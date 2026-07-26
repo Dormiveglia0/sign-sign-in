@@ -53,6 +53,11 @@ tests
 /resources/mitm/conf/
 /resources/config/mitm*.json
 */__pycache__
+__pycache__/
+/.venv/
+/.runtime/
+/frontend/node_modules/
+/frontend/dist/
 
 /.pnpm-store
 doc/

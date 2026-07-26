@@ -1,0 +1,9 @@
+fastapi==0.116.1
+gmssl==3.2.2
+mitmproxy==11.0.2
+pillow==11.3.0
+psutil==7.0.0
+python-multipart==0.0.20
+qrcode[pil]==8.2
+requests==2.32.4
+uvicorn[standard]==0.35.0
