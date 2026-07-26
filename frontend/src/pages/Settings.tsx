@@ -118,7 +118,9 @@ export default function SettingsPage() {
           newPassword: values.newPassword,
         },
       });
-      message.success("密码已修改，本次登录即将失效");
+      message.success(
+        "管理员密码已修改，管理后台将重新登录；校友邦凭证不受影响",
+      );
       setPasswordOpen(false);
       window.setTimeout(
         () => window.dispatchEvent(new CustomEvent("auth-expired")),
@@ -173,7 +175,7 @@ export default function SettingsPage() {
           type="warning"
           showIcon
           message="当前仍在使用首次生成的管理员密码"
-          description="完成测试后请在本页“访问安全”中修改密码；修改成功后服务器会删除初始密码文件并使旧会话失效。"
+          description="完成测试后请在本页“访问安全”中修改。它只影响管理后台登录，不会清除校友邦凭证，也不会中断定时任务。"
         />
       )}
 
@@ -414,7 +416,7 @@ export default function SettingsPage() {
                 <Card>
                   <SectionHeading
                     title="管理员访问"
-                    description="密码使用 scrypt 哈希保存；修改后所有旧登录会话立即失效。"
+                    description="密码只保护本管理后台。登录不再按固定时长失效；修改密码仅要求所有已登录浏览器重新登录，不影响校友邦凭证、签到或定时任务。"
                     extra={<KeyRound size={19} />}
                   />
                   <div className="security-panel">
@@ -423,8 +425,8 @@ export default function SettingsPage() {
                       <strong>admin</strong>
                     </div>
                     <div>
-                      <span>会话有效期</span>
-                      <strong>12 小时</strong>
+                      <span>管理后台登录</span>
+                      <strong>仅退出、改密或清除 Cookie 后失效</strong>
                     </div>
                     <div>
                       <span>Cookie 策略</span>
@@ -449,13 +451,20 @@ export default function SettingsPage() {
             修改管理员密码
           </div>
         }
-        okText="修改并退出"
+        okText="修改并重新登录"
         cancelText="取消"
         confirmLoading={saving}
         onOk={() => void changePassword()}
         onCancel={() => setPasswordOpen(false)}
         destroyOnClose
       >
+        <Alert
+          type="info"
+          showIcon
+          message="这里只修改管理后台密码"
+          description="提交后当前及其他浏览器中的管理后台登录会失效；校友邦自动续期凭证、签到任务和定时任务不会变化。"
+          style={{ marginBottom: 16 }}
+        />
         <Form
           form={passwordForm}
           layout="vertical"

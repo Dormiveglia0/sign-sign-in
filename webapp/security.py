@@ -18,7 +18,6 @@ SECURITY_FILE = RUNTIME_DIR / "web_security.json"
 INITIAL_PASSWORD_FILE = RUNTIME_DIR / "initial_admin_password.txt"
 SESSION_COOKIE = "ssi_session"
 CSRF_COOKIE = "ssi_csrf"
-SESSION_SECONDS = 12 * 60 * 60
 
 _login_failures: dict[str, tuple[int, float]] = {}
 
@@ -105,7 +104,6 @@ def create_session() -> tuple[str, str]:
     payload = {
         "sub": config["username"],
         "iat": now,
-        "exp": now + SESSION_SECONDS,
         "ver": int(config.get("session_version", 1)),
         "nonce": secrets.token_hex(8),
     }
@@ -135,8 +133,6 @@ def verify_session(token: str) -> dict | None:
         ):
             return None
         payload = json.loads(_b64decode(encoded))
-        if int(payload["exp"]) < int(time.time()):
-            return None
         if int(payload["ver"]) != int(config.get("session_version", 1)):
             return None
         if payload["sub"] != config["username"]:
@@ -151,7 +147,7 @@ def require_auth(request: Request) -> dict:
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="登录已失效",
+            detail="管理后台登录已失效",
         )
     return payload
 

@@ -20,14 +20,26 @@ from app.config.common import (
     PACKET_LOG_FILE,
     SESSION_CACHE_FILE,
 )
-from app.apis.xybsyw import auto_login, is_session_expired_error
+from app.apis.xybsyw import (
+    AUTO_RENEW_SECONDS,
+    auto_login,
+    is_session_expired_error,
+)
 from app.mitm.service import MitmService
 from app.sign_flow import SignFlow, TaskCancelled, mode_to_option
 from app.utils.code_channel import CodeChannel
-from app.utils.files import get_valid_session_cache, read_config
+from app.utils.files import (
+    get_valid_session_cache,
+    list_images,
+    load_session_cache,
+    read_config,
+)
 from app.utils.pushplus import notify_pushplus
 
 TASK_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name("web_task_history.json")
+SCHEDULE_IMAGE_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name(
+    "scheduled_image_history.json"
+)
 
 
 def iso_now() -> str:
@@ -88,11 +100,77 @@ def _save_history(history: deque[dict]) -> None:
     os.replace(temporary, TASK_HISTORY_FILE)
 
 
-class TaskManager:
+class ImageRotation:
+    """Select scheduled photos without repeats until the library is exhausted."""
+
     def __init__(self):
+        self.lock = threading.RLock()
+
+    @staticmethod
+    def _available() -> list[Path]:
+        return [Path(path) for path in list_images()]
+
+    @staticmethod
+    def _load_used() -> list[str]:
+        try:
+            with SCHEDULE_IMAGE_HISTORY_FILE.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            if isinstance(payload, dict) and isinstance(payload.get("used"), list):
+                return [str(name) for name in payload["used"]]
+        except (OSError, json.JSONDecodeError):
+            pass
+        return []
+
+    @staticmethod
+    def _save_used(used: list[str]) -> None:
+        SCHEDULE_IMAGE_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        temporary = SCHEDULE_IMAGE_HISTORY_FILE.with_suffix(".tmp")
+        with temporary.open("w", encoding="utf-8") as handle:
+            json.dump(
+                {"used": used, "updatedAt": iso_now()},
+                handle,
+                ensure_ascii=False,
+                indent=2,
+            )
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, SCHEDULE_IMAGE_HISTORY_FILE)
+
+    def choose(self, *, remember: bool) -> str:
+        images = self._available()
+        if not images:
+            raise RuntimeError("图片库为空，请先上传签到图片")
+        if not remember:
+            return str(random.choice(images))
+
+        with self.lock:
+            names = {path.name for path in images}
+            used = [name for name in self._load_used() if name in names]
+            candidates = [path for path in images if path.name not in used]
+            if not candidates:
+                used = []
+                candidates = images
+            selected = random.choice(candidates)
+            self._save_used([*used, selected.name])
+            return str(selected)
+
+    def snapshot(self) -> dict:
+        with self.lock:
+            images = self._available()
+            names = {path.name for path in images}
+            used = [name for name in self._load_used() if name in names]
+        return {
+            "used": len(used),
+            "total": len(images),
+            "remaining": max(0, len(images) - len(used)),
+        }
+
+
+class TaskManager:
+    def __init__(self, image_rotation: ImageRotation | None = None):
         self.lock = threading.RLock()
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None
+        self.image_rotation = image_rotation or ImageRotation()
         self.history = _load_history()
         self.state = {
             "id": "",
@@ -143,19 +221,30 @@ class TaskManager:
         mode: str,
         image_path: str = "",
         source: str = "manual",
+        random_image: bool = False,
     ) -> dict:
-        option = mode_to_option(mode, image_path)
-        return self._start(
-            mode=mode,
-            action=option["action"],
-            source=source,
-            target=lambda flow: flow.run(option),
-        )
+        with self.lock:
+            if self.state["status"] in {"queued", "running", "stopping"}:
+                raise RuntimeError("已有任务正在执行")
+            if mode.startswith("photo_") and random_image:
+                image_path = self.image_rotation.choose(remember=source == "auto")
+                logging.info(
+                    "🎲 %s随机图片: %s",
+                    "定时任务不重复" if source == "auto" else "手动任务",
+                    Path(image_path).name,
+                )
+            option = mode_to_option(mode, image_path)
+            return self._start(
+                mode=mode,
+                action=option["action"],
+                source=source,
+                target=lambda flow: flow.run(option),
+            )
 
     def start_session_refresh(self, code: str, source: str = "manual") -> dict:
         return self._start(
             mode="session",
-            action="刷新会话",
+            action="更新校友邦登录凭证",
             source=source,
             target=lambda flow: flow.refresh_session(code),
         )
@@ -289,6 +378,9 @@ def _valid_schedule_tasks(config: dict) -> list[dict]:
                 "image_path": str(
                     item.get("image_path") or item.get("imagePath") or ""
                 ),
+                "random_image": bool(
+                    item.get("random_image") or item.get("randomImage")
+                ),
             }
         )
     return tasks
@@ -317,7 +409,10 @@ class Scheduler:
 
     @staticmethod
     def _task_key(index: int, task: dict) -> str:
-        return f"{index}:{task['mode']}:{task['time']}:{task.get('image_path', '')}"
+        return (
+            f"{index}:{task['mode']}:{task['time']}:"
+            f"{task.get('image_path', '')}:{int(task.get('random_image', False))}"
+        )
 
     @staticmethod
     def _randomized_time(
@@ -387,6 +482,7 @@ class Scheduler:
             "taskCount": len(tasks),
             "tasks": next_items,
             "timezone": str(_timezone(config)),
+            "imageRotation": self.task_manager.image_rotation.snapshot(),
         }
 
     def _loop(self) -> None:
@@ -424,6 +520,7 @@ class Scheduler:
                     task["mode"],
                     task.get("image_path", ""),
                     source="auto",
+                    random_image=bool(task.get("random_image")),
                 )
             except Exception as exc:
                 logging.error("定时任务启动失败: %s", exc)
@@ -434,6 +531,176 @@ class Scheduler:
                     random_minutes,
                 )
             break
+
+
+class SessionKeeper:
+    CHECK_SECONDS = 60
+    RETRY_SECONDS = 5 * 60
+
+    def __init__(self, task_manager: TaskManager):
+        self.task_manager = task_manager
+        self.stop_event = threading.Event()
+        self.renew_lock = threading.Lock()
+        self.lock = threading.RLock()
+        self.thread = threading.Thread(
+            target=self._loop,
+            name="session-keeper",
+            daemon=True,
+        )
+        self.state = {
+            "status": "starting",
+            "lastAttemptAt": None,
+            "lastSuccessAt": None,
+            "nextAttemptAt": None,
+            "lastError": "",
+        }
+        self.retry_at = 0.0
+
+    @staticmethod
+    def _cache_details() -> tuple[dict, bool, int]:
+        cache = load_session_cache()
+        available = bool(
+            cache.get("encryptValue")
+            and cache.get("openId")
+            and cache.get("unionId")
+        )
+        try:
+            timestamp = int(cache.get("timestamp") or 0)
+        except (TypeError, ValueError):
+            timestamp = 0
+        return cache, available, timestamp
+
+    @staticmethod
+    def _iso_from_timestamp(timestamp: int) -> str | None:
+        if not timestamp:
+            return None
+        return (
+            datetime.fromtimestamp(timestamp)
+            .astimezone()
+            .isoformat(timespec="seconds")
+        )
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        if self.thread.is_alive():
+            self.thread.join(timeout=2)
+
+    def renew(self) -> dict:
+        if self.task_manager.snapshot()["status"] in {
+            "queued",
+            "running",
+            "stopping",
+        }:
+            raise RuntimeError("当前任务执行中，完成后再验证自动续期")
+        with self.renew_lock:
+            attempted_at = iso_now()
+            with self.lock:
+                self.state.update(
+                    {
+                        "status": "renewing",
+                        "lastAttemptAt": attempted_at,
+                        "lastError": "",
+                    }
+                )
+            try:
+                config = read_config(CONFIG_FILE)
+                session = auto_login(config["input"])
+            except Exception as exc:
+                with self.lock:
+                    self.retry_at = time.time() + self.RETRY_SECONDS
+                    self.state.update(
+                        {
+                            "status": "retrying",
+                            "nextAttemptAt": self._iso_from_timestamp(
+                                int(self.retry_at)
+                            ),
+                            "lastError": str(exc),
+                        }
+                    )
+                logging.warning("校友邦自动续期失败，5 分钟后重试: %s", exc)
+                raise
+
+            succeeded_at = iso_now()
+            with self.lock:
+                self.retry_at = 0
+                self.state.update(
+                    {
+                        "status": "active",
+                        "lastSuccessAt": succeeded_at,
+                        "nextAttemptAt": self._iso_from_timestamp(
+                            int(time.time() + AUTO_RENEW_SECONDS)
+                        ),
+                        "lastError": "",
+                    }
+                )
+            logging.info(
+                "✅ 校友邦自动续期守护验证成功，SESSION 尾号 %s",
+                str(session.get("sessionId") or "")[-4:],
+            )
+            return self.snapshot()
+
+    def _tick(self) -> None:
+        cache, available, timestamp = self._cache_details()
+        if not available:
+            with self.lock:
+                self.state.update(
+                    {
+                        "status": "not_initialized",
+                        "lastSuccessAt": None,
+                        "nextAttemptAt": None,
+                        "lastError": "",
+                    }
+                )
+            return
+
+        now = time.time()
+        if self.task_manager.snapshot()["status"] in {
+            "queued",
+            "running",
+            "stopping",
+        }:
+            return
+        if cache.get("valid") is not False and now - timestamp < AUTO_RENEW_SECONDS:
+            with self.lock:
+                self.retry_at = 0
+                self.state.update(
+                    {
+                        "status": "active",
+                        "lastSuccessAt": self._iso_from_timestamp(timestamp),
+                        "nextAttemptAt": self._iso_from_timestamp(
+                            timestamp + AUTO_RENEW_SECONDS
+                        ),
+                        "lastError": "",
+                    }
+                )
+            return
+        if not self.retry_at or now >= self.retry_at:
+            self.renew()
+
+    def _loop(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                self._tick()
+            except Exception:
+                pass
+            if self.stop_event.wait(self.CHECK_SECONDS):
+                break
+
+    def snapshot(self) -> dict:
+        _, available, timestamp = self._cache_details()
+        with self.lock:
+            state = copy.deepcopy(self.state)
+        if available and timestamp and not state["lastSuccessAt"]:
+            state["lastSuccessAt"] = self._iso_from_timestamp(timestamp)
+        return {
+            "enabled": True,
+            "credentialAvailable": available,
+            "intervalMinutes": AUTO_RENEW_SECONDS // 60,
+            **state,
+        }
 
 
 class CaptureManager:
@@ -608,8 +875,8 @@ class CaptureManager:
                 raise RuntimeError("抓包结果中没有 Code")
             with self.lock:
                 self.state["status"] = "refreshing"
-                self.state["message"] = "已捕获 Code，正在刷新会话"
-            logging.info("✅ 已捕获 Code，正在关闭代理并刷新会话")
+                self.state["message"] = "已捕获 Code，正在更新校友邦登录凭证"
+            logging.info("✅ 已捕获 Code，正在关闭代理并更新校友邦登录凭证")
             self.service.stop_mitm()
             self.task_manager.start_session_refresh(code, source="capture")
             while not self.stop_event.wait(0.3):
@@ -655,8 +922,10 @@ class CaptureManager:
 class Runtime:
     def __init__(self):
         self.logs = MemoryLogHandler()
-        self.tasks = TaskManager()
+        self.image_rotation = ImageRotation()
+        self.tasks = TaskManager(self.image_rotation)
         self.scheduler = Scheduler(self.tasks)
+        self.session_keeper = SessionKeeper(self.tasks)
         self.capture = CaptureManager(self.tasks)
 
     def start(self) -> None:
@@ -664,6 +933,7 @@ class Runtime:
         root_logger.setLevel(logging.INFO)
         if self.logs not in root_logger.handlers:
             root_logger.addHandler(self.logs)
+        self.session_keeper.start()
         self.scheduler.start()
         logging.info("SignSignIn Linux 服务已启动")
 
@@ -678,18 +948,13 @@ class Runtime:
         except Exception:
             pass
         self.scheduler.stop()
+        self.session_keeper.stop()
         logging.info("SignSignIn Linux 服务已停止")
         logging.getLogger().removeHandler(self.logs)
 
     def status(self) -> dict:
         session = get_valid_session_cache()
-        raw_session = {}
-        if os.path.exists(SESSION_CACHE_FILE):
-            try:
-                with open(SESSION_CACHE_FILE, "r", encoding="utf-8") as handle:
-                    raw_session = json.load(handle)
-            except (OSError, json.JSONDecodeError):
-                pass
+        raw_session = load_session_cache()
         cached_at = None
         if raw_session.get("timestamp"):
             cached_at = datetime.fromtimestamp(
@@ -709,7 +974,7 @@ class Runtime:
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),
                 "cachedAt": cached_at,
-                "expiresAt": None,
+                "autoRenew": self.session_keeper.snapshot(),
             },
             "task": self.tasks.snapshot(),
             "scheduler": self.scheduler.snapshot(),

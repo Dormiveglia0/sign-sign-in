@@ -14,7 +14,9 @@ from app.apis import xybsyw
 from app.mitm.embedded_runner import build_mitmdump_args
 from app.mitm.service import MitmService
 from app.utils import files as file_utils
-from webapp.runtime import TaskManager
+from webapp import runtime as runtime_module
+from webapp import security as web_security
+from webapp.runtime import ImageRotation, SessionKeeper, TaskManager
 
 
 def check_session_cache_has_no_local_expiry():
@@ -146,11 +148,88 @@ def check_task_retries_after_silent_renewal():
     renew.assert_called_once()
 
 
+def check_random_image_rotation():
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        images = [root / name for name in ("a.jpg", "b.jpg", "c.jpg")]
+        for image in images:
+            image.touch()
+        history = root / "history.json"
+        with (
+            patch.object(runtime_module, "SCHEDULE_IMAGE_HISTORY_FILE", history),
+            patch.object(
+                runtime_module,
+                "list_images",
+                return_value=[str(image) for image in images],
+            ),
+            patch.object(
+                runtime_module.random,
+                "choice",
+                side_effect=lambda values: values[0],
+            ),
+        ):
+            rotation = ImageRotation()
+            assert Path(rotation.choose(remember=False)).name == "a.jpg"
+            assert not history.exists()
+            selected = [
+                Path(rotation.choose(remember=True)).name for _ in range(4)
+            ]
+            assert selected == ["a.jpg", "b.jpg", "c.jpg", "a.jpg"]
+            assert rotation.snapshot() == {"used": 1, "total": 3, "remaining": 2}
+
+
+def check_session_keeper_status():
+    manager = TaskManager()
+    keeper = SessionKeeper(manager)
+    now = int(time.time())
+    cache = {
+        "sessionId": "session",
+        "encryptValue": "encrypt",
+        "openId": "open",
+        "unionId": "union",
+        "timestamp": now,
+        "valid": True,
+    }
+    with (
+        patch.object(runtime_module, "load_session_cache", return_value=cache),
+        patch.object(runtime_module, "read_config", return_value={"input": {}}),
+        patch.object(runtime_module, "auto_login", return_value=cache),
+    ):
+        state = keeper.renew()
+    assert state["status"] == "active"
+    assert state["credentialAvailable"] is True
+    assert state["lastSuccessAt"]
+    assert state["nextAttemptAt"]
+
+    retrying = SessionKeeper(manager)
+    with (
+        patch.object(runtime_module, "load_session_cache", return_value=cache),
+        patch.object(runtime_module, "read_config", return_value={"input": {}}),
+        patch.object(
+            runtime_module,
+            "auto_login",
+            side_effect=RuntimeError("temporary failure"),
+        ),
+    ):
+        try:
+            retrying.renew()
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("Failed renewal should be retried")
+        state = retrying.snapshot()
+    assert state["status"] == "retrying"
+    assert state["nextAttemptAt"]
+    assert state["lastError"] == "temporary failure"
+
+
 def main():
     check_session_cache_has_no_local_expiry()
     check_consumed_code_message()
     check_silent_session_renewal()
     check_task_retries_after_silent_renewal()
+    check_random_image_rotation()
+    check_session_keeper_status()
     capture_command = MitmService(
         host="0.0.0.0",
         allowed_client_ip="203.0.113.7",
@@ -190,6 +269,13 @@ def main():
         timeout=5,
     )
     assert response.status_code == 200, response.text
+    admin_cookie = next(
+        cookie
+        for cookie in session.cookies
+        if cookie.name == "ssi_session"
+    )
+    assert admin_cookie.expires is None
+    assert "exp" not in web_security.verify_session(admin_cookie.value)
     assert session.get(f"{base_url}/api/status", timeout=5).status_code == 200
     for path in (
         "/api/config",

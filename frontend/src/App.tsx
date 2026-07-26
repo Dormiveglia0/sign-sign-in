@@ -106,38 +106,23 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
   return (
     <main className="login-shell">
-      <section className="login-story">
-        <div className="login-brand">
-          <img src="/app-icon.svg" alt="" />
-          <span>SignSignIn</span>
-        </div>
-        <div className="login-copy">
-          <span className="eyebrow light">LINUX OPERATIONS CONSOLE</span>
-          <h1>
-            把桌面任务，
-            <br />
-            放进可靠的常驻服务。
-          </h1>
-          <p>
-            会话、签到、定时、周记与接龙统一运行在服务器端；浏览器只负责安全地发出指令和查看结果。
-          </p>
-        </div>
-        <div className="login-system-line">
-          <span className={serviceOnline ? "online-dot" : "offline-dot"} />
-          {serviceOnline === null
-            ? "正在检查服务"
-            : serviceOnline
-              ? "Linux 服务在线"
-              : "服务暂不可用"}
-        </div>
-      </section>
-
       <section className="login-panel">
         <div className="login-form-wrap">
+          <div className="login-brand">
+            <img src="/app-icon.svg" alt="" />
+            <span>SignSignIn</span>
+          </div>
           <div className="login-title">
             <span className="eyebrow">SECURE ACCESS</span>
             <h2>登录控制台</h2>
-            <p>使用服务器首次启动时生成的管理员凭据。</p>
+          </div>
+          <div className="login-system-line">
+            <span className={serviceOnline ? "online-dot" : "offline-dot"} />
+            {serviceOnline === null
+              ? "正在检查服务"
+              : serviceOnline
+                ? "Linux 服务在线"
+                : "服务暂不可用"}
           </div>
           <Form
             layout="vertical"
@@ -171,7 +156,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             </Button>
           </Form>
           <p className="login-footnote">
-            登录状态仅保存在当前浏览器，会在 12 小时后自动失效。
+            此密码只用于管理后台，不影响校友邦登录凭证与定时任务。
           </p>
         </div>
       </section>

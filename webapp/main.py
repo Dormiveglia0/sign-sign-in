@@ -103,6 +103,31 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _set_auth_cookies(
+    response: Response,
+    request: Request,
+    session_token: str,
+    csrf_token: str,
+) -> None:
+    secure = cookie_secure(request)
+    response.set_cookie(
+        SESSION_COOKIE,
+        session_token,
+        httponly=True,
+        secure=secure,
+        samesite="strict",
+        path="/",
+    )
+    response.set_cookie(
+        CSRF_COOKIE,
+        csrf_token,
+        httponly=False,
+        secure=secure,
+        samesite="strict",
+        path="/",
+    )
+
+
 def _atomic_save_config(config: dict) -> None:
     path = Path(CONFIG_FILE)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -216,6 +241,11 @@ async def security_headers(request: Request, call_next):
                 status_code=exc.status_code,
             )
     response = await call_next(request)
+    token = request.cookies.get(SESSION_COOKIE, "")
+    payload = verify_session(token)
+    csrf = request.cookies.get(CSRF_COOKIE, "")
+    if payload and "exp" in payload and csrf:
+        _set_auth_cookies(response, request, token, csrf)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "same-origin"
@@ -273,25 +303,7 @@ def auth_login(payload: LoginInput, request: Request, response: Response):
     if not valid:
         raise HTTPException(status_code=401, detail="账号或密码不正确")
     session_token, csrf_token = create_session()
-    secure = cookie_secure(request)
-    response.set_cookie(
-        SESSION_COOKIE,
-        session_token,
-        max_age=12 * 60 * 60,
-        httponly=True,
-        secure=secure,
-        samesite="strict",
-        path="/",
-    )
-    response.set_cookie(
-        CSRF_COOKIE,
-        csrf_token,
-        max_age=12 * 60 * 60,
-        httponly=False,
-        secure=secure,
-        samesite="strict",
-        path="/",
-    )
+    _set_auth_cookies(response, request, session_token, csrf_token)
     logging.info("Web 管理员登录成功")
     return {"authenticated": True, "user": {"username": "admin"}}
 
@@ -313,7 +325,10 @@ async def auth_change_password(payload: PasswordInput):
         payload.currentPassword,
         payload.newPassword,
     )
-    return {"ok": True, "message": "密码已更新，请重新登录"}
+    return {
+        "ok": True,
+        "message": "管理员密码已更新，管理后台需要重新登录；校友邦凭证不受影响",
+    }
 
 
 @protected.get("/status")
@@ -334,6 +349,7 @@ def get_task_history():
 class TaskInput(BaseModel):
     mode: Literal["in", "out", "both", "photo_in", "photo_out"]
     image: str = Field(default="", max_length=255)
+    randomImage: bool = False
 
 
 @protected.post("/tasks")
@@ -343,12 +359,19 @@ def start_task(payload: TaskInput):
         status["session"]["valid"]
         or status["session"]["renewalAvailable"]
     ):
-        raise HTTPException(status_code=409, detail="会话无效，请先刷新会话")
+        raise HTTPException(
+            status_code=409,
+            detail="校友邦登录凭证不可用，请先完成一次初始化",
+        )
     image_path = ""
-    if payload.mode.startswith("photo_"):
-        image_path = str(_safe_image_path(payload.image))
     try:
-        return runtime.tasks.start_sign(payload.mode, image_path)
+        if payload.mode.startswith("photo_") and not payload.randomImage:
+            image_path = str(_safe_image_path(payload.image))
+        return runtime.tasks.start_sign(
+            payload.mode,
+            image_path,
+            random_image=payload.randomImage,
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -376,10 +399,18 @@ def refresh_session(payload: SessionInput):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+@protected.post("/session/auto-renew")
+def auto_renew_session():
+    try:
+        return runtime.session_keeper.renew()
+    except Exception as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @protected.delete("/session")
 def delete_session():
     clear_session_cache()
-    logging.info("已清除会话缓存")
+    logging.info("已清除校友邦登录凭证")
     return {"ok": True}
 
 
@@ -585,6 +616,7 @@ class ScheduleTaskInput(BaseModel):
     time: str = Field(pattern=r"^\d{2}:\d{2}$")
     mode: Literal["in", "out", "photo_in", "photo_out"]
     image: str = Field(default="", max_length=255)
+    randomImage: bool = False
 
 
 class ScheduleInput(BaseModel):
@@ -606,6 +638,7 @@ def get_schedules():
     snapshot["pushplusConfigured"] = _secret_state(config)["pushplusToken"]
     for task in snapshot["tasks"]:
         task["image"] = Path(task.pop("image_path", "")).name
+        task["randomImage"] = bool(task.pop("random_image", False))
     return snapshot
 
 
@@ -627,7 +660,15 @@ def update_schedules(payload: ScheduleInput):
         seen.add(key)
         item = {"time": task.time, "mode": task.mode}
         if task.mode.startswith("photo_"):
-            item["image_path"] = str(_safe_image_path(task.image))
+            item["random_image"] = task.randomImage
+            if task.randomImage:
+                if not list_images():
+                    raise HTTPException(
+                        status_code=422,
+                        detail="随机图片任务需要先在图片资产中上传图片",
+                    )
+            else:
+                item["image_path"] = str(_safe_image_path(task.image))
         normalized_tasks.append(item)
     if payload.enabled and not normalized_tasks:
         raise HTTPException(status_code=422, detail="启用定时任务前至少添加一项")

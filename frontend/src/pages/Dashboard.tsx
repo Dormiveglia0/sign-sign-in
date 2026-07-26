@@ -10,7 +10,6 @@ import {
   Select,
   Skeleton,
   Table,
-  Tabs,
   Tooltip,
 } from "antd";
 import {
@@ -20,15 +19,12 @@ import {
   CheckCircle2,
   CircleStop,
   Clock3,
-  Download,
   KeyRound,
   ListChecks,
   Play,
-  RadioTower,
   RefreshCw,
   Server,
   ShieldCheck,
-  Smartphone,
   TerminalSquare,
 } from "lucide-react";
 import { api, formatDateTime } from "../api";
@@ -83,6 +79,7 @@ export default function Dashboard() {
   const { status, statusError, refreshStatus } = useWorkspace();
   const [mode, setMode] = useState<(typeof modes)[number]["value"]>("in");
   const [image, setImage] = useState("");
+  const [randomImage, setRandomImage] = useState(true);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [history, setHistory] = useState<TaskState[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -111,7 +108,11 @@ export default function Dashboard() {
   }, [status?.task.finishedAt]);
 
   async function startTask() {
-    if (photoMode && !image) {
+    if (photoMode && !images.length) {
+      message.warning("图片库为空，请先到图片资产上传图片");
+      return;
+    }
+    if (photoMode && !randomImage && !image) {
       message.warning("拍照模式需要先选择一张图片");
       return;
     }
@@ -119,7 +120,11 @@ export default function Dashboard() {
     try {
       await api("/api/tasks", {
         method: "POST",
-        json: { mode, image },
+        json: {
+          mode,
+          image: photoMode && !randomImage ? image : "",
+          randomImage: photoMode && randomImage,
+        },
       });
       message.success("任务已启动");
       await refreshStatus();
@@ -152,7 +157,7 @@ export default function Dashboard() {
       });
       setCode("");
       setSessionOpen(false);
-      message.success("会话刷新任务已启动");
+      message.success("校友邦凭证初始化任务已启动");
       await refreshStatus();
     } catch (error) {
       message.error(error instanceof Error ? error.message : "刷新失败");
@@ -161,27 +166,14 @@ export default function Dashboard() {
     }
   }
 
-  async function startCapture() {
+  async function verifyAutoRenewal() {
     setBusy(true);
     try {
-      await api("/api/capture", { method: "POST" });
-      message.success("临时抓包代理正在启动");
+      await api("/api/session/auto-renew", { method: "POST" });
+      message.success("自动续期验证成功");
       await refreshStatus();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "启动失败");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function stopCapture() {
-    setBusy(true);
-    try {
-      await api("/api/capture", { method: "DELETE" });
-      message.info("抓包代理正在关闭");
-      await refreshStatus();
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : "关闭失败");
+      message.error(error instanceof Error ? error.message : "验证失败");
     } finally {
       setBusy(false);
     }
@@ -204,19 +196,28 @@ export default function Dashboard() {
         tone: statusError ? "danger" : "success",
       },
       {
-        label: "校友邦会话",
-        value: status?.session.valid
-          ? "有效"
-          : status?.session.renewalAvailable
-            ? "待自动续期"
-            : "待初始化",
-        detail: status?.session.valid
-          ? `尾号 ${status.session.suffix} · 已启用按需静默续期`
-          : status?.session.renewalAvailable
-            ? "下次任务会自动换取新 SESSION"
-            : "首次使用需要获取一次 Code",
+        label: "校友邦自动续期",
+        value:
+          status?.session.autoRenew.status === "renewing"
+            ? "正在续期"
+            : status?.session.autoRenew.status === "retrying"
+              ? "自动重试中"
+              : status?.session.renewalAvailable
+                ? "运行正常"
+                : "未初始化",
+        detail:
+          status?.session.autoRenew.status === "retrying"
+            ? `下次 ${formatDateTime(status.session.autoRenew.nextAttemptAt)} 重试`
+            : status?.session.autoRenew.lastSuccessAt
+              ? `上次成功 ${formatDateTime(status.session.autoRenew.lastSuccessAt)}`
+              : "首次使用需要一个有效 Code",
         icon: KeyRound,
-        tone: status?.session.valid ? "success" : "warning",
+        tone:
+          status?.session.autoRenew.status === "retrying"
+            ? "danger"
+            : status?.session.renewalAvailable
+              ? "success"
+              : "warning",
       },
       {
         label: "定时调度",
@@ -253,7 +254,7 @@ export default function Dashboard() {
       <PageHeader
         eyebrow="OPERATIONS / OVERVIEW"
         title="运行总览"
-        description="从这里发起一次真实任务，并持续查看服务、会话与调度状态。"
+        description="发起任务并查看服务、校友邦凭证与定时调度状态。"
         actions={
           <Tooltip title="刷新全部状态">
             <Button
@@ -326,20 +327,39 @@ export default function Dashboard() {
           </Radio.Group>
 
           {photoMode && (
-            <div className="inline-field">
-              <label htmlFor="dashboard-image">签到图片</label>
-              <Select
-                id="dashboard-image"
-                value={image || undefined}
-                onChange={setImage}
-                placeholder="从图片资产中选择"
-                options={images.map((item) => ({
-                  value: item.name,
-                  label: item.name,
-                }))}
-                notFoundContent="还没有图片，请先到图片资产上传"
-              />
-            </div>
+            <>
+              <div className="inline-field">
+                <label>图片来源</label>
+                <Radio.Group
+                  value={randomImage ? "random" : "fixed"}
+                  onChange={(event) =>
+                    setRandomImage(event.target.value === "random")
+                  }
+                  optionType="button"
+                  buttonStyle="solid"
+                  options={[
+                    { value: "random", label: "从图片库随机抽取" },
+                    { value: "fixed", label: "指定图片" },
+                  ]}
+                />
+              </div>
+              {!randomImage && (
+                <div className="inline-field">
+                  <label htmlFor="dashboard-image">签到图片</label>
+                  <Select
+                    id="dashboard-image"
+                    value={image || undefined}
+                    onChange={setImage}
+                    placeholder="从图片资产中选择"
+                    options={images.map((item) => ({
+                      value: item.name,
+                      label: item.name,
+                    }))}
+                    notFoundContent="还没有图片，请先到图片资产上传"
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <div className="run-summary">
@@ -350,9 +370,19 @@ export default function Dashboard() {
               </strong>
             </div>
             <div>
-              <span>会话</span>
-              <strong className={status?.session.valid ? "good" : "warn"}>
-                {status?.session.valid ? "已就绪" : "需要刷新"}
+              <span>校友邦凭证</span>
+              <strong
+                className={
+                  status?.session.valid || status?.session.renewalAvailable
+                    ? "good"
+                    : "warn"
+                }
+              >
+                {status?.session.valid
+                  ? "已就绪"
+                  : status?.session.renewalAvailable
+                    ? "执行前自动续期"
+                    : "未初始化"}
               </strong>
             </div>
             <div>
@@ -367,7 +397,7 @@ export default function Dashboard() {
               onClick={() => setSessionOpen(true)}
               disabled={activeTask}
             >
-              管理会话
+              管理校友邦凭证
             </Button>
             {activeTask ? (
               <Button
@@ -384,7 +414,9 @@ export default function Dashboard() {
                 type="primary"
                 icon={<Play size={16} />}
                 loading={busy}
-                disabled={!status?.session.valid}
+                disabled={
+                  !(status?.session.valid || status?.session.renewalAvailable)
+                }
                 onClick={startTask}
               >
                 开始执行
@@ -410,24 +442,83 @@ export default function Dashboard() {
 
         <Card className="session-card">
           <SectionHeading
-            title="会话状态"
-            description="不再按本地时间过期；仅在服务端明确返回未登录时清除。"
+            title="校友邦自动续期"
+            description="由 Linux 后台守护运行，与管理后台登录状态互不影响。"
             extra={<ShieldCheck size={19} />}
           />
           <div className="session-orbit">
-            <div className={status?.session.valid ? "session-ring valid" : "session-ring"}>
+            <div
+              className={
+                status?.session.renewalAvailable
+                  ? "session-ring valid"
+                  : "session-ring"
+              }
+            >
               <KeyRound size={28} />
             </div>
-            <strong>{status?.session.valid ? "SESSION 有效" : "SESSION 缺失"}</strong>
+            <strong>
+              {status?.session.autoRenew.status === "renewing"
+                ? "正在自动续期"
+                : status?.session.autoRenew.status === "retrying"
+                  ? "续期失败，等待重试"
+                  : status?.session.renewalAvailable
+                    ? "自动续期守护运行中"
+                    : "尚未初始化"}
+            </strong>
             <span>
-              {status?.session.valid
-                ? `${formatDateTime(status.session.cachedAt)} 缓存，服务端失效前持续使用`
-                : "当前无法执行签到与周记操作"}
+              {status?.session.renewalAvailable
+                ? `每 ${status.session.autoRenew.intervalMinutes} 分钟主动换新；接口返回未登录时也会立即续期并重试`
+                : "需要先用一个有效 Code 初始化，之后无需日常手动操作"}
             </span>
+            <div className="session-detail-grid">
+              <div>
+                <span>上次成功</span>
+                <strong>
+                  {formatDateTime(status?.session.autoRenew.lastSuccessAt)}
+                </strong>
+              </div>
+              <div>
+                <span>下次检查</span>
+                <strong>
+                  {formatDateTime(status?.session.autoRenew.nextAttemptAt)}
+                </strong>
+              </div>
+              <div>
+                <span>当前 SESSION</span>
+                <strong>
+                  {status?.session.valid
+                    ? `有效 · 尾号 ${status.session.suffix}`
+                    : status?.session.renewalAvailable
+                      ? "等待自动换新"
+                      : "不可用"}
+                </strong>
+              </div>
+            </div>
           </div>
-          <Button block type="default" onClick={() => setSessionOpen(true)}>
-            {status?.session.valid ? "更新会话" : "立即获取会话"}
-          </Button>
+          {status?.session.autoRenew.lastError && (
+            <Alert
+              type="warning"
+              showIcon
+              message="最近一次自动续期失败"
+              description={status.session.autoRenew.lastError}
+              className="session-renew-error"
+            />
+          )}
+          <div className="session-card-actions">
+            <Button
+              block
+              type="primary"
+              icon={<RefreshCw size={15} />}
+              loading={busy}
+              disabled={!status?.session.renewalAvailable || activeTask}
+              onClick={() => void verifyAutoRenewal()}
+            >
+              立即验证自动续期
+            </Button>
+            <Button block type="text" onClick={() => setSessionOpen(true)}>
+              初始化或恢复凭证
+            </Button>
+          </div>
         </Card>
       </div>
 
@@ -503,7 +594,7 @@ export default function Dashboard() {
         title={
           <div className="modal-title">
             <KeyRound size={19} />
-            获取校友邦会话
+            校友邦登录凭证
           </div>
         }
       >
@@ -522,135 +613,31 @@ export default function Dashboard() {
           }
           style={{ marginBottom: 16 }}
         />
-        <Tabs
-          items={[
-            {
-              key: "manual",
-              label: "直接填入 Code",
-              children: (
-                <div className="session-tab">
-                  <Alert
-                    type="warning"
-                    showIcon
-                    message="必须提交尚未发送的 Code"
-                    description="Code 只能换取一次。Reqable 请在 getOpenId.action 请求发送前设置断点，复制 Code 后取消原请求，再立即提交；已完成请求或 Windows 客户端“获取 Code”日志里的 Code 已被使用。"
-                  />
-                  <label htmlFor="session-code">小程序 Code</label>
-                  <Input.Password
-                    id="session-code"
-                    value={code}
-                    onChange={(event) => setCode(event.target.value)}
-                    placeholder="粘贴抓取到的 Code"
-                    autoComplete="off"
-                  />
-                  <Button
-                    type="primary"
-                    block
-                    loading={busy}
-                    disabled={!code.trim()}
-                    onClick={refreshSession}
-                  >
-                    安全换取会话
-                  </Button>
-                </div>
-              ),
-            },
-            {
-              key: "capture",
-              label: "远程抓包",
-              children: (
-                <div className="session-tab">
-                  <Alert
-                    type="warning"
-                    showIcon
-                    message="Android 无 Root 通常无法解密微信"
-                    description="Android 7+ 应用默认不信任用户 CA。若出现 TLS-FAILED，请在 Windows 的 Reqable 中对 getOpenId.action 设置发送前断点，复制 Code 后取消原请求，再到左侧立即提交。"
-                  />
-                  <ol className="capture-steps">
-                    <li>
-                      <span>1</span>
-                      <div>
-                        <strong>启动临时代理</strong>
-                        <p>仅向当前公网 IP 开放，并只解密目标业务域名。</p>
-                      </div>
-                    </li>
-                    <li>
-                      <span>2</span>
-                      <div>
-                        <strong>设置手机 Wi-Fi 代理</strong>
-                        <p>
-                          主机填写服务器公网 IP，端口填写 <code>13140</code>。
-                        </p>
-                      </div>
-                    </li>
-                    <li>
-                      <span>3</span>
-                      <div>
-                        <strong>观察活动后再判断兼容性</strong>
-                        <p>兼容设备安装 CA 后重启小程序；TLS-FAILED 表示证书被拒绝。</p>
-                      </div>
-                    </li>
-                  </ol>
-                  <div className="capture-status">
-                    <RadioTower size={18} />
-                    <div>
-                      <strong>{status?.capture.message}</strong>
-                      <span>
-                        {status?.capture.diagnosis || "当前未占用代理端口"}
-                      </span>
-                      {status?.capture.expiresAt && (
-                        <span>
-                          {formatDateTime(status.capture.expiresAt)} 自动关闭
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="capture-diagnostics" aria-live="polite">
-                    <div className="capture-diagnostics-head">
-                      <strong>实时代理活动</strong>
-                      <span>{status?.capture.events?.length || 0} 条</span>
-                    </div>
-                    {status?.capture.events?.length ? (
-                      <ol>
-                        {status.capture.events.map((event, index) => (
-                          <li key={`${index}-${event}`}>{event}</li>
-                        ))}
-                      </ol>
-                    ) : (
-                      <p>连接域名、目标请求和 TLS 失败会在这里实时出现。</p>
-                    )}
-                  </div>
-                  <div className="capture-actions">
-                    <Button
-                      href="/api/capture/certificate"
-                      target="_blank"
-                      icon={<Download size={16} />}
-                      disabled={!status?.capture.certReady}
-                    >
-                      下载 CA 证书
-                    </Button>
-                    {["starting", "waiting", "refreshing"].includes(
-                      status?.capture.status || "",
-                    ) ? (
-                      <Button danger loading={busy} onClick={stopCapture}>
-                        关闭代理
-                      </Button>
-                    ) : (
-                      <Button
-                        type="primary"
-                        icon={<Smartphone size={16} />}
-                        loading={busy}
-                        onClick={startCapture}
-                      >
-                        启动 5 分钟抓包
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ),
-            },
-          ]}
-        />
+        <div className="session-tab">
+          <Alert
+            type="warning"
+            showIcon
+            message="这里只用于凭证被撤销后的重新初始化"
+            description="wx.login Code 由微信运行时签发，Linux 服务不会伪造。当前凭证正常时无需填写任何内容。"
+          />
+          <label htmlFor="session-code">新的小程序 Code</label>
+          <Input.Password
+            id="session-code"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="仅在自动续期凭证失效后填写"
+            autoComplete="off"
+          />
+          <Button
+            type="primary"
+            block
+            loading={busy}
+            disabled={!code.trim()}
+            onClick={refreshSession}
+          >
+            重新初始化校友邦凭证
+          </Button>
+        </div>
       </Modal>
     </div>
   );

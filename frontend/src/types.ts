@@ -35,6 +35,7 @@ export interface ScheduleTask {
   time: string;
   mode: "in" | "out" | "photo_in" | "photo_out";
   image?: string;
+  randomImage?: boolean;
   nextAt?: string | null;
 }
 
@@ -46,6 +47,11 @@ export interface ScheduleState {
   timezone: string;
   notificationsEnabled: boolean;
   pushplusConfigured: boolean;
+  imageRotation: {
+    used: number;
+    total: number;
+    remaining: number;
+  };
 }
 
 export interface SystemStatus {
@@ -56,7 +62,16 @@ export interface SystemStatus {
     renewalAvailable: boolean;
     suffix: string;
     cachedAt: string | null;
-    expiresAt: string | null;
+    autoRenew: {
+      enabled: boolean;
+      credentialAvailable: boolean;
+      intervalMinutes: number;
+      status: "starting" | "active" | "renewing" | "retrying" | "not_initialized";
+      lastAttemptAt: string | null;
+      lastSuccessAt: string | null;
+      nextAttemptAt: string | null;
+      lastError: string;
+    };
   };
   task: TaskState;
   scheduler: ScheduleState;

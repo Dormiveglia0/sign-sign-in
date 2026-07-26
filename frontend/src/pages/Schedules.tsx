@@ -33,6 +33,7 @@ type TaskDraft = {
   time: Dayjs;
   mode: ScheduleTask["mode"];
   image?: string;
+  randomImage?: boolean;
 };
 
 const modeLabels: Record<ScheduleTask["mode"], string> = {
@@ -81,18 +82,25 @@ export default function Schedules() {
       time: dayjs().hour(hour).minute(minute).second(0),
       mode: task?.mode || "in",
       image: task?.image || "",
+      randomImage: task?.randomImage ?? true,
     });
     setTaskModal(true);
   }
 
   async function saveTask() {
     const values = await taskForm.validateFields();
+    const photoTask = values.mode.startsWith("photo_");
     const task: ScheduleTask = {
       time: values.time.format("HH:mm"),
       mode: values.mode,
-      image: values.image || "",
+      image: photoTask && !values.randomImage ? values.image || "" : "",
+      randomImage: photoTask && Boolean(values.randomImage),
     };
-    if (task.mode.startsWith("photo_") && !task.image) {
+    if (
+      task.mode.startsWith("photo_") &&
+      !task.randomImage &&
+      !task.image
+    ) {
       message.warning("拍照任务必须选择图片");
       return;
     }
@@ -132,10 +140,11 @@ export default function Schedules() {
           enabled: state.enabled,
           randomMinutes: state.randomMinutes,
           timezone: state.timezone,
-          tasks: state.tasks.map(({ time, mode, image }) => ({
+          tasks: state.tasks.map(({ time, mode, image, randomImage }) => ({
             time,
             mode,
             image: image || "",
+            randomImage: Boolean(randomImage),
           })),
           notificationsEnabled: state.notificationsEnabled,
           pushplusToken,
@@ -189,7 +198,7 @@ export default function Schedules() {
         type="info"
         showIcon
         message="调度由 Linux 后端执行"
-        description="服务器系统时间当前可以是 UTC；这里的时区设置会单独决定任务触发时间，默认使用 Asia/Shanghai。会话过期时任务会明确失败并通知，不会在无人值守时开放抓包端口。"
+        description="服务器系统时间可以是 UTC；这里的时区单独决定触发时间。校友邦 SESSION 失效时会先自动续期并重试，不会在无人值守时开放抓包端口。"
       />
 
       <div className="schedule-layout">
@@ -230,7 +239,11 @@ export default function Schedules() {
                 render: (value: ScheduleTask["mode"], record) => (
                   <div className="table-primary">
                     <strong>{modeLabels[value]}</strong>
-                    <span>{record.image || "无需图片"}</span>
+                    <span>
+                      {record.randomImage
+                        ? "图片库不重复随机（全部用完后重置）"
+                        : record.image || "无需图片"}
+                    </span>
                   </div>
                 ),
               },
@@ -321,6 +334,12 @@ export default function Schedules() {
                 }
               />
               <small>每项任务每天只计算一次随机时间。</small>
+            </div>
+            <div className="security-note">
+              <ShieldCheck size={16} />
+              随机图片本轮已使用 {state?.imageRotation?.used || 0} /{" "}
+              {state?.imageRotation?.total || 0}，剩余{" "}
+              {state?.imageRotation?.remaining || 0} 张；全部使用后自动开始新一轮。
             </div>
           </Card>
 
@@ -418,23 +437,47 @@ export default function Schedules() {
             />
           </Form.Item>
           <Form.Item noStyle shouldUpdate>
-            {({ getFieldValue }) =>
-              String(getFieldValue("mode") || "").startsWith("photo_") ? (
-                <Form.Item
-                  name="image"
-                  label="签到图片"
-                  rules={[{ required: true, message: "请选择图片" }]}
-                >
-                  <Select
-                    placeholder="选择服务器图片"
-                    options={images.map((item) => ({
-                      value: item.name,
-                      label: item.name,
-                    }))}
-                  />
-                </Form.Item>
-              ) : null
-            }
+            {({ getFieldValue }) => {
+              if (!String(getFieldValue("mode") || "").startsWith("photo_")) {
+                return null;
+              }
+              const usesRandomImage = Boolean(getFieldValue("randomImage"));
+              return (
+                <>
+                  <Form.Item
+                    name="randomImage"
+                    label="图片策略"
+                    valuePropName="checked"
+                  >
+                    <Switch
+                      checkedChildren="不重复随机"
+                      unCheckedChildren="固定图片"
+                    />
+                  </Form.Item>
+                  {usesRandomImage ? (
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="每次从图片库抽取一张未使用图片，全部用完后自动重置。"
+                    />
+                  ) : (
+                    <Form.Item
+                      name="image"
+                      label="签到图片"
+                      rules={[{ required: true, message: "请选择图片" }]}
+                    >
+                      <Select
+                        placeholder="选择服务器图片"
+                        options={images.map((item) => ({
+                          value: item.name,
+                          label: item.name,
+                        }))}
+                      />
+                    </Form.Item>
+                  )}
+                </>
+              );
+            }}
           </Form.Item>
         </Form>
       </Modal>

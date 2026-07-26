@@ -95,6 +95,9 @@ function normalizeBlogs(raw: unknown): Array<Record<string, unknown>> {
 export default function Journal() {
   const { message, modal } = App.useApp();
   const { status } = useWorkspace();
+  const credentialReady = Boolean(
+    status?.session.valid || status?.session.renewalAvailable,
+  );
   const [form] = Form.useForm<{
     prompt: string;
     content: string;
@@ -242,7 +245,7 @@ export default function Journal() {
           <Button
             icon={loading ? <LoaderCircle size={16} /> : <RefreshCw size={16} />}
             loading={loading}
-            disabled={!status?.session.valid}
+            disabled={!credentialReady}
             onClick={bootstrap}
           >
             {loaded ? "重新加载" : "加载校友邦数据"}
@@ -250,13 +253,13 @@ export default function Journal() {
         }
       />
 
-      {!status?.session.valid && (
+      {!credentialReady && (
         <Alert
           className="page-alert"
           type="warning"
           showIcon
-          message="需要有效的校友邦会话"
-          description="请先回到运行总览刷新 SESSION，之后才能读取周次或提交周记。若已配置自有模型，草稿生成仍可使用。"
+          message="需要可用的校友邦登录凭证"
+          description="请先回到运行总览初始化校友邦凭证。凭证存在时，SESSION 会由后台自动续期。若已配置自有模型，草稿生成仍可使用。"
         />
       )}
 
@@ -349,7 +352,7 @@ export default function Journal() {
                 type="primary"
                 icon={<Send size={16} />}
                 loading={submitting}
-                disabled={!status?.session.valid || !loaded}
+                disabled={!credentialReady || !loaded}
                 onClick={() => void submit()}
               >
                 提交到校友邦
