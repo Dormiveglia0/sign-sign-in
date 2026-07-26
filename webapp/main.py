@@ -98,10 +98,7 @@ runtime = Runtime()
 
 
 def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for", "")
-    return forwarded.split(",")[0].strip() or (
-        request.client.host if request.client else "unknown"
-    )
+    return request.client.host if request.client else "unknown"
 
 
 def _atomic_save_config(config: dict) -> None:
@@ -375,9 +372,9 @@ def delete_session():
 
 
 @protected.post("/capture")
-def start_capture():
+def start_capture(request: Request):
     try:
-        return runtime.capture.start()
+        return runtime.capture.start(_client_ip(request))
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

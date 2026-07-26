@@ -15,10 +15,16 @@ class MitmService:
     START_TIMEOUT_SECONDS = 6.0
     POLL_INTERVAL_SECONDS = 0.1
 
-    def __init__(self, host: str | None = None, port: int | None = None):
+    def __init__(
+        self,
+        host: str | None = None,
+        port: int | None = None,
+        allowed_client_ip: str = "",
+    ):
         configured_host, configured_port = MITM_PROXY.split(":")
         self.host = host or configured_host
         self.port = int(port or configured_port)
+        self.allowed_client_ip = allowed_client_ip
         self.check_host = "127.0.0.1" if self.host in {"0.0.0.0", "::"} else self.host
         self.addon = os.path.join(ADDONS_DIR, "get_code.py")
         self.confdir = MITM_CONF_DIR
@@ -71,8 +77,7 @@ class MitmService:
         return sys.executable
 
     def _build_launch_command(self):
-        common_args = [
-            "--mitm-runner",
+        runner_args = [
             "--host",
             self.host,
             "--port",
@@ -82,23 +87,18 @@ class MitmService:
             "--confdir",
             self.confdir,
         ]
+        if self.allowed_client_ip:
+            runner_args.extend(["--allow-client", self.allowed_client_ip])
 
         if getattr(sys, "frozen", False):
-            return [sys.executable, *common_args]
+            return [sys.executable, "--mitm-runner", *runner_args]
 
         python_executable = self._resolve_python_executable()
         return [
             python_executable,
             "-m",
             "app.mitm.embedded_runner",
-            "--host",
-            self.host,
-            "--port",
-            str(self.port),
-            "--addon",
-            self.addon,
-            "--confdir",
-            self.confdir,
+            *runner_args,
         ]
 
     @staticmethod

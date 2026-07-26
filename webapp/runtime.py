@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import ipaddress
 import json
 import logging
 import os
@@ -427,6 +428,7 @@ class CaptureManager:
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None
         self.service: MitmService | None = None
+        self.allowed_client_ip = ""
         self.state = {
             "status": "idle",
             "message": "抓包服务未启动",
@@ -446,13 +448,20 @@ class CaptureManager:
         ).exists()
         return state
 
-    def start(self) -> dict:
+    def start(self, allowed_client_ip: str) -> dict:
+        try:
+            allowed_client_ip = str(
+                ipaddress.ip_address(allowed_client_ip.split("%", 1)[0])
+            )
+        except ValueError as exc:
+            raise RuntimeError("无法识别当前客户端公网 IP") from exc
         with self.lock:
             if self.state["status"] in {"starting", "waiting", "refreshing"}:
                 raise RuntimeError("抓包服务已在运行")
             if self.task_manager.snapshot()["status"] in {"queued", "running", "stopping"}:
                 raise RuntimeError("请先等待当前任务结束")
             self.stop_event = threading.Event()
+            self.allowed_client_ip = allowed_client_ip
             self.state = {
                 "status": "starting",
                 "message": "正在启动临时抓包代理",
@@ -474,19 +483,35 @@ class CaptureManager:
             return copy.deepcopy(self.state)
 
     def _run(self) -> None:
-        channel = CodeChannel.instance()
-        channel.reset()
-        channel.start()
-        self.service = MitmService(host="0.0.0.0")
-        if not self.service.start():
+        try:
+            channel = CodeChannel.instance()
+            channel.reset()
+            channel.start()
+            self.service = MitmService(
+                host="0.0.0.0",
+                allowed_client_ip=self.allowed_client_ip,
+            )
+            if not self.service.start():
+                with self.lock:
+                    self.state["status"] = "failed"
+                    self.state["message"] = (
+                        self.service.last_error or "抓包代理启动失败"
+                    )
+                    self.state["expiresAt"] = None
+                return
+        except Exception as exc:
             with self.lock:
                 self.state["status"] = "failed"
-                self.state["message"] = self.service.last_error or "抓包代理启动失败"
+                self.state["message"] = f"抓包代理启动失败: {exc}"
+                self.state["expiresAt"] = None
+            logging.exception("抓包代理启动失败")
             return
 
         with self.lock:
             self.state["status"] = "waiting"
-            self.state["message"] = "等待校友邦小程序请求"
+            self.state["message"] = (
+                f"等待校友邦小程序请求（仅允许 {self.allowed_client_ip}）"
+            )
             self.state["certReady"] = True
         logging.info("🛡️ 临时抓包代理已启动，5 分钟后自动关闭")
 

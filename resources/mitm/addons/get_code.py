@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import os
 from datetime import datetime
@@ -147,6 +148,24 @@ def write_payload(payload: dict):
 class GetCode:
     XYB_TARGET = "getOpenId.action"
     JIELONG_TARGET = "/api/User/Token"
+
+    def client_connected(self, client):
+        allowed = os.environ.get("SIGN_MITM_ALLOWED_CLIENT", "").strip()
+        if not allowed:
+            return
+        try:
+            peer = ipaddress.ip_address(client.peername[0].split("%", 1)[0])
+            expected = ipaddress.ip_address(allowed.split("%", 1)[0])
+            if isinstance(peer, ipaddress.IPv6Address):
+                peer = peer.ipv4_mapped or peer
+            if isinstance(expected, ipaddress.IPv6Address):
+                expected = expected.ipv4_mapped or expected
+        except ValueError:
+            client.error = "Invalid proxy client address."
+            return
+        if peer != expected:
+            append_packet_log(f"[MITM] 已拒绝非授权客户端: {peer}")
+            client.error = "Proxy client address is not allowed."
 
     def _capture_xyb_code(self, flow: http.HTTPFlow):
         code = flow.request.urlencoded_form.get("code")

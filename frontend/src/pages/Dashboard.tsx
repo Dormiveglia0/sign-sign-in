@@ -542,15 +542,15 @@ export default function Dashboard() {
                   <Alert
                     type="warning"
                     showIcon
-                    message="代理端口必须能从手机访问"
-                    description="当前 Web 隧道只转发控制台，不会转发 13140 代理端口。请填写服务器公网 IP，而不是本页域名。代理只开放 5 分钟并会自动关闭。"
+                    message="手机与控制台须使用同一公网出口"
+                    description="代理仅允许点击启动按钮时的公网 IP。请让手机与当前控制台连接同一 Wi-Fi；主机填写服务器公网 IP，端口填写 13140。"
                   />
                   <ol className="capture-steps">
                     <li>
                       <span>1</span>
                       <div>
                         <strong>启动临时代理</strong>
-                        <p>监听服务器的 13140 端口，5 分钟后自动回收。</p>
+                        <p>仅向当前公网 IP 开放 13140，5 分钟后自动回收。</p>
                       </div>
                     </li>
                     <li>
@@ -566,7 +566,7 @@ export default function Dashboard() {
                       <span>3</span>
                       <div>
                         <strong>安装证书并打开小程序</strong>
-                        <p>重新进入校友邦，捕获后服务会自动刷新 SESSION。</p>
+                        <p>先安装下方 CA 证书，再彻底关闭并重新进入校友邦。</p>
                       </div>
                     </li>
                   </ol>

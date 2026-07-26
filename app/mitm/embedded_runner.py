@@ -5,7 +5,7 @@ import os
 def build_mitmdump_args(args):
     addon = os.path.abspath(args.addon)
     confdir = os.path.abspath(args.confdir)
-    return [
+    result = [
         "--listen-host",
         args.host,
         "--listen-port",
@@ -16,6 +16,9 @@ def build_mitmdump_args(args):
         addon,
         "--quiet",
     ]
+    if args.allow_client:
+        result.extend(["--set", "block_global=false"])
+    return result
 
 
 def parse_args(argv=None):
@@ -24,11 +27,14 @@ def parse_args(argv=None):
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--addon", required=True)
     parser.add_argument("--confdir", required=True)
+    parser.add_argument("--allow-client", default="")
     return parser.parse_args(argv)
 
 
 def main(argv=None):
     args = parse_args(argv)
+    if args.allow_client:
+        os.environ["SIGN_MITM_ALLOWED_CLIENT"] = args.allow_client
     os.makedirs(os.path.abspath(args.confdir), exist_ok=True)
     from mitmproxy.tools.main import mitmdump
 
