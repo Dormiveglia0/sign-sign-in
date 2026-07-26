@@ -509,10 +509,10 @@ export default function Dashboard() {
               children: (
                 <div className="session-tab">
                   <Alert
-                    type="info"
+                    type="warning"
                     showIcon
-                    message="Code 只用于本次换取会话"
-                    description="服务器不会保存 Code；换取成功后的 SESSION 不再按 24 小时强制过期，仅在校友邦明确返回未登录时清除。"
+                    message="必须提交尚未发送的 Code"
+                    description="Code 只能换取一次。Reqable 请在 getOpenId.action 请求发送前设置断点，复制 Code 后取消原请求，再立即提交；已完成请求或 Windows 客户端“获取 Code”日志里的 Code 已被使用。"
                   />
                   <label htmlFor="session-code">小程序 Code</label>
                   <Input.Password
@@ -543,7 +543,7 @@ export default function Dashboard() {
                     type="warning"
                     showIcon
                     message="Android 无 Root 通常无法解密微信"
-                    description="Android 7+ 应用默认不信任用户 CA。代理只解密校友邦/接龙域名，普通网页会直接转发；若下方出现 TLS-FAILED，说明该设备无法远程抓取，请用 Windows 微信或 Reqable 获取 Code 后在左侧填入。"
+                    description="Android 7+ 应用默认不信任用户 CA。若出现 TLS-FAILED，请在 Windows 的 Reqable 中对 getOpenId.action 设置发送前断点，复制 Code 后取消原请求，再到左侧立即提交。"
                   />
                   <ol className="capture-steps">
                     <li>

@@ -6,9 +6,11 @@ import tempfile
 import time
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import requests
 
+from app.apis import xybsyw
 from app.mitm.embedded_runner import build_mitmdump_args
 from app.mitm.service import MitmService
 from app.utils import files as file_utils
@@ -31,8 +33,32 @@ def check_session_cache_has_no_local_expiry():
         file_utils.SESSION_CACHE_FILE = original
 
 
+def check_consumed_code_message():
+    response = SimpleNamespace(
+        json=lambda: {"code": "202", "msg": "获取openid失败！"},
+        text='{"code":"202"}',
+    )
+    config = {"device": {}, "userAgent": "test"}
+    with (
+        patch.object(
+            xybsyw,
+            "_build_security_context",
+            return_value={"params": {}, "url_token": ""},
+        ),
+        patch.object(xybsyw, "get_device_code", return_value=""),
+        patch.object(xybsyw.requests, "post", return_value=response),
+    ):
+        try:
+            xybsyw.get_open_id(config, "used-code")
+        except RuntimeError as exc:
+            assert "请求发送前设置断点" in str(exc)
+        else:
+            raise AssertionError("Consumed Code should fail")
+
+
 def main():
     check_session_cache_has_no_local_expiry()
+    check_consumed_code_message()
     capture_command = MitmService(
         host="0.0.0.0",
         allowed_client_ip="203.0.113.7",

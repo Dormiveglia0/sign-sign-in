@@ -330,8 +330,12 @@ def get_open_id(config, code):
         )
         logging.debug(f"📡 收到响应:{response} {response.text}")
         res = response.json()
-        if res.get('code') == '202':
-            raise RuntimeError(f'code已失效，请重启小程序。接口响应：{res}')
+        if str(res.get('code')) == '202':
+            raise RuntimeError(
+                "Code 已被消费或过期。Reqable 必须在 getOpenId.action 请求发送前"
+                "设置断点，复制 Code 后取消原请求，再立即提交；已完成请求或 "
+                "Windows 客户端“获取 Code”日志里的 Code 不能二次使用。"
+            )
         return _require_data(response, "获取OpenID失败")
     except Exception as e:
         raise RuntimeError(f"获取OpenID失败: {e}")
