@@ -10,6 +10,7 @@ import {
   Select,
   Skeleton,
   Table,
+  Tabs,
   Tooltip,
 } from "antd";
 import {
@@ -19,12 +20,15 @@ import {
   CheckCircle2,
   CircleStop,
   Clock3,
+  Download,
   KeyRound,
   ListChecks,
   Play,
+  RadioTower,
   RefreshCw,
   Server,
   ShieldCheck,
+  Smartphone,
   TerminalSquare,
 } from "lucide-react";
 import { api, formatDateTime } from "../api";
@@ -174,6 +178,32 @@ export default function Dashboard() {
       await refreshStatus();
     } catch (error) {
       message.error(error instanceof Error ? error.message : "验证失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function startCapture() {
+    setBusy(true);
+    try {
+      await api("/api/capture", { method: "POST" });
+      message.success("临时抓包代理正在启动");
+      await refreshStatus();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "启动失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function stopCapture() {
+    setBusy(true);
+    try {
+      await api("/api/capture", { method: "DELETE" });
+      message.info("抓包代理正在关闭");
+      await refreshStatus();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "关闭失败");
     } finally {
       setBusy(false);
     }
@@ -590,7 +620,7 @@ export default function Dashboard() {
         open={sessionOpen}
         onCancel={() => setSessionOpen(false)}
         footer={null}
-        width={640}
+        width={700}
         title={
           <div className="modal-title">
             <KeyRound size={19} />
@@ -613,31 +643,139 @@ export default function Dashboard() {
           }
           style={{ marginBottom: 16 }}
         />
-        <div className="session-tab">
-          <Alert
-            type="warning"
-            showIcon
-            message="这里只用于凭证被撤销后的重新初始化"
-            description="wx.login Code 由微信运行时签发，Linux 服务不会伪造。当前凭证正常时无需填写任何内容。"
-          />
-          <label htmlFor="session-code">新的小程序 Code</label>
-          <Input.Password
-            id="session-code"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="仅在自动续期凭证失效后填写"
-            autoComplete="off"
-          />
-          <Button
-            type="primary"
-            block
-            loading={busy}
-            disabled={!code.trim()}
-            onClick={refreshSession}
-          >
-            重新初始化校友邦凭证
-          </Button>
-        </div>
+        <Tabs
+          items={[
+            {
+              key: "manual",
+              label: "输入 Code",
+              children: (
+                <div className="session-tab">
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="Code 只能换取一次"
+                    description="请提交尚未被小程序发送的 wx.login Code；已经请求过 getOpenId.action 的 Code 会失效。"
+                  />
+                  <label htmlFor="session-code">新的小程序 Code</label>
+                  <Input.Password
+                    id="session-code"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    placeholder="输入尚未使用的 Code"
+                    autoComplete="off"
+                  />
+                  <Button
+                    type="primary"
+                    block
+                    loading={busy}
+                    disabled={!code.trim()}
+                    onClick={refreshSession}
+                  >
+                    更新校友邦凭证
+                  </Button>
+                </div>
+              ),
+            },
+            {
+              key: "capture",
+              label: "代理自动获取",
+              children: (
+                <div className="session-tab">
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="通过代理自动捕获 Code 并更新 SESSION"
+                    description="启动后会显示设备连接、访问域名、目标请求和 TLS 失败；捕获成功后会自动关闭代理并刷新凭证。"
+                  />
+                  <ol className="capture-steps">
+                    <li>
+                      <span>1</span>
+                      <div>
+                        <strong>启动临时代理</strong>
+                        <p>仅允许当前公网 IP 连接，5 分钟后自动关闭。</p>
+                      </div>
+                    </li>
+                    <li>
+                      <span>2</span>
+                      <div>
+                        <strong>设置设备代理</strong>
+                        <p>
+                          主机 <code>{window.location.hostname}</code>，端口{" "}
+                          <code>13140</code>；普通网站会透传，目标域名才解密。
+                        </p>
+                      </div>
+                    </li>
+                    <li>
+                      <span>3</span>
+                      <div>
+                        <strong>查看实时活动</strong>
+                        <p>
+                          始终为 0 条表示设备未连到代理；TLS-FAILED
+                          表示客户端不信任用户 CA。
+                        </p>
+                      </div>
+                    </li>
+                  </ol>
+                  <div className="capture-status">
+                    <RadioTower size={18} />
+                    <div>
+                      <strong>{status?.capture.message}</strong>
+                      <span>
+                        {status?.capture.diagnosis || "当前未占用代理端口"}
+                      </span>
+                      {status?.capture.expiresAt && (
+                        <span>
+                          {formatDateTime(status.capture.expiresAt)} 自动关闭
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="capture-diagnostics" aria-live="polite">
+                    <div className="capture-diagnostics-head">
+                      <strong>实时代理活动</strong>
+                      <span>{status?.capture.events?.length || 0} 条</span>
+                    </div>
+                    {status?.capture.events?.length ? (
+                      <ol>
+                        {status.capture.events.map((event, index) => (
+                          <li key={`${index}-${event}`}>{event}</li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p>连接设备后，这里会持续显示实际收到的代理活动。</p>
+                    )}
+                  </div>
+                  <div className="capture-actions">
+                    <Button
+                      href="/api/capture/certificate"
+                      target="_blank"
+                      icon={<Download size={16} />}
+                      disabled={!status?.capture.certReady}
+                    >
+                      下载 CA 证书
+                    </Button>
+                    {["starting", "waiting", "refreshing"].includes(
+                      status?.capture.status || "",
+                    ) ? (
+                      <Button danger loading={busy} onClick={stopCapture}>
+                        关闭代理
+                      </Button>
+                    ) : (
+                      <Button
+                        type="primary"
+                        icon={<Smartphone size={16} />}
+                        loading={busy}
+                        onClick={startCapture}
+                      >
+                        启动 5 分钟代理
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+          ]}
+        />
       </Modal>
     </div>
   );

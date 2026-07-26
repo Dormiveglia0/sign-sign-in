@@ -676,6 +676,7 @@ code {
 
 .dashboard-grid {
   display: grid;
+  align-items: start;
   grid-template-columns: minmax(0, 1fr) 310px;
   gap: 20px;
 }
@@ -877,28 +878,29 @@ code {
 }
 
 .session-orbit {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: 58px minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  padding: 20px 0 32px;
-  text-align: center;
+  gap: 2px 14px;
+  padding: 14px 0 18px;
+  text-align: left;
 }
 
 .session-ring {
   display: grid;
-  width: 84px;
-  height: 84px;
-  margin-bottom: 18px;
+  width: 54px;
+  height: 54px;
+  margin: 0;
   place-items: center;
+  grid-row: 1 / span 2;
   border: 1px solid #ded7c9;
   border-radius: 50%;
   background: #faf6ee;
   color: #ad762d;
   box-shadow:
-    0 0 0 8px #fff,
-    0 0 0 9px #e8e5dd;
+    0 0 0 5px #fff,
+    0 0 0 6px #e8e5dd;
 }
 
 .session-ring.valid {
@@ -906,8 +908,8 @@ code {
   background: #edf6f3;
   color: #147569;
   box-shadow:
-    0 0 0 8px #fff,
-    0 0 0 9px #dce9e6;
+    0 0 0 5px #fff,
+    0 0 0 6px #dce9e6;
 }
 
 .session-orbit strong {
@@ -923,8 +925,9 @@ code {
 
 .session-detail-grid {
   width: 100%;
-  margin-top: 18px;
+  margin-top: 12px;
   overflow: hidden;
+  grid-column: 1 / -1;
   border: 1px solid #e3e8e6;
   border-radius: 8px;
   background: #f8faf9;
@@ -1439,6 +1442,20 @@ code {
 .security-panel strong {
   margin-top: 5px;
   font-size: 12px;
+}
+
+.security-password-button {
+  border-color: #8ab8b2;
+  background: #fff;
+  color: #126c63;
+  font-weight: 650;
+}
+
+.security-password-button:hover,
+.security-password-button:focus-visible {
+  border-color: #0f766e !important;
+  background: #edf7f5 !important;
+  color: #0f766e !important;
 }
 
 /* Journal */

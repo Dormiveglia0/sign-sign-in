@@ -432,7 +432,11 @@ export default function SettingsPage() {
                       <span>Cookie 策略</span>
                       <strong>HttpOnly · SameSite Strict</strong>
                     </div>
-                    <Button type="primary" onClick={() => setPasswordOpen(true)}>
+                    <Button
+                      className="security-password-button"
+                      icon={<KeyRound size={15} />}
+                      onClick={() => setPasswordOpen(true)}
+                    >
                       修改管理员密码
                     </Button>
                   </div>
