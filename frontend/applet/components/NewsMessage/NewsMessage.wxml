@@ -1,0 +1,22 @@
+<block wx:if="{{$taroCompReady}}">
+    <view catchtap="anonymousFunc0" class="NewsMessage_box" wx:if="{{newsListFlg}}"></view>
+    <view class="{{['NewsMessage',!newBoxFlg&&'NewsMessage_hide']}}">
+        <view class="newsMessage_icons">
+            <image catchtap="anonymousFunc1" class="newsMessagei_close" src="https://xcxstatic.xybsyw.com/xcx/images/news_newsMessage_close.png"></image>
+            <image catchtap="anonymousFunc2" class="newsMessagei_img" src="https://xcxstatic.xybsyw.com/xcx/images/news_newsMessage_icon1.png" wx:if="{{isLottieOut}}"></image>
+            <canvas class="newsMessagei_img" id="lottie_demo" style="display:inline-block;width:50px;height:50px;" type="2d" wx:if="{{!isLottieOut}}"></canvas>
+            <view class="news_list" wx:if="{{newsListFlg}}">
+                <view catchtap="anonymousFunc3" class="{{['news_list_item',item[$original].id==activeItem&&'news_list_item_active']}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1294}}">
+                    <text class="nli_companyname">{{item[$original].enterpriseName}}<block wx:if="{{item[$original].dealType==0}}">邀请您投递简历</block>
+                        <block wx:if="{{item[$original].dealType==1}}">给你发了消息</block>
+                        <block wx:if="{{item[$original].dealType==2}}">邀请您参加面试</block>
+                        <block wx:if="{{item[$original].dealType==3}}">查看了您的简历</block>
+                        <block wx:if="{{item[$original].dealType==4}}">初筛通过</block>
+                    </text>
+                    <text class="nli_mark" wx:if="{{item[$original].unReadNum>0}}">{{item[$original].unReadNum}}</text>
+                </view>
+                <view catchtap="anonymousFunc4" class="news_list_allread">全部已读</view>
+            </view>
+        </view>
+    </view>
+</block>

@@ -1,0 +1,30 @@
+<popup compid="{{$compid__2726}}" wx:if="{{$taroCompReady}}">
+    <view class="win_main">
+        <view class="win_title">
+            <text class="win_name">{{winName}}</text>
+            <view bindtap="anonymousFunc1" class="gunbi_icon" wx:if="{{closeIcon}}">
+                <at-icon compid="{{$compid__2727}}"></at-icon>
+            </view>
+        </view>
+        <view class="success_text" wx:if="{{jobHuntDtoNeed}}">
+            <text class="iconfont icon-wancheng"></text>求职意向保存成功</view>
+        <view class="success_text" wx:if="{{educationexpNeed}}">
+            <text class="iconfont icon-wancheng"></text>教育经历保存成功</view>
+        <view class="tip_box">{{jobHuntDtoNeed?'当前所选意向职位有以下技能要求，是否可以做为您的职位推荐依据':'根据您的专业，为您推荐您的专业需要的技能，请您选择当前自己技能的掌握情况，我们将根据您的技能为您推荐合适的职位'}}</view>
+        <view class="job_info_right">
+            <view class="skill_list" wx:if="{{skillList&&skillList.length>0}}">
+                <view bindtap="anonymousFunc2" class="skill_item" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1343}}">
+                    <view class="skill_text cut_text">{{item[$original].name}}</view>
+                    <text class="iconfont icon-guanbi"></text>
+                </view>
+            </view>
+        </view>
+        <view bindtap="anonymousFunc3" class="confirm_btn" wx:if="{{skillList&&skillList.length>0}}">确定</view>
+        <view wx:if="{{skillList.length===0}}">
+            <view class="no_answer_other_container">
+                <image src="https://xcxstatic.xybsyw.com/static/nodata_2.png"></image>
+                <text class="no_answer_other_container_des">暂无{{winName}}信息</text>
+            </view>
+        </view>
+    </view>
+</popup>

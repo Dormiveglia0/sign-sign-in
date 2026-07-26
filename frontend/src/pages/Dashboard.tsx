@@ -205,10 +205,16 @@ export default function Dashboard() {
       },
       {
         label: "校友邦会话",
-        value: status?.session.valid ? "有效" : "待刷新",
+        value: status?.session.valid
+          ? "有效"
+          : status?.session.renewalAvailable
+            ? "待自动续期"
+            : "待初始化",
         detail: status?.session.valid
-          ? `尾号 ${status.session.suffix} · 服务端失效前持续复用`
-          : "执行任务前需要获取",
+          ? `尾号 ${status.session.suffix} · 已启用按需静默续期`
+          : status?.session.renewalAvailable
+            ? "下次任务会自动换取新 SESSION"
+            : "首次使用需要获取一次 Code",
         icon: KeyRound,
         tone: status?.session.valid ? "success" : "warning",
       },
@@ -501,6 +507,21 @@ export default function Dashboard() {
           </div>
         }
       >
+        <Alert
+          type={status?.session.renewalAvailable ? "success" : "info"}
+          showIcon
+          message={
+            status?.session.renewalAvailable
+              ? "后续无需再手动更新"
+              : "首次初始化需要一个有效 Code"
+          }
+          description={
+            status?.session.renewalAvailable
+              ? "服务器已保存小程序登录凭证，会按源码中的 AutoLogin 流程自动换取新 SESSION。下面的方式只在你主动退出、解绑或凭证被服务端撤销后才需要。"
+              : "首次成功登录后会保存 AutoLogin 凭证，后续 SESSION 失效将由服务器静默续期。"
+          }
+          style={{ marginBottom: 16 }}
+        />
         <Tabs
           items={[
             {

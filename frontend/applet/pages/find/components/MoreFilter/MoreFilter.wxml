@@ -1,0 +1,30 @@
+<popup compid="{{$compid__2209}}" wx:if="{{$taroCompReady}}">
+    <view class="more-filter-bar">更多筛选<text bindtap="anonymousFunc1" class="iconfont icon-guanbi"></text>
+    </view>
+    <view class="more-filter">
+        <view class="more-filter-title">职位类型</view>
+        <view class="more-filter-content">
+            <view bindtap="anonymousFunc2" class="{{item[$loopState__temp2]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1064}}" wx:for-index="__index2" wx:key="id">{{item[$original].name}}</view>
+        </view>
+        <view class="more-filter-title">薪资范围</view>
+        <view class="more-filter-content">
+            <view bindtap="anonymousFunc3" class="{{item[$loopState__temp4]}}" data-e-tap-a-a="{{item[_$indexKey2]}}" data-e-tap-so="this" wx:for="{{loopArray1065}}" wx:for-index="__index3" wx:key="id">{{item[$original].name}}</view>
+        </view>
+        <view class="more-filter-title">学历要求</view>
+        <view class="more-filter-content">
+            <view bindtap="anonymousFunc4" class="{{item[$loopState__temp6]}}" data-e-tap-a-a="{{item[_$indexKey3]}}" data-e-tap-so="this" wx:for="{{loopArray1066}}" wx:for-index="__index4" wx:key="id">{{item[$original].name}}</view>
+        </view>
+        <view class="more-filter-title">公司规模</view>
+        <view class="more-filter-content">
+            <view bindtap="anonymousFunc5" class="{{item[$loopState__temp8]}}" data-e-tap-a-a="{{item[_$indexKey4]}}" data-e-tap-so="this" wx:for="{{loopArray1067}}" wx:for-index="__index5" wx:key="id">{{item[$original].name}}</view>
+        </view>
+        <view class="more-filter-title">公司性质</view>
+        <view class="more-filter-content">
+            <view bindtap="anonymousFunc6" class="{{item[$loopState__temp10]}}" data-e-tap-a-a="{{item[_$indexKey5]}}" data-e-tap-so="this" wx:for="{{loopArray1068}}" wx:for-index="__index6" wx:key="id">{{item[$original].name}}</view>
+        </view>
+    </view>
+    <view class="more-filter-btn">
+        <view bindtap="anonymousFunc7" class="reset">重置</view>
+        <view bindtap="anonymousFunc8" class="confirm">确认</view>
+    </view>
+</popup>

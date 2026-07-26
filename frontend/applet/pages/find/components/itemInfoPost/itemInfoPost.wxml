@@ -1,0 +1,21 @@
+<view bindtap="toNewsDetail" class="recommend_item_box" data-id="{{itemDataNew.id}}">
+    <view class="news_img" wx:if="{{itemDataNew.imgList&&itemDataNew.imgList.length>0}}">
+        <view class="zxOneImg">
+            <image binderror="listImgError" class="no_data_img" data-imgindex="0" data-index="{{itemIndex}}" lazyLoad="true" mode="aspectFill" src="{{itemDataNew.imgList[0]}}"></image>
+        </view>
+    </view>
+    <view class="news_main">{{itemDataNew.title}}</view>
+    <view class="item_footer">
+        <view class="tag_awesome">
+            <view catchtap="awesome" class="tag_awesome_bind" data-id="{{itemDataNew.id}}" data-index="{{itemIndex}}" data-status="{{itemDataNew.praise}}"></view>
+            <image binderror="" bindload="" class="like_gif" lazyLoad="false" mode="aspectFit|aspectFill|widthFix" src="https://xcxstatic.xybsyw.com/xcx/images/firstPageLike.gif" wx:if="{{itemDataNew.showLikeGif}}"></image>
+            <text class="like_gif_bkg" wx:if="{{itemDataNew.showLikeGif}}"></text>
+            <text class="{{itemDataNew.praise?'awesome_icon_on':'awesome_icon'}}"></text>
+            <text class="awesome_text {{itemDataNew.praise?'awesome_text_red':''}}">{{itemDataNew.totalPraise==0||itemDataNew.totalPraise==null?'':itemDataNew.totalPraise}}</text>
+        </view>
+        <view class="liulanV">
+            <image class="zan_icon" src="https://xcxstatic.xybsyw.com/xcx/images/hot_liulan.png"></image>
+            <text class="liulanText">{{itemData.totalBrowse==0?'浏览':itemData.totalBrowse}}</text>
+        </view>
+    </view>
+</view>

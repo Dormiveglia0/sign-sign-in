@@ -1,0 +1,42 @@
+{
+  "usingComponents": {
+    "homepage-guide": "../../../components/HomepageGuide/HomepageGuide",
+    "home-tab": "../../../components/HomeTab/HomeTab",
+    "part-time-tab-guide": "../../../components/PartTimeTabGuide/PartTimeTabGuide",
+    "briefing-session-card": "../../../components/BriefingSessionCard/BriefingSessionCard",
+    "kong-view": "../components/KongView/KongView",
+    "post-card-list": "../components/PostCardList/PostCardList",
+    "message-bar": "../../../components/MessageBar/MessageBar",
+    "offer-hero": "../../../componentsBag/OfferHero/OfferHero",
+    "part-time-job": "../../../componentsBag/PartTimeJob/PartTimeJob",
+    "fastlogin": "../../../components/fastlogin/fastlogin",
+    "bottom-tabbar": "../../../components/bottom-tabbar/bottom-tabbar",
+    "forbiddenlogin": "../../../components/forbidden-login/forbidden-login",
+    "job-status-popup": "../../../components/JobStatusPopup/jobStatusPopup",
+    "city-select": "../../../components/CitySelect/citySelect",
+    "intention-popup": "../components/IntentionPopup/IntentionPopup",
+    "single-select": "../../../components/singleSelect/SingleSelect",
+    "more-filter": "../components/MoreFilter/MoreFilter",
+    "full-screen-ad": "../components/FullScreenAd/FullScreenAd",
+    "growth-plan-chat": "../../../componentsBag/GrowthPlanChat/GrowthPlanChat",
+    "internship-reminder-popup": "../../../componentsBag/InternshipReminderPopup/InternshipReminderPopup",
+    "van-tabs": "../../../vant-weapp/dist/tabs/index",
+    "van-tab": "../../../vant-weapp/dist/tab/index",
+    "van-icon": "../../../vant-weapp/dist/icon/index",
+    "van-button": "../../../vant-weapp/dist/button/index",
+    "van-popup": "../../../vant-weapp/dist/popup/index",
+    "van-dialog": "../../../vant-weapp/dist/dialog/index",
+    "van-search": "vant-weapp/dist/search/index"
+  },
+  "navigationBarTitleText": "校友邦",
+  "navigationBarBackgroundColor": "#FF453A",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "navigationBarTextStyle": "black",
+  "componentPlaceholder": {
+    "offer-hero": "view",
+    "growth-plan-chat": "view",
+    "internship-reminder-popup": "view",
+    "part-time-job": "view"
+  }
+}

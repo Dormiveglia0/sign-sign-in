@@ -1,0 +1,9 @@
+<block wx:if="{{$taroCompReady}}">
+    <view wx:if="{{!list||!list.length}}"></view>
+    <view class="home-tab" wx:else>
+        <view bindtap="anonymousFunc0" class="{{item[$loopState__temp2]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1071}}" wx:for-index="__index0" wx:key="id">
+            <view class="{{item[$loopState__temp4]}}">{{item[$original].name}}<view class="home-tab-item-dot" wx:if="{{item[$original].dot}}"></view>
+            </view>
+        </view>
+    </view>
+</block>

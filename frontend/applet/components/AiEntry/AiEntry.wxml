@@ -1,0 +1,6 @@
+<block wx:if="{{$taroCompReady}}">
+    <block wx:if="{{isLogin&&userId!='292903'}}">
+        <image bindtap="anonymousFunc0" class="{{anonymousState__temp}}" mode="widthFix" src="https://xcxstatic.xybsyw.com/xcx/images/ai-entry-icon.png"></image>
+        <image bindtap="anonymousFunc1" class="{{anonymousState__temp2}}" mode="widthFix" src="https://xcxstatic.xybsyw.com/xcx/images/ai-entry-small.png"></image>
+    </block>
+</block>

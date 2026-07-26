@@ -1,0 +1,11 @@
+<view class="cut_img_box" wx:if="{{$taroCompReady}}">
+    <image-cropper compid="{{$compid__2731}}" id="image-cropper"></image-cropper>
+    <text catchtap="anonymousFunc0" class="rotate_btn" data-type="rotate"></text>
+    <view class="bottom_warp">
+        <view class="b_warp">
+            <text catchtap="anonymousFunc1" class="text1">取消</text>
+            <text catchtap="anonymousFunc2" class="text2">还原</text>
+            <text catchtap="anonymousFunc3" class="text3">完成</text>
+        </view>
+    </view>
+</view>

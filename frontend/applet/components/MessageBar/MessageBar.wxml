@@ -1,0 +1,11 @@
+<block wx:if="{{$taroCompReady}}">
+    <view bindtap="anonymousFunc0" class="vip-message-bar" wx:if="{{vipTrialBarVisible&&showVipMessage}}">
+        <text class="vip-message-bar-text">恭喜您获得 {{vipTrialDays}} 天体验会员！查看名企岗位 →</text>
+        <text catchtap="anonymousFunc1" class="vip-message-bar-close">关闭</text>
+    </view>
+    <view bindtap="anonymousFunc2" class="message-bar" wx:if="{{deliverMessageVisible&&messageInfo.studentName&&showDeliverMessage&&!vipTrialBarVisible}}">
+        <view class="message-title">
+            <image class="message-bar-icon" mode="widthFix" src="https://xcxstatic.xybsyw.com/xcx/images/message-bar-icon.png"></image>{{messageInfo.studentName}}，你好</view>
+        <view class="message-content">{{messageInfo.enterpriseName}}HR对您的经历很感兴趣，邀请您投递【{{messageInfo.postName}}】岗位，快去接受邀约吧！→</view>
+    </view>
+</block>

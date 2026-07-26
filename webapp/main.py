@@ -43,6 +43,8 @@ from app.apis.jielong import (
     submit_record,
 )
 from app.apis.xybsyw import (
+    SessionExpired,
+    auto_login,
     blog_list,
     get_default_plan,
     get_plan,
@@ -164,6 +166,13 @@ async def _blocking(function, *args, **kwargs):
         return await run_in_threadpool(function, *args, **kwargs)
     except HTTPException:
         raise
+    except SessionExpired:
+        try:
+            config = read_config(CONFIG_FILE)
+            await run_in_threadpool(auto_login, config["input"])
+            return await run_in_threadpool(function, *args, **kwargs)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -330,7 +339,10 @@ class TaskInput(BaseModel):
 @protected.post("/tasks")
 def start_task(payload: TaskInput):
     status = runtime.status()
-    if not status["session"]["valid"]:
+    if not (
+        status["session"]["valid"]
+        or status["session"]["renewalAvailable"]
+    ):
         raise HTTPException(status_code=409, detail="会话无效，请先刷新会话")
     image_path = ""
     if payload.mode.startswith("photo_"):

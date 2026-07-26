@@ -1,0 +1,147 @@
+.van-ellipsis,.van-multi-ellipsis--l2,.van-multi-ellipsis--l3 {
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis
+}
+
+.van-ellipsis {
+    white-space: nowrap
+}
+
+.van-multi-ellipsis--l2,.van-multi-ellipsis--l3 {
+    -webkit-line-clamp: 2;
+    display: -webkit-box
+}
+
+.van-multi-ellipsis--l3 {
+    -webkit-line-clamp: 3
+}
+
+.van-clearfix:after {
+    clear: both;
+    content: "";
+    display: table
+}
+
+.van-hairline,.van-hairline--bottom,.van-hairline--left,.van-hairline--right,.van-hairline--surround,.van-hairline--top,.van-hairline--top-bottom {
+    position: relative
+}
+
+.van-hairline--bottom:after,.van-hairline--left:after,.van-hairline--right:after,.van-hairline--surround:after,.van-hairline--top-bottom:after,.van-hairline--top:after,.van-hairline:after {
+    border: 0 solid #eee;
+    bottom: -50%;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    content: " ";
+    left: -50%;
+    pointer-events: none;
+    position: absolute;
+    right: -50%;
+    top: -50%;
+    -webkit-transform: scale(.5);
+    -ms-transform: scale(.5);
+    transform: scale(.5);
+    -webkit-transform-origin: center;
+    -ms-transform-origin: center;
+    transform-origin: center
+}
+
+.van-hairline--top:after {
+    border-top-width: 1px
+}
+
+.van-hairline--left:after {
+    border-left-width: 1px
+}
+
+.van-hairline--right:after {
+    border-right-width: 1px
+}
+
+.van-hairline--bottom:after {
+    border-bottom-width: 1px
+}
+
+.van-hairline--top-bottom:after {
+    border-width: 1px 0
+}
+
+.van-hairline--surround:after {
+    border-width: 1px
+}
+
+.van-dialog {
+    background-color: #fff;
+    border-radius: 4px;
+    font-size: 16px;
+    overflow: hidden;
+    top: 45%!important;
+    width: 85%
+}
+
+.van-dialog__header {
+    font-weight: 500;
+    line-height: 24px;
+    padding-top: 25px;
+    text-align: center
+}
+
+.van-dialog__header--isolated {
+    padding: 25px 0
+}
+
+.van-dialog__message {
+    -webkit-overflow-scrolling: touch;
+    color: #000;
+    font-size: 16px;
+    line-height: 22px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 20px 35px 35px;
+    text-align: center
+}
+
+.van-dialog__message--has-title {
+    color: #7d7e80;
+    padding-top: 12px
+}
+
+.van-dialog__message--left {
+    text-align: left
+}
+
+.van-dialog__message--right {
+    text-align: right
+}
+
+.van-dialog__footer {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.van-dialog__button {
+    -webkit-flex: 1;
+    -ms-flex: 1;
+    flex: 1
+}
+
+.van-dialog__cancel,.van-dialog__confirm {
+    border: 0!important
+}
+
+.van-dialog__confirm {
+    color: #3894c6!important
+}
+
+.van-dialog-bounce-enter {
+    opacity: 0;
+    -webkit-transform: translate3d(-50%,-50%,0) scale(.7);
+    transform: translate3d(-50%,-50%,0) scale(.7)
+}
+
+.van-dialog-bounce-leave-active {
+    opacity: 0;
+    -webkit-transform: translate3d(-50%,-50%,0) scale(.9);
+    transform: translate3d(-50%,-50%,0) scale(.9)
+}

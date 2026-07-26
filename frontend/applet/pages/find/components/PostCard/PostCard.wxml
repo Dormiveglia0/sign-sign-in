@@ -1,0 +1,72 @@
+<view bindtap="anonymousFunc0" class="{{anonymousState__temp}}" data-famousFlag="{{item.famousFlag}}" data-id="{{item[idKey]}}" wx:if="{{$taroCompReady}}">
+    <view class="red-dot" wx:if="{{props.dot}}"></view>
+    <view class="post_top">
+        <view class="post_name ">
+            <view class="{{anonymousState__temp2}}">{{item[nameKey]}}</view>
+            <view class="enterprise_tag_new_cn" wx:if="{{item.publishNewFlag===0||item.publishNewFlag===1}}">新</view>
+            <view class="enterprise_tag_new_cn" wx:if="{{item.equalHot}}">匹配度高</view>
+            <view>
+                <view class="part-time-job-tag" wx:if="{{item.publishNewFlag!==1&&item.nature=='兼职'}}">兼职</view>
+            </view>
+        </view>
+        <view class="{{anonymousState__temp3}}">
+            <text class="salary" wx:if="{{item.salaryType==0}}">
+                <text wx:if="{{!item.floorSalary&&!item.upperSalary}}">面谈</text>
+                <text wx:if="{{item.floorSalary||item.upperSalary}}">{{item.floorSalary+'-'+item.upperSalary+'/月'}}</text>
+            </text>
+            <text class="salary" wx:if="{{item.salaryType==2}}">
+                <text wx:if="{{!item.upperSalary}}">面谈</text>
+                <text wx:if="{{item.upperSalary}}">{{item.upperSalary+'/月'}}</text>
+            </text>
+            <text class="salary" wx:if="{{item.salaryType==1}}">
+                <text wx:if="{{!item.daySalary}}">面谈</text>
+                <text wx:if="{{item.miniDaySalary===null&&item.daySalary}}">{{item.daySalary+'/天'}}</text>
+                <text wx:if="{{item.miniDaySalary!==null&&item.daySalary}}">{{item.miniDaySalary+'-'+item.daySalary+'/天'}}</text>
+            </text>
+            <text class="salary" wx:if="{{item.salaryType==3}}">
+                <text wx:if="{{!item.daySalary}}">面谈</text>
+                <text wx:if="{{item.daySalary}}">{{item.daySalary+'/天'}}</text>
+            </text>
+            <text class="salary" wx:if="{{item.salaryType==4}}">面谈</text>
+            <text class="salary" wx:if="{{item.famousFlag}}">{{item.salary}}</text>
+        </view>
+    </view>
+    <view class="enterprise_info">
+        <text class="enterprise_name">{{item.enterpriseName}}</text>
+        <text class="enterprise_scale">{{item.scale||''}}</text>
+    </view>
+    <view class="post_center" wx:if="{{item.welfareLabels&&item.welfareLabels.length>0}}">
+        <view class="post_welfare_box">
+            <view class="{{welfare[$loopState__temp5]}}" wx:if="{{idx<=5}}" wx:for="{{loopArray1422}}" wx:for-index="idx" wx:for-item="welfare" wx:key="idx">{{welfare[$original]}}</view>
+            <view class="post_welfare" wx:if="{{item.welfareLabels.length>5}}">...</view>
+        </view>
+    </view>
+    <block wx:if="{{props.showBottom}}">
+        <view class="post_bottom">
+            <view class="post_content">
+                <view class="post_company">
+                    <view class="post_icon">
+                        <image binderror="funPrivatebhfiz" data-errorimg="{{index}}" src="{{item.logoUrl+'?x-oss-process=image/resize,m_fixed,w_40'}}" wx:if="{{item.logoUrl}}"></image>
+                        <image src="https://xcxstatic.xybsyw.com/xcx/images/com_default.png" wx:if="{{!item.logoUrl}}"></image>
+                    </view>
+                    <view class="{{anonymousState__temp6}}" style="max-width:19em">{{item.hrName||item.enterpriseName}} · HR<text class="active-status">{{anonymousState__temp7}}</text>
+                    </view>
+                    <view class="tag-list">
+                        <view class="famous-tag" wx:if="{{item.famousFlag}}">名企网申</view>
+                    </view>
+                </view>
+            </view>
+            <view catchtap="anonymousFunc1" class="right-bottom">
+                <view class="post_text_right single_text" wx:if="{{item.famousFlag}}">{{item.recruitmentCity}}</view>
+                <view class="post_text_right single_text" wx:if="{{!item.famousFlag}}">{{item[locationKey]?item[locationKey]:''}}</view>
+                <van-icon color="#DBDBDB" name="cross" style="margin-left:16rpx;position:relative;top:8rpx" wx:if="{{props.crossIcon&&!item.famousFlag}}"></van-icon>
+            </view>
+        </view>
+        <view class="match-bar" wx:if="{{props.matchBar&&matchMap[item.tagFlag]}}">{{matchMap[item.tagFlag]}}</view>
+        <view catchtap="anonymousFunc2" class="double-tag" wx:if="{{item.doubleChoiceDTO}}">
+            <image class="icon-sxh-text" src="https://xcxstatic.xybsyw.com/xcx/images/icon-sxh-text.png"></image>
+            <view class="double-tag-text">{{item.doubleChoiceDTO.name}} {{'>'}}</view>
+        </view>
+    </block>
+    <slot name="footer"></slot>
+</view>

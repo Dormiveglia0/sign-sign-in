@@ -1,0 +1,10 @@
+<view wx:if="{{$taroCompReady}}">
+    <view class="{{['switch-bar',list[listIndex].color?'switch-bar--'+list[listIndex].color:'']}}" style="{{'--left:'+(type=='growUp'?listIndex*140+10:listIndex*120+10)+'rpx;width:'+(type=='growUp'?length*140+12:length*120+12)+'rpx;--width:'+(type=='growUp'?140:listIndex===0?120:130)+'rpx'}}" wx:if="{{list&&list.length>0}}">
+        <view bindtap="anonymousFunc0" class="{{item[$loopState__temp2]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1120}}" wx:for-index="__index0" wx:key="id">
+            <view wx:if="{{item[$original].name==='名企岗位'}}">
+                <text class="offer-hero-text">名企岗位</text>
+            </view>
+            <block wx:else>{{item[$original].name}}</block>
+        </view>
+    </view>
+</view>

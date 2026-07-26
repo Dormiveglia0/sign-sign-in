@@ -1,0 +1,64 @@
+<popup compid="{{$compid__2581}}" wx:if="{{$taroCompReady}}">
+    <view class="dialog_warp">
+        <view class="title">
+            <view class="name">实习体验问卷</view>
+            <view class="school_name">{{schoolname}}实习护航</view>
+        </view>
+        <view class="question_list">
+            <view class="question">
+                <view class="q_item" hidden="{{item[$original].hide}}" style="{{item[$loopState__temp2]}}" wx:for="{{loopArray1252}}" wx:for-index="idx" wx:key="idx">
+                    <view class="q_title">
+                        <view class="multiple_tag" wx:if="{{item[$original].questionId==2}}">多选</view>{{item[$original].questionName}}</view>
+                    <view class="multiple_answer" wx:if="{{item[$original].questionId==2}}">
+                        <view bindtap="anonymousFunc1" class="{{option[$loopState__temp4]}}" data-e-tap-a-a="{{option[_$indexKey]}}" data-e-tap-so="this" wx:for="{{item[$anonymousCallee__154]}}" wx:for-index="optionIdx" wx:for-item="option" wx:key="optionIdx">{{option[$original].option}}</view>
+                    </view>
+                    <view class="emoji_answer" wx:if="{{item[$original].questionId!=2}}">
+                        <view bindtap="anonymousFunc2" class="{{option[$loopState__temp6]}}" data-e-tap-a-a="{{option[_$indexKey2]}}" data-e-tap-so="this" wx:for="{{item[$anonymousCallee__155]}}" wx:for-index="optionIdx" wx:for-item="option" wx:key="optionIdx">
+                            <image alt="" class="choosed_img" src="https://xcxstatic.xybsyw.com/xcx/images/choosed.png"></image>
+                            <image alt="" class="emoji_img" mode="widthFix" src="{{'https://xcxstatic.xybsyw.com/xcx/images/emoji_1_'+optionIdx+1+'.png'}}"></image>{{option[$original].option}}</view>
+                    </view>
+                </view>
+            </view>
+            <view class="question">
+                <view class="q_item" wx:for="{{loopArray1253}}" wx:for-index="idx" wx:key="idx">
+                    <view class="q_title">{{item[$original].questionName}}</view>
+                    <view class="multiple_answer single" wx:if="{{item[$original].questionId==4}}">
+                        <view bindtap="anonymousFunc3" class="{{option[$loopState__temp8]}}" data-e-tap-a-a="{{option[_$indexKey3]}}" data-e-tap-so="this" wx:for="{{item[$anonymousCallee__156]}}" wx:for-index="optionIdx" wx:for-item="option" wx:key="optionIdx">{{option[$original].option}}</view>
+                    </view>
+                    <view class="emoji_answer" wx:if="{{item[$original].questionId!=4}}">
+                        <view bindtap="anonymousFunc4" class="{{option[$loopState__temp10]}}" data-e-tap-a-a="{{option[_$indexKey4]}}" data-e-tap-so="this" wx:for="{{item[$anonymousCallee__157]}}" wx:for-index="optionIdx" wx:for-item="option" wx:key="optionIdx">
+                            <image alt="" class="choosed_img" src="https://xcxstatic.xybsyw.com/xcx/images/choosed.png"></image>
+                            <image alt="" class="emoji_img" mode="widthFix" src="{{'https://xcxstatic.xybsyw.com/xcx/images/emoji_1_'+optionIdx+1+'.png'}}"></image>{{option[$original].option}}</view>
+                    </view>
+                </view>
+            </view>
+            <view class="question">
+                <view class="q_item" hidden="{{item[$original].hide}}" wx:for="{{loopArray1254}}" wx:for-index="idx" wx:key="idx">
+                    <view class="q_title">
+                        <view class="multiple_tag" wx:if="{{item[$original].questionId==8}}">多选</view>{{item[$original].questionName}}</view>
+                    <view class="multiple_answer" wx:if="{{item[$original].questionId==8}}">
+                        <view bindtap="anonymousFunc5" class="{{option[$loopState__temp12]}}" data-e-tap-a-a="{{option[_$indexKey5]}}" data-e-tap-so="this" wx:for="{{item[$anonymousCallee__158]}}" wx:for-index="optionIdx" wx:for-item="option" wx:key="optionIdx">{{option[$original].option}}</view>
+                    </view>
+                    <view class="emoji_answer" wx:if="{{item[$original].questionId!=8}}">
+                        <view bindtap="anonymousFunc6" class="{{option[$loopState__temp14]}}" data-e-tap-a-a="{{option[_$indexKey6]}}" data-e-tap-so="this" wx:for="{{item[$anonymousCallee__159]}}" wx:for-index="optionIdx" wx:for-item="option" wx:key="optionIdx">
+                            <image alt="" class="choosed_img" src="https://xcxstatic.xybsyw.com/xcx/images/choosed.png"></image>
+                            <image alt="" class="emoji_img" mode="widthFix" src="{{optionIdx==2?'https://xcxstatic.xybsyw.com/xcx/images/emoji_1_3.png':'https://xcxstatic.xybsyw.com/xcx/images/emoji_2_'+optionIdx+1+'.png'}}"></image>{{option[$original].option}}</view>
+                    </view>
+                </view>
+            </view>
+            <view class="question">
+                <view class="q_item" hidden="{{item[$original].hide}}" wx:for="{{loopArray1255}}" wx:for-index="idx" wx:key="idx">
+                    <view class="q_title">{{item[$original].questionName}}</view>
+                    <view class="emoji_answer">
+                        <view bindtap="anonymousFunc7" class="{{option[$loopState__temp16]}}" data-e-tap-a-a="{{option[_$indexKey7]}}" data-e-tap-so="this" wx:for="{{item[$anonymousCallee__160]}}" wx:for-index="optionIdx" wx:for-item="option" wx:key="optionIdx">
+                            <image alt="" class="choosed_img" src="https://xcxstatic.xybsyw.com/xcx/images/choosed.png"></image>
+                            <image alt="" class="emoji_img" mode="widthFix" src="{{optionIdx==2?'https://xcxstatic.xybsyw.com/xcx/images/emoji_1_3.png':'https://xcxstatic.xybsyw.com/xcx/images/emoji_3_'+optionIdx+1+'.png'}}"></image>{{option[$original].option}}</view>
+                    </view>
+                </view>
+            </view>
+        </view>
+        <view class="btn_warp">
+            <view bindtap="anonymousFunc8" class="btn">提交</view>
+        </view>
+    </view>
+</popup>

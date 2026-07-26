@@ -1,0 +1,9 @@
+{
+  "component": true,
+  "usingComponents": {
+    "picker-column": "../picker-column/index",
+    "loading": "../loading/index",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  }
+}

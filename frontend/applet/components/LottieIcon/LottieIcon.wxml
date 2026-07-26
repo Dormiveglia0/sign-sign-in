@@ -1,0 +1,4 @@
+<block wx:if="{{$taroCompReady}}">
+    <canvas id="LottieIcon" style="{{anonymousState__temp}}" type="2d" wx:if="{{!imgSrc}}"></canvas>
+    <image class="img_box" src="{{imgSrc}}" style="{{anonymousState__temp2}}"></image>
+</block>

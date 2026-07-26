@@ -1,0 +1,18 @@
+.banner_box {
+    background: -webkit-gradient(linear,left top,left bottom,from(#fff),to(#f5f7f9));
+    background: -webkit-linear-gradient(top,#fff,#f5f7f9);
+    background: -o-linear-gradient(top,#fff 0,#f5f7f9 100%);
+    background: linear-gradient(180deg,#fff,#f5f7f9);
+    padding: 16rpx
+}
+
+.resume_box {
+    background: #f5f7f9
+}
+
+.more_box {
+    background: -webkit-gradient(linear,left top,left bottom,from(#f5f7f9),to(#fff));
+    background: -webkit-linear-gradient(top,#f5f7f9,#fff);
+    background: -o-linear-gradient(top,#f5f7f9 0,#fff 100%);
+    background: linear-gradient(180deg,#f5f7f9,#fff)
+}

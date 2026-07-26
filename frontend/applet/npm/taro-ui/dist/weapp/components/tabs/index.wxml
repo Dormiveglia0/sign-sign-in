@@ -1,0 +1,14 @@
+<view class="{{rootCls}}" style="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <scroll-view class="at-tabs__header" id="{{_tabId}}" scrollIntoView="{{_scrollIntoView}}" scrollLeft="{{_scrollLeft}}" scrollTop="{{_scrollTop}}" scrollWithAnimation="{{true}}" scrollX="{{scrollX}}" scrollY="{{scrollY}}" style="{{anonymousState__temp2}}" wx:if="{{scroll}}">
+        <view bindtap="handleClick" class="{{item.itemCls}}" data-e-tap-a-a="{{idx}}" data-e-tap-so="this" id="{{'tab'+idx}}" wx:for="{{loopArray1251}}" wx:for-index="idx" wx:key="title">{{item[$original].title}}<view class="at-tabs__item-underline"></view>
+        </view>
+    </scroll-view>
+    <view class="at-tabs__header" id="{{_tabId}}" wx:else>
+        <view bindtap="handleClick" class="{{item.itemCls}}" data-e-tap-a-a="{{idx}}" data-e-tap-so="this" id="{{'tab'+idx}}" wx:for="{{loopArray1251}}" wx:for-index="idx" wx:key="title">{{item[$original].title}}<view class="at-tabs__item-underline"></view>
+        </view>
+    </view>
+    <view bindtouchend="handleTouchEnd" bindtouchmove="handleTouchMove" bindtouchstart="handleTouchStart" class="at-tabs__body" data-e-touchend-so="this" data-e-touchmove-so="this" data-e-touchstart-so="this" style="{{anonymousState__temp3}}">
+        <view class="at-tabs__underline" style="{{anonymousState__temp4}}"></view>
+        <slot></slot>
+    </view>
+</view>

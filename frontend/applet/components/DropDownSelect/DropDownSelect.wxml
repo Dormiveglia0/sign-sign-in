@@ -1,0 +1,10 @@
+<block wx:if="{{$taroCompReady}}">
+    <view bindtap="anonymousFunc0" class="drop-down-select-wrap" id="drop-down-select-wrap">
+        <slot></slot>
+    </view>
+    <view bindtap="anonymousFunc1" class="drop-down-mask" wx:if="{{maskVisible}}">
+        <view class="drop-down-container" style="{{anonymousState__temp}}">
+            <view catchtap="anonymousFunc2" class="{{item[$loopState__temp5]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" hoverClass="drop-down-item-hover" wx:for="{{loopArray1328}}" wx:key="$loopState__temp3">{{item[$original].name}}</view>
+        </view>
+    </view>
+</block>

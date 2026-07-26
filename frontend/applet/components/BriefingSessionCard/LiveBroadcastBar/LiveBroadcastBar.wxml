@@ -1,0 +1,14 @@
+<block wx:if="{{$taroCompReady}}">
+    <view bindtap="anonymousFunc0" class="live-bar" wx:if="{{visible}}">
+        <view class="live-bar-water1"></view>
+        <view class="live-bar-water2"></view>
+        <view class="live-bar-water3"></view>
+        <view class="live-bar-water4"></view>
+        <image class="live-icon" src="https://xcxstatic.xybsyw.com/xcx/images/live-icon.png"></image>
+        <view class="live-bar-text">
+            <view class="title cut_text">{{item.name}}</view>
+            <view class="content">直播中</view>
+        </view>
+        <text catchtap="anonymousFunc1" class="icon icon-guanbi"></text>
+    </view>
+</block>

@@ -1,0 +1,11 @@
+{
+  "component": true,
+  "usingComponents": {
+    "at-action-sheet": "../../npm/taro-ui/dist/weapp/components/action-sheet/index",
+    "at-action-sheet-item": "../../npm/taro-ui/dist/weapp/components/action-sheet/body/item/index",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  },
+  "addGlobalClass": true,
+  "__warning__": "invalid page.json [\"addGlobalClass\"]"
+}

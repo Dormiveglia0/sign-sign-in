@@ -1,0 +1,4 @@
+<view class="{{rootCls}}" style="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <textarea autoFocus="{{autoFocus}}" bindblur="handleBlur" bindconfirm="handleConfirm" bindfocus="handleFocus" bindinput="handleInput" bindlinechange="handleLinechange" class="at-textarea__textarea" cursorSpacing="{{cursorSpacing}}" disabled="{{disabled}}" fixed="{{fixed}}" focus="{{focus}}" maxlength="{{actualMaxLength}}" placeholder="{{placeholder}}" placeholderClass="{{placeholderCls}}" placeholderStyle="{{placeholderStyle}}" selectionEnd="{{selectionEnd}}" selectionStart="{{selectionStart}}" showConfirmBar="{{showConfirmBar}}" style="{{anonymousState__temp2}}" value="{{value}}"></textarea>
+    <view class="at-textarea__counter" wx:if="{{count}}">{{value.length}}/{{_maxLength}}</view>
+</view>

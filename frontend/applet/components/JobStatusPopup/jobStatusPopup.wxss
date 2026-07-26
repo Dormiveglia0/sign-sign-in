@@ -1,0 +1,187 @@
+.jobStatusPopup {
+    -ms-flex-line-pack: center;
+    -ms-flex-align: center;
+    -webkit-align-content: center;
+    align-content: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: rgba(0,0,0,.4);
+    bottom: 0;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    height: 100vh;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 100%;
+    z-index: 999999
+}
+
+.jobStatusPopup .contentData {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/markJobStatus202104_11.png) 0 0 no-repeat;
+    background-color: #fff;
+    background-size: 580rpx 334rpx;
+    border-radius: 28rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: auto;
+    margin: 0 auto;
+    padding: 96rpx 0 64rpx;
+    position: relative;
+    width: 580rpx
+}
+
+.jobStatusPopup .contentData2 {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/markJobStatus202104_09.png) 0 0 no-repeat;
+    background-color: #fff;
+    background-size: 580rpx 340rpx;
+    height: 628rpx;
+    padding: 96rpx 0 94rpx
+}
+
+.contentData .closeImg {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/markJobStatus202104_02.png) 50% no-repeat;
+    background-size: 30rpx 30rpx;
+    height: 30rpx;
+    padding: 10rpx;
+    position: absolute;
+    right: 20rpx;
+    top: 15rpx;
+    width: 30rpx
+}
+
+.contentData .textTop {
+    background: #fff;
+    border-radius: 75rpx 75rpx 75rpx 0;
+    -webkit-box-shadow: 0 11rpx 38rpx 0 rgba(252,164,81,.1);
+    box-shadow: 0 11rpx 38rpx 0 rgba(252,164,81,.1);
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 149rpx;
+    margin-left: 142rpx;
+    padding: 41rpx 0 0 32rpx;
+    width: 390rpx
+}
+
+.contentData2 .textTop {
+    margin-left: 210rpx;
+    padding: 33rpx 0 0 30rpx;
+    width: 338rpx
+}
+
+.contentData2 .textTop2 {
+    margin-left: 220rpx;
+    margin-top: 23rpx;
+    padding: 33rpx 0 0 40rpx
+}
+
+.contentData .textTop_jobStatusType2 {
+    background: #fff;
+    border-radius: 75rpx 75rpx 75rpx 0;
+    -webkit-box-shadow: 0 11rpx 38rpx 0 rgba(252,164,81,.1);
+    box-shadow: 0 11rpx 38rpx 0 rgba(252,164,81,.1);
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 199rpx;
+    margin-left: 142rpx;
+    padding: 37rpx 15rpx 36rpx 32rpx
+}
+
+.textTop .textItem {
+    color: #333;
+    font-size: 30rpx;
+    font-weight: 500;
+    line-height: 42rpx
+}
+
+.contentData .buttonContent {
+    margin: 0 112rpx;
+    padding-top: 49rpx
+}
+
+.contentData .buttonContent_type2 {
+    padding-top: 0
+}
+
+.contentData .buttonContent2 {
+    margin-bottom: 80rpx;
+    padding-top: 96rpx
+}
+
+.buttonContent .item,.buttonContent .item2 {
+    -webkit-transform: rotateZ(1turn);
+    -ms-transform: rotate(1turn);
+    transform: rotateZ(1turn)
+}
+
+.buttonContent .item {
+    background: #fff;
+    border: 1rpx solid #fc6400;
+    border-radius: 44rpx;
+    color: #fc6400;
+    font-size: 32rpx;
+    font-weight: 500;
+    height: 88rpx;
+    line-height: 88rpx;
+    margin-top: 32rpx;
+    text-align: center;
+    width: 355rpx
+}
+
+.buttonContent .item2 {
+    border: 1rpx solid #bbb;
+    color: #666
+}
+
+.buttonContent .click_hover {
+    background: #f5f5f5
+}
+
+.jobStatusPopup .contentData3 {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/markJobStatus202104_10.png) 0 0 no-repeat;
+    background-color: #fff;
+    background-size: 580rpx 351rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 628rpx;
+    padding: 119rpx 0 70rpx
+}
+
+.contentData3 .textTop {
+    margin-left: 220rpx;
+    padding: 33rpx 39rpx 0 40rpx
+}
+
+.contentData3 .buttonContent {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row;
+    -webkit-flex-wrap: wrap;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    margin: 0 0 0 49rpx;
+    padding-top: 34rpx
+}
+
+.contentData3 .item {
+    background: #fff;
+    border: 1rpx solid #fc6400;
+    border-radius: 44rpx;
+    color: #fc6400;
+    font-size: 32rpx;
+    font-weight: 500;
+    height: 88rpx;
+    line-height: 88rpx;
+    margin-right: 24rpx;
+    margin-top: 40rpx;
+    text-align: center;
+    -webkit-transform: rotateZ(1turn);
+    -ms-transform: rotate(1turn);
+    transform: rotateZ(1turn);
+    width: 144rpx
+}

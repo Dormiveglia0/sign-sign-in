@@ -1,0 +1,127 @@
+.full-screen-ad {
+    background: #fff;
+    height: 100vh;
+    left: 0;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    width: 100vw;
+    z-index: 999999
+}
+
+.full-screen-ad .ad-img {
+    display: block;
+    height: 100vh;
+    width: 100vw
+}
+
+.full-screen-ad .ad-mask {
+    background: rgba(78,89,105,.3);
+    height: 100vh;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100vw
+}
+
+.ad-close-btn,.full-screen-ad .ad-skip-btn {
+    border-radius: 28rpx;
+    color: #fff;
+    font-size: 24rpx;
+    font-weight: 400;
+    position: absolute;
+    text-align: center
+}
+
+.full-screen-ad .ad-skip-btn {
+    background: rgba(0,0,0,.42);
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 56rpx;
+    left: 28rpx;
+    line-height: 56rpx;
+    min-width: 116rpx;
+    padding: 0 24rpx;
+    top: 68rpx
+}
+
+.full-screen-ad .ad-brand-bar {
+    background: #fff;
+    bottom: 0;
+    height: 140rpx;
+    left: 0;
+    position: absolute;
+    width: 100vw
+}
+
+.full-screen-ad.full-screen-ad--safe-bottom .ad-brand-bar {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: calc(140rpx + constant(safe-area-inset-bottom));
+    height: calc(140rpx + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom)
+}
+
+.full-screen-ad .ad-brand-bar,.full-screen-ad .ad-brand-content {
+    -ms-flex-align: center;
+    -ms-flex-pack: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: center;
+    justify-content: center
+}
+
+.full-screen-ad .ad-brand-logo {
+    -ms-flex-negative: 0;
+    border-radius: 50%;
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
+    height: 80rpx;
+    margin-right: 32rpx;
+    width: 80rpx
+}
+
+.full-screen-ad .ad-brand-name {
+    color: #13151a;
+    font-size: 28rpx;
+    font-weight: 500;
+    line-height: 44rpx;
+    white-space: nowrap
+}
+
+.ad-close-btn {
+    background: rgba(0,0,0,.57);
+    height: 55rpx;
+    line-height: 55rpx;
+    right: 30rpx;
+    top: 150rpx;
+    width: 130rpx
+}
+
+.full-loading {
+    -ms-flex-align: center;
+    -ms-flex-pack: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #fff;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    height: 100vh;
+    -webkit-justify-content: center;
+    justify-content: center;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100vw;
+    z-index: 9999999
+}
+
+.full-loading .full-loading-img {
+    border-radius: 50%;
+    height: 100rpx;
+    width: 100rpx
+}

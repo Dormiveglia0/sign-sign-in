@@ -1,0 +1,108 @@
+.actionradio_warp {
+    height: 1000rpx;
+    width: 100%
+}
+
+.title {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #666;
+    font-size: 34rpx;
+    font-weight: 500;
+    line-height: 92rpx;
+    padding: 4rpx 32rpx 0
+}
+
+.title wx-text {
+    color: #666;
+    float: right
+}
+
+.title .closeIcon {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/blogOptimize202103_10.png) 50% no-repeat;
+    background-size: 30rpx 30rpx;
+    float: right;
+    height: 30rpx;
+    left: 10rpx;
+    padding: 20rpx;
+    position: relative;
+    width: 30rpx
+}
+
+.menuwarp,.selectWarp,.title {
+    width: 100%
+}
+
+.menuwarp {
+    background: #fff;
+    border-bottom: 1rpx solid #dbdbdb;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 88rpx;
+    padding: 0 10rpx;
+    position: relative
+}
+
+.menuwarp .menu {
+    color: #666;
+    float: left;
+    font-size: 32rpx;
+    line-height: 87rpx;
+    max-width: 200rpx;
+    overflow: hidden;
+    padding: 0 24rpx;
+    position: relative;
+    text-align: center;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.menuwarp .menu .line {
+    background: #ff453a;
+    border-radius: 6rpx;
+    bottom: -1rpx;
+    display: none;
+    height: 6rpx;
+    left: 50%;
+    position: absolute;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+    width: 40rpx;
+    z-index: 99
+}
+
+.menuwarp .active {
+    color: #ff453a;
+    font-weight: 600
+}
+
+.menuwarp .active .line {
+    display: block
+}
+
+.contentWarp,.optionwarp .item {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 100%
+}
+
+.contentWarp {
+    height: 816rpx;
+    overflow: hidden;
+    padding: 32rpx 0
+}
+
+.optionwarp .item {
+    line-height: 96rpx;
+    padding: 0 32rpx
+}
+
+.optionwarp .current {
+    color: #ff453a
+}
+
+.click_hover {
+    background: #f5f5f5
+}

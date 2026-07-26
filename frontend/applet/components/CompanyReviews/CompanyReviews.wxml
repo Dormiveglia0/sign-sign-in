@@ -1,0 +1,22 @@
+<view bindtap="anonymousFunc0" class="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <view class="company-reviews-info">
+        <image binderror="anonymousFunc1" class="avatar" src="{{isZiwenZiDA?'https://xcxstatic.xybsyw.com/xcx/images/comment_talk.png':avatar}}"></image>
+        <view class="student-name cut_text" style="{{anonymousState__temp2}}">{{studentName}}</view>
+        <view class="auth-tag" wx:if="{{!isZiwenZiDA}}">实习已认证</view>
+    </view>
+    <view catchtap="anonymousFunc2" class="company-info" wx:if="{{!isZiwenZiDA&&!noCompanyName}}">
+        <text class="field">公司：</text>{{data.enterpriseName}}</view>
+    <company-rate compid="{{$compid__2789}}" wx:if="{{!isZiwenZiDA}}"></company-rate>
+    <view class="{{['comments',data.type==0?'frame_box':'']}}" style="{{anonymousState__temp3}}" wx:if="{{data.content}}">{{data.content}}</view>
+    <view class="comments" wx:if="{{isZiwenZiDA}}">{{replyComments}}</view>
+    <view class="company-reviews-footer">
+        <view class="comments-time">{{data[timeKey]||''}}</view>
+        <view catchtap="anonymousFunc3" class="comments-like active" wx:if="{{active}}">{{' '}}<text class="icon icon-dianzan"></text>{{num}}{{' '}}</view>
+        <view catchtap="anonymousFunc4" class="comments-like" wx:else>
+            <text class="icon icon-ic_zhunque"></text>{{num===0?'有用':num}}</view>
+    </view>
+    <view class="company-reply" wx:if="{{replyComments&&!isZiwenZiDA}}">
+        <view class="field">企业回复：</view>
+        <view class="reply_content">{{replyComments}}</view>
+    </view>
+</view>

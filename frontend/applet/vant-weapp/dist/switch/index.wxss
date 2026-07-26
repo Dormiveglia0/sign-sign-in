@@ -1,0 +1,123 @@
+.van-ellipsis,.van-multi-ellipsis--l2,.van-multi-ellipsis--l3 {
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis
+}
+
+.van-ellipsis {
+    white-space: nowrap
+}
+
+.van-multi-ellipsis--l2,.van-multi-ellipsis--l3 {
+    -webkit-line-clamp: 2;
+    display: -webkit-box
+}
+
+.van-multi-ellipsis--l3 {
+    -webkit-line-clamp: 3
+}
+
+.van-clearfix:after {
+    clear: both;
+    content: "";
+    display: table
+}
+
+.van-hairline,.van-hairline--bottom,.van-hairline--left,.van-hairline--right,.van-hairline--surround,.van-hairline--top,.van-hairline--top-bottom {
+    position: relative
+}
+
+.van-hairline--bottom:after,.van-hairline--left:after,.van-hairline--right:after,.van-hairline--surround:after,.van-hairline--top-bottom:after,.van-hairline--top:after,.van-hairline:after {
+    border: 0 solid #eee;
+    bottom: -50%;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    content: " ";
+    left: -50%;
+    pointer-events: none;
+    position: absolute;
+    right: -50%;
+    top: -50%;
+    -webkit-transform: scale(.5);
+    -ms-transform: scale(.5);
+    transform: scale(.5);
+    -webkit-transform-origin: center;
+    -ms-transform-origin: center;
+    transform-origin: center
+}
+
+.van-hairline--top:after {
+    border-top-width: 1px
+}
+
+.van-hairline--left:after {
+    border-left-width: 1px
+}
+
+.van-hairline--right:after {
+    border-right-width: 1px
+}
+
+.van-hairline--bottom:after {
+    border-bottom-width: 1px
+}
+
+.van-hairline--top-bottom:after {
+    border-width: 1px 0
+}
+
+.van-hairline--surround:after {
+    border-width: 1px
+}
+
+.van-switch,.van-switch__node {
+    background-color: #fff;
+    height: 1em
+}
+
+.van-switch {
+    border: 1px solid rgba(0,0,0,.1);
+    border-radius: 1em;
+    -webkit-box-sizing: initial;
+    box-sizing: initial;
+    display: inline-block;
+    position: relative;
+    -webkit-transition: background-color .3s;
+    -o-transition: background-color .3s;
+    transition: background-color .3s;
+    width: 2em
+}
+
+.van-switch__node {
+    border-radius: 100%;
+    -webkit-box-shadow: 0 3px 1px 0 rgba(0,0,0,.05),0 2px 2px 0 rgba(0,0,0,.1),0 3px 3px 0 rgba(0,0,0,.05);
+    box-shadow: 0 3px 1px 0 rgba(0,0,0,.05),0 2px 2px 0 rgba(0,0,0,.1),0 3px 3px 0 rgba(0,0,0,.05);
+    left: 0;
+    position: absolute;
+    top: 0;
+    -webkit-transition: .3s;
+    -o-transition: .3s;
+    transition: .3s;
+    width: 1em;
+    z-index: 1
+}
+
+.van-switch__loading {
+    left: 25%;
+    position: absolute!important;
+    top: 25%
+}
+
+.van-switch--on {
+    background-color: #1989fa
+}
+
+.van-switch--on .van-switch__node {
+    -webkit-transform: translateX(1em);
+    -ms-transform: translateX(1em);
+    transform: translateX(1em)
+}
+
+.van-switch--disabled {
+    opacity: .4
+}

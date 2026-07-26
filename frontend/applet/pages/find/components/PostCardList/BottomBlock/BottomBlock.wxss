@@ -1,0 +1,45 @@
+.bottom-block {
+    background: #fff;
+    color: #666;
+    font-size: 26rpx;
+    height: 120rpx;
+    line-height: 120rpx;
+    text-align: center
+}
+
+.bottom-block-button {
+    color: #4990e2
+}
+
+.nodata {
+    color: #b2b2b2;
+    line-height: 112rpx;
+    min-height: 112rpx;
+    text-align: center;
+    width: 100%;
+    z-index: 99
+}
+
+.nodara_iphonex {
+    height: 172rpx
+}
+
+.nodata-text {
+    font-size: 22rpx;
+    position: relative
+}
+
+.search-btn {
+    background: #fff;
+    border: 1rpx solid #f25451;
+    border-radius: 44rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #f25451;
+    font-size: 30rpx;
+    height: 80rpx;
+    line-height: 80rpx;
+    margin: 0 auto 30rpx;
+    text-align: center;
+    width: 364rpx
+}

@@ -1,0 +1,66 @@
+<block wx:if="{{$taroCompReady}}">
+    <block wx:if="{{visible}}">
+        <view bindtap="anonymousFunc0" class="{{anonymousState__temp}}">
+            <view class="form-item" style="{{anonymousState__temp2}}">
+                <view class="form-item__left" style="{{anonymousState__temp3}}">
+                    <text class="form-item__required-text" wx:if="{{required}}">*</text>
+                    <slot name="labelslot" wx:if="{{useLabelSlot}}"></slot>
+                    <block wx:else>{{label}}</block>
+                </view>
+                <view class="form-item__remark" wx:if="{{remark}}">{{remark}}</view>
+                <view class="form-item__right form-item__input" wx:if="{{type==='input'}}">
+                    <van-field __fn_onBlur="{{true}}" __fn_onChange="{{true}}" __fn_onFocus="{{true}}" bindblur="anonymousFunc3" bindchange="anonymousFunc1" bindfocus="anonymousFunc2" border="{{false}}" disabled="{{disabled}}" maxlength="{{maxlength}}" placeholder="{{placeholder||'请输入'}}" showConfirmBar="{{false}}" style="{{anonymousState__temp4}}" type="{{inputType}}" value="{{value}}"></van-field>
+                    <view class="form-item__suffix" wx:if="{{suffix&&!useSuffixSlot&&inputType!=='textarea'}}">{{suffix}}</view>
+                    <slot name="suffixslot"></slot>
+                </view>
+                <view class="form-item__right form-item__input form-item__native-input" wx:if="{{type==='nativeInput'}}">
+                    <input bindblur="anonymousFunc6" bindfocus="anonymousFunc5" bindinput="anonymousFunc4" class="native-input van-field__input" disabled="{{disabled}}" maxlength="{{maxlength}}" placeholder="{{placeholder||'请输入'}}" placeholderStyle="color:#999" showConfirmBar="{{false}}" style="{{'width:100%;'+(disabled?'color:#999;-webkit-text-fill-color:#999':'')}}" type="{{inputType}}" value="{{value}}"></input>
+                </view>
+                <view class="form-item__right form-item__select" wx:if="{{type==='select'||type==='multipleSelect'||type==='date'}}">
+                    <view class="{{value?'form-item__select-value':'form-item__select-placeholder'}}">{{value||placeholder||'请选择'}}</view>
+                    <text class="triangle_down" wx:if="{{needDownArrow}}"></text>
+                    <text class="icon icon-jiantou" wx:else></text>
+                </view>
+                <view class="form-item__right form-item__date-range" wx:if="{{type==='dateRange'}}">
+                    <view class="form-item__date-range-value">
+                        <view bindtap="anonymousFunc7" class="{{value&&value[0]?'form-item__select-value':'form-item__select-placeholder'}}">{{value&&value[0]?value[0]:'开始时间'}}</view>
+                        <view class="form-item__date-range-separator"></view>
+                        <view bindtap="anonymousFunc8" class="{{value&&value[1]?'form-item__select-value':'form-item__select-placeholder'}}">{{value&&value[1]?value[1]:'结束时间'}}</view>
+                    </view>
+                </view>
+                <view class="form-item__right form-item__textarea-wrap" wx:if="{{type==='textarea'}}">
+                    <textarea autoHeight="{{true}}" bindblur="anonymousFunc11" bindfocus="anonymousFunc10" bindinput="anonymousFunc9" class="form-item__textarea" disabled="{{disabled}}" maxlength="{{maxlength}}" placeholder="{{placeholder||'请输入'}}" placeholderClass="form-item__textarea-placeholder" showConfirmBar="{{false}}" value="{{value}}"></textarea>
+                    <view class="form-item__textarea-limit" wx:if="{{showLimitNumber&&!customLimitNumber}}">
+                        <text class="value-length">{{value.length||'0'}}/</text>{{maxlength}}</view>
+                    <view class="form-item__textarea-limit" wx:if="{{customLimitNumber}}">
+                        <slot name="limitnumber"></slot>
+                    </view>
+                </view>
+                <view class="form-item__right form-item__custom" wx:if="{{type==='custom'}}">
+                    <slot></slot>
+                </view>
+            </view>
+            <view class="form-item__border-bottom" wx:if="{{borderBottom}}"></view>
+        </view>
+        <slot name="errorslot"></slot>
+        <view class="form-item__error" wx:if="{{!useErrorSlot&&error}}">{{error}}</view>
+        <view class="form-item__tips" wx:if="{{!error&&!useErrorSlot&&tips}}">{{tips}}</view>
+        <single-select compid="{{$compid__2758}}" wx:if="{{type==='select'&&selectOption&&selectOption.length>0}}"></single-select>
+        <block wx:if="{{type==='multipleSelect'&&selectOption&&selectOption.length>0}}">
+            <single-select compid="{{$compid__2759}}"></single-select>
+            <multiple-select compid="{{$compid__2760}}"></multiple-select>
+        </block>
+        <van-popup __fn_onClose="{{true}}" bindclose="anonymousFunc18" className="select_limit" overlay="true" position="bottom" show="{{dateSelectShow}}" wx:if="{{type==='date'}}">
+            <van-datetime-picker __fn_onCancel="{{true}}" __fn_onConfirm="{{true}}" bindcancel="anonymousFunc19" bindconfirm="anonymousFunc20" cancelButtonText="取消" confirmButtonText="确定" formatter="{{formatter}}" title="{{dateOptions.title}}" type="date" value="{{anonymousState__temp5}}"></van-datetime-picker>
+        </van-popup>
+        <block wx:if="{{type==='dateRange'}}">
+            <van-popup __fn_onClose="{{true}}" bindclose="anonymousFunc21" className="select_limit" overlay="true" position="bottom" show="{{startTimeVisible}}">
+                <van-datetime-picker __fn_onCancel="{{true}}" __fn_onConfirm="{{true}}" bindcancel="anonymousFunc22" bindconfirm="anonymousFunc23" cancelButtonText="取消" confirmButtonText="下一步" formatter="{{formatter}}" maxDate="{{anonymousState__temp8}}" minDate="{{anonymousState__temp7}}" title="{{dateRangeOptions.startTitle}}" type="date" value="{{anonymousState__temp6}}"></van-datetime-picker>
+            </van-popup>
+            <van-popup __fn_onClose="{{true}}" bindclose="anonymousFunc24" className="select_limit" overlay="true" position="bottom" show="{{endTimeVisible}}">
+                <van-datetime-picker __fn_onCancel="{{true}}" __fn_onConfirm="{{true}}" bindcancel="anonymousFunc25" bindconfirm="anonymousFunc26" cancelButtonText="上一步" confirmButtonText="确定" formatter="{{formatter}}" maxDate="{{anonymousState__temp11}}" minDate="{{anonymousState__temp10}}" title="{{dateRangeOptions.endTitle}}" type="date" value="{{anonymousState__temp9}}"></van-datetime-picker>
+            </van-popup>
+        </block>
+    </block>
+    <block wx:else></block>
+</block>

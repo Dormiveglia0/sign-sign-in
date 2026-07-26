@@ -1,0 +1,11 @@
+{
+  "component": true,
+  "usingComponents": {
+    "van-popup": "../../vant-weapp/dist/popup/index",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  },
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "white",
+  "enablePullDownRefresh": true
+}

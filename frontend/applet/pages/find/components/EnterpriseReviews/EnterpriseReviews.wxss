@@ -1,0 +1,155 @@
+.page-container {
+    background: -webkit-gradient(linear,left top,left bottom,from(#fff),to(#f3f4fa)) no-repeat;
+    background: -webkit-linear-gradient(top,#fff,#f3f4fa) no-repeat;
+    background: -o-linear-gradient(top,#fff 0,#f3f4fa 100%) no-repeat;
+    background: linear-gradient(180deg,#fff,#f3f4fa) no-repeat;
+    background-size: 100% 293rpx;
+    margin-top: -12rpx;
+    overflow: hidden;
+    padding: 0 16rpx;
+    position: relative
+}
+
+.search-bar,.search-input {
+    -webkit-flex: 1;
+    -ms-flex: 1;
+    flex: 1
+}
+
+.search-bar {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #f3f4fb;
+    border-radius: 35rpx;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    height: 70rpx;
+    margin-right: 16rpx;
+    position: relative
+}
+
+.search-bar .icon {
+    color: #a8a9b3;
+    font-size: 29rpx;
+    margin: 0 20rpx
+}
+
+.search-input {
+    font-size: 28rpx
+}
+
+.search-input-placeholder {
+    color: #bcbdc4
+}
+
+.page-title-container {
+    padding: 0 8rpx
+}
+
+.more,.page-title-flex {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.page-title-flex {
+    -ms-flex-pack: justify;
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.more {
+    color: #999;
+    font-size: 24rpx;
+    font-weight: 400;
+    line-height: 33rpx
+}
+
+.more>.icon-jiantou {
+    color: #dbdbdb;
+    margin-left: 8rpx
+}
+
+.page-title {
+    color: #333;
+    font-size: 30rpx;
+    font-weight: 500;
+    line-height: 42rpx;
+    margin: 24rpx 0;
+    position: relative
+}
+
+.filter-item {
+    -ms-flex-pack: center;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    border: 2rpx solid #ededed;
+    border-radius: 35rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #6c6d73;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    font-size: 26rpx;
+    font-weight: 400;
+    height: 64rpx;
+    -webkit-justify-content: center;
+    justify-content: center;
+    line-height: 37rpx;
+    padding: 0 20rpx;
+    width: 168rpx
+}
+
+.filter-item>.cityText {
+    max-width: 40vw
+}
+
+.filter-item .icon-xialasanjiao {
+    color: #b4b5bf;
+    display: inline-block;
+    font-size: 12rpx;
+    margin-left: 5rpx;
+    -webkit-transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    transform: rotate(-90deg)
+}
+
+.empty-card {
+    background: #fff;
+    border-radius: 16rpx;
+    color: #999;
+    font-size: 24rpx;
+    font-weight: 400;
+    height: 320rpx;
+    line-height: 320rpx;
+    text-align: center
+}
+
+.empty-card .empty-text {
+    color: #4990e2
+}
+
+.search-bar-wrap {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    margin-top: 12rpx
+}
+
+.part-container {
+    background: #fff;
+    border-radius: 16rpx;
+    margin-top: 27rpx;
+    overflow: hidden;
+    padding: 0 16rpx
+}

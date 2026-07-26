@@ -1,13 +1,22 @@
 import logging
 import os
 import tempfile
+import threading
+import time
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
 from app.config.common import XYB_VERSION, XYB_REFERER, AMAP_WEB_KEY, XYB_N_HEADER
 from app.utils.common import get_timestamp
-from app.utils.files import get_img_file, clear_session_cache, check_img
+from app.utils.files import (
+    check_img,
+    get_img_file,
+    get_valid_session_cache,
+    invalidate_session_cache,
+    load_session_cache,
+    save_session_cache,
+)
 from app.utils.params import (
     create_security_fingerprint,
     get_device_code,
@@ -17,6 +26,21 @@ from app.utils.params import (
 )
 
 TENCENT_MAP_KEY = "GOZBZ-E4L67-6WLXT-PSLBH-2WEZZ-LOFLE"
+AUTO_RENEW_SECONDS = 45 * 60
+_auto_login_lock = threading.Lock()
+
+
+class SessionExpired(RuntimeError):
+    pass
+
+
+def is_session_expired_error(error):
+    current = error
+    while current is not None:
+        if isinstance(current, SessionExpired):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
 
 
 def _normalize_address_text(value):
@@ -50,9 +74,9 @@ def check_session_validity(response_json):
 
 
 def handle_invalid_session():
-    """处理失效的会话：清除缓存并提示"""
-    clear_session_cache()
-    logging.warning('❌ JSESSIONID已失效，已清除缓存，请重新获取code')
+    """保留 encryptValue，供小程序同款 AutoLogin 静默续期。"""
+    invalidate_session_cache()
+    logging.warning('❌ JSESSIONID已失效，准备静默续期')
 
 
 def _normalize_map_provider(provider):
@@ -82,7 +106,7 @@ def _is_success_code(code):
 def _assert_session(response_json):
     if not check_session_validity(response_json):
         handle_invalid_session()
-        raise RuntimeError('❌ JSESSIONID已失效，请重新获取Code')
+        raise SessionExpired('❌ JSESSIONID已失效')
 
 
 def _require_data(response, context):
@@ -168,6 +192,74 @@ def _form_post(url, data, config, args, include_device_code=False, timeout=5):
     )
     logging.debug(f"收到响应:{response} {response.text}")
     return response
+
+
+def auto_login(config, stale_session_id=None):
+    """复刻小程序 AutoLogin.action，用 encryptValue 静默换新 SESSION。"""
+    with _auto_login_lock:
+        cache = load_session_cache()
+        if (
+            stale_session_id
+            and cache.get("sessionId")
+            and cache.get("sessionId") != stale_session_id
+            and cache.get("valid") is not False
+        ):
+            return get_valid_session_cache()
+
+        encrypt_value = str(cache.get("encryptValue") or "").strip()
+        open_id = str(cache.get("openId") or "").strip()
+        union_id = str(cache.get("unionId") or "").strip()
+        if not encrypt_value or not open_id or not union_id:
+            raise RuntimeError("缺少静默续期凭证，首次使用仍需获取一次 Code")
+
+        url = "https://xcx.xybsyw.com/login/AutoLogin.action"
+        data = {"encryptValue": encrypt_value}
+        security = _build_security_context(data, config)
+        headers = {
+            **_base_xyb_headers(config),
+            "encryptvalue": encrypt_value,
+            "n": XYB_N_HEADER,
+            "wechat": "1",
+            "devicecode": get_device_code(open_id, config["device"]),
+        }
+        cookies = (
+            {"JSESSIONID": cache["sessionId"]}
+            if cache.get("sessionId")
+            else None
+        )
+        response = requests.post(
+            url,
+            headers=headers,
+            cookies=cookies,
+            data={**data, **security["params"]},
+            params={"t": security["url_token"]},
+            timeout=10,
+        )
+        try:
+            payload = response.json()
+        except Exception as exc:
+            raise RuntimeError(f"静默续期失败: 响应解析失败 {exc}") from exc
+        renewed = payload.get("data") if isinstance(payload, dict) else None
+        if (
+            response.status_code != 200
+            or not _is_success_code(payload.get("code"))
+            or not isinstance(renewed, dict)
+            or not renewed.get("sessionId")
+            or not renewed.get("encryptValue")
+        ):
+            raise RuntimeError(
+                f"静默续期失败: {_response_message(payload)}"
+            )
+
+        save_session_cache(
+            session_id=renewed["sessionId"],
+            encrypt_value=renewed["encryptValue"],
+            open_id=open_id,
+            union_id=union_id,
+            trainee_id=cache.get("traineeId"),
+        )
+        logging.info("✅ SESSION 静默续期成功")
+        return get_valid_session_cache()
 
 
 def _is_plan_empty_body(data):
@@ -370,12 +462,16 @@ def login(config, use_cache=True):
     :param use_cache: 是否使用缓存，如果为True且缓存有效则直接返回缓存
     :return: 登录结果字典
     """
-    from app.utils.files import get_valid_session_cache, save_session_cache
-
     # 尝试使用缓存
     if use_cache:
         cached = get_valid_session_cache()
         if cached:
+            timestamp = int(load_session_cache().get("timestamp") or 0)
+            if time.time() - timestamp >= AUTO_RENEW_SECONDS:
+                try:
+                    return auto_login(config, cached["sessionId"])
+                except Exception as exc:
+                    logging.warning("SESSION 预续期失败，先尝试当前会话: %s", exc)
             logging.info('✅ 使用缓存的JSESSIONID')
             return {
                 'openId': cached['openId'],
@@ -384,6 +480,8 @@ def login(config, use_cache=True):
                 'sessionId': cached['sessionId'],
                 'traineeId': cached.get('traineeId')
             }
+        if load_session_cache().get("encryptValue"):
+            return auto_login(config)
 
     code = config.get('code')
     if not code or code == '':
@@ -680,9 +778,7 @@ def load_blog_year(args, config):
         logging.debug(f"📡 收到响应:{response} {response.text}")
         res = response.json()
 
-        if not check_session_validity(res):
-            handle_invalid_session()
-            raise RuntimeError('❌ JSESSIONID已失效，请重新获取code')
+        _assert_session(res)
 
         logging.info(f"加载周记年份和月份：{res.get('data', 'Unknown error')}")
         if res.get('code') == '200' and 'data' in res:
@@ -729,9 +825,7 @@ def load_blog_date(args, config, year, month):
         logging.debug(f"📡 收到响应:{response} {response.text}")
         res = response.json()
 
-        if not check_session_validity(res):
-            handle_invalid_session()
-            raise RuntimeError('❌ JSESSIONID已失效，请重新获取code')
+        _assert_session(res)
 
         logging.info(f"加载周信息：{res.get('msg', 'Unknown error')}")
         if res.get('code') == '200' and 'data' in res:
@@ -786,9 +880,7 @@ def submit_blog(args, config, blog_title, blog_body, start_date, end_date, blog_
         logging.debug(f"📡 收到响应:{response} {response.text}")
         res = response.json()
 
-        if not check_session_validity(res):
-            handle_invalid_session()
-            raise RuntimeError('❌ JSESSIONID已失效，请重新获取code')
+        _assert_session(res)
 
         logging.info(f"提交周记结果: {res}")
         if res.get('code') == '200':
@@ -892,9 +984,7 @@ def blog_list(args, config, page, blogType="1"):
         logging.debug(f"📡 收到响应:{response} {response.text}")
         res = response.json()
 
-        if not check_session_validity(res):
-            handle_invalid_session()
-            raise RuntimeError('❌ JSESSIONID已失效，请重新获取code')
+        _assert_session(res)
 
         if res.get('code') == '200' and 'data' in res:
             return res['data']

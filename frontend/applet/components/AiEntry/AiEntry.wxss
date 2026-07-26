@@ -1,0 +1,33 @@
+.ai-head-pic {
+    bottom: 400rpx;
+    height: 110rpx;
+    position: fixed;
+    right: 0;
+    -webkit-transition: all .3s;
+    -o-transition: all .3s;
+    transition: all .3s;
+    width: 100rpx
+}
+
+.ai-head-pic.hide,.ai-small {
+    -webkit-transform: translateX(100%);
+    -ms-transform: translateX(100%);
+    transform: translateX(100%)
+}
+
+.ai-small {
+    bottom: 400rpx;
+    height: 40rpx;
+    position: fixed;
+    right: 0;
+    -webkit-transition: all .3s;
+    -o-transition: all .3s;
+    transition: all .3s;
+    width: 50rpx
+}
+
+.ai-small.show {
+    -webkit-transform: translateX(8rpx);
+    -ms-transform: translateX(8rpx);
+    transform: translateX(8rpx)
+}

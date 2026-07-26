@@ -1,0 +1,10 @@
+<view class="{{[isOpened?'Popup_layout active':'Popup_layout',divZindex?'zfy':'']}}" wx:if="{{$taroCompReady}}">
+    <view bindtap="handleClose" catchtouchmove="handleTouchMove" class="Popup_layout__overlay" data-e-tap-so="this" style="{{anonymousState__temp}}" wx:if="{{isOpened}}"></view>
+    <view class="{{['Popup_layout__container layout',isOpened?'':'hide_d']}}">
+        <view catchtouchmove="ture" class="layout-header" style="{{anonymousState__temp2}}" wx:if="{{needTitle}}">{{title}}</view>
+        <text bindtap="handleClose" class="iconfont icon-guanbi popup-close-icon" data-e-tap-so="this" wx:if="{{needCloseIcon}}"></text>
+        <view class="layout-body">
+            <slot></slot>
+        </view>
+    </view>
+</view>

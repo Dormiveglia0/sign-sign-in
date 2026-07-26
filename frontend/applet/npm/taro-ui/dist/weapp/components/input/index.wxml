@@ -1,0 +1,16 @@
+<view class="{{rootCls}}" style="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <view class="{{containerCls}}">
+        <view bindtap="handleClick" class="{{overlayCls}}"></view>
+        <label class="{{'at-input__title '+(required&&'at-input__title--required')}}" for="{{name}}" wx:if="{{title}}">{{title}}</label>
+        <input adjustPosition="{{adjustPosition}}" autoFocus="{{autoFocus}}" bindblur="handleBlur" bindconfirm="handleConfirm" bindfocus="handleFocus" bindinput="handleInput" bindkeyboardheightchange="handleKeyboardHeightChange" class="at-input__input" confirmType="{{confirmType}}" cursor="{{cursor}}" cursorSpacing="{{cursorSpacing}}" focus="{{focus}}" id="{{name}}" maxlength="{{maxLength}}" name="{{name}}" password="{{password}}" placeholder="{{placeholder}}" placeholderClass="{{placeholderCls}}" placeholderStyle="{{placeholderStyle}}" selectionEnd="{{selectionEnd}}" selectionStart="{{selectionStart}}" type="{{type}}" value="{{value}}"></input>
+        <view bindtouchend="handleClearValue" class="at-input__icon" wx:if="{{clear&&value}}">
+            <text class="at-icon at-icon-close-circle at-input__icon-close"></text>
+        </view>
+        <view bindtouchstart="handleErrorClick" class="at-input__icon" wx:if="{{error}}">
+            <text class="at-icon at-icon-alert-circle at-input__icon-alert"></text>
+        </view>
+        <view class="at-input__children">
+            <slot></slot>
+        </view>
+    </view>
+</view>

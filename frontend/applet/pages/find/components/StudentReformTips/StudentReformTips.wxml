@@ -1,0 +1,6 @@
+<block wx:if="{{$taroCompReady}}">
+    <view bindtap="anonymousFunc0" class="student-reform-tips" wx:if="{{props.visible&&step>0}}">
+        <image class="student-reform-tips-1" mode="widthFix" src="https://xcxstatic.xybsyw.com/xcx/images/aijlsxyd.png" style="{{anonymousState__temp}}" wx:if="{{step===1}}"></image>
+    </view>
+    <block wx:else></block>
+</block>

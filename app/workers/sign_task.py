@@ -93,7 +93,7 @@ class SignTaskThread(QThread):
 
                 code = self.wait_code(target_proxy)
                 config['input']['code'] = code
-                logging.info(f"✅ Code: {code}")
+                logging.info("✅ 已捕获 Code")
 
                 logging.info("🛑 恢复网络...")
                 reset_proxy(self.origin_proxy, target_proxy)
@@ -376,7 +376,7 @@ class GetCodeAndSessionThread(QThread):
 
             code = self.wait_code(target_proxy)
             config['input']['code'] = code
-            logging.info(f"✅ Code: {code}")
+            logging.info("✅ 已捕获 Code")
 
             logging.info("🛑 恢复网络...")
             reset_proxy(self.origin_proxy, target_proxy)

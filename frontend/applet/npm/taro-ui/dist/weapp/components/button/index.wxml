@@ -1,0 +1,13 @@
+<view bindtap="onClick" class="{{anonymousState__temp}}" data-e-tap-so="this" style="{{anonymousState__temp2}}" wx:if="{{$taroCompReady}}">
+    <button class="at-button__wxbutton" formType="{{formType==='submit'||formType==='reset'?formType:undefined}}" lang="{{lang}}" wx:if="{{isWEB&&!disabled}}"></button>
+    <form bindreset="onReset" bindsubmit="onSumit" data-e-reset-so="this" data-e-submit-so="this" wx:if="{{isWEAPP&&!disabled}}">
+        <button appParameter="{{appParameter}}" bindcontact="onContact" binderror="onError" bindgetphonenumber="onGetPhoneNumber" bindgetuserinfo="onGetUserInfo" bindopensetting="onOpenSetting" class="at-button__wxbutton" data-e-contact-so="this" data-e-error-so="this" data-e-getphonenumber-so="this" data-e-getuserinfo-so="this" data-e-opensetting-so="this" formType="{{formType}}" lang="{{lang}}" openType="{{openType}}" sendMessageImg="{{sendMessageImg}}" sendMessagePath="{{sendMessagePath}}" sendMessageTitle="{{sendMessageTitle}}" sessionFrom="{{sessionFrom}}" showMessageCard="{{showMessageCard}}"></button>
+    </form>
+    <button appParameter="{{appParameter}}" bindcontact="onContact" binderror="onError" bindgetphonenumber="onGetPhoneNumber" bindgetuserinfo="onGetUserInfo" bindopensetting="onOpenSetting" class="at-button__wxbutton" data-e-contact-so="this" data-e-error-so="this" data-e-getphonenumber-so="this" data-e-getuserinfo-so="this" data-e-opensetting-so="this" formType="{{formType}}" lang="{{lang}}" openType="{{openType}}" sendMessageImg="{{sendMessageImg}}" sendMessagePath="{{sendMessagePath}}" sendMessageTitle="{{sendMessageTitle}}" sessionFrom="{{sessionFrom}}" showMessageCard="{{showMessageCard}}" wx:if="{{isALIPAY&&!disabled}}"></button>
+    <view class="at-button__icon" wx:if="{{loading}}">
+        <at-loading compid="{{$compid__2706}}"></at-loading>
+    </view>
+    <view class="at-button__text">
+        <slot></slot>
+    </view>
+</view>

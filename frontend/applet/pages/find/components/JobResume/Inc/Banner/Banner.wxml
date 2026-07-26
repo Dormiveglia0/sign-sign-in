@@ -1,0 +1,14 @@
+<view wx:if="{{$taroCompReady}}">
+    <view class="banner" wx:if="{{bannerList.length>=1}}">
+        <swiper autoplay="true" bindchange="anonymousFunc0" circular="true" class="swiperContainer" current="{{currentSwiper}}" duration="300" indicatorActiveColor="rgba(255,255,255,0.3)" interval="3000">
+            <swiper-item wx:for="{{loopArray1388}}" wx:key="index">
+                <image bindtap="anonymousFunc1" class="slide-image" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" data-item="{{item[$original]}}" mode="scaleToFill" src="{{item[$original].bannerImgPath}}"></image>
+            </swiper-item>
+        </swiper>
+        <view class="dots" wx:if="{{bannerList.length>=2}}">
+            <view class="dots_box">
+                <view class="{{'dot '+(index==currentSwiper?'active':'')}}" wx:for="{{bannerList}}" wx:key="index"></view>
+            </view>
+        </view>
+    </view>
+</view>

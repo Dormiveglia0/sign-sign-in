@@ -1,0 +1,56 @@
+<block wx:if="{{$taroCompReady}}">
+    <view bindtap="handleBottomClick" class="home-bottom-card" data-e-tap-a-a="{{2}}" data-e-tap-so="this" wx:if="{{!(jobHuntInfo&&jobHuntInfo.positions&&jobHuntInfo.positions.length>0)&&intentionStatus===1}}">
+        <image class="home-bottom-card-img" mode="aspectFill" src="https://xcxstatic.xybsyw.com/xcx/images/card-tx.png"></image>
+        <view style="flex:1;width:1px">
+            <view class="home-bottom-card-title">请添加您的实习/求职意向</view>
+            <view class="home-bottom-card-subtitle">填写求职意向后可以更精准的为您匹配岗位</view>
+        </view>
+        <view class="home-bottom-card-button">去添加</view>
+    </view>
+    <block wx:for="{{loopArray1069}}" wx:key="$loopState__temp2">
+        <view bindtap="goSetPost" class="n-box" wx:if="{{index==2&&postList.length>2&&activatePopFlag}}">
+            <image class="img-one-icon" src="https://xcxstatic.xybsyw.com/xcx/images/img-one-icon.png"></image>
+            <view class="text-box">
+                <view class="n-box-title">没有找到合适实习嘛？</view>
+                <view class="n-box-tips">完善求职意向，获取更多精准岗位推荐</view>
+            </view>
+            <view class="n-box-btn">立即前往</view>
+            <view catchtap="anonymousFunc0" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" style="position:absolute;top:54px;right:10px">
+                <van-icon color="#DBDBDB" name="cross"></van-icon>
+            </view>
+        </view>
+        <view class="post-item" data-id="{{item[$original].id}}" data-index="{{index}}" data-name="{{item[$original].name}}">
+            <post-card compid="{{item[$compid__2210]}}"></post-card>
+            <view bindtap="toJobobjective" class="post_box_text" wx:if="{{jobTipPreference&&index===4}}">
+                <text class="tip_text">您还未设置职位偏好，无法匹配专属推荐</text>
+                <view>
+                    <text class="set_text">去设置</text>
+                    <text class="icon icon-arrowright"></text>
+                </view>
+            </view>
+            <view bindtap="toJobobjective" class="post_box_text" wx:if="{{jobTipPreference&&index===postList.length-1&&postList.length<=5}}">
+                <text class="tip_text">您还未设置职位偏好，无法匹配专属推荐</text>
+                <view>
+                    <text class="set_text">去设置</text>
+                    <text class="icon icon-arrowright"></text>
+                </view>
+            </view>
+        </view>
+        <custom-size-ad compid="{{item[$compid__2211]}}" wx:if="{{index===1&&postList.length>1}}"></custom-size-ad>
+    </block>
+    <view class="more-button" wx:if="{{showMoreButton}}">
+        <text bindtap="funPrivatebcjjz" class="{{hasScorll==1?'more-text':''}}">更多推荐</text>
+    </view>
+    <view class="loading" wx:if="{{hasMore}}">
+        <at-activity-indicator compid="{{$compid__2212}}"></at-activity-indicator>
+    </view>
+    <view class="noDataView" wx:if="{{!postList||postList.length==0}}">
+        <image class="noDataPic" src="https://xcxstatic.xybsyw.com/static/nodata_2.png"></image>
+        <view class="noDataText1">暂无相关岗位</view>
+        <view class="noDataText1">
+            <text bindtap="funPrivatebdaaz">修改职位偏好</text>或{{' '}}<text bindtap="funPrivatebdabz">重新选择城市</text>获取更多岗位</view>
+        <view bindtap="toEnterpriseList" class="search-btn" data-e-tap-so="this">去看看名企岗位</view>
+    </view>
+    <bottom-block compid="{{$compid__2213}}" wx:if="{{!hasMore&&!showMoreButton&&maxPage>=1&&postList&&postList.length>0}}"></bottom-block>
+    <live-broadcast-bar compid="{{$compid__2214}}" wx:if="{{!!hasLiving}}"></live-broadcast-bar>
+</block>

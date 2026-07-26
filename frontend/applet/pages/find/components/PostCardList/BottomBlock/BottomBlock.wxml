@@ -1,0 +1,8 @@
+<block wx:if="{{$taroCompReady}}">
+    <view bindtap="anonymousFunc0" class="bottom-block" wx:if="{{!isLogin}}">点击<text class="bottom-block-button">登录</text>后查看更多职位</view>
+    <view bindtap="anonymousFunc1" class="bottom-block" wx:elif="{{jobHuntInfo&&!jobHuntInfo.eduExpFlag}}">添加<text class="bottom-block-button">教育经历</text>后查看更多职位</view>
+    <view class="nodata" wx:else>
+        <text class="nodata-text">暂时没有更多的推荐结果了，试试搜索职位</text>
+        <view bindtap="anonymousFunc2" class="search-btn">去看看名企岗位</view>
+    </view>
+</block>

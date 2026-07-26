@@ -1,0 +1,31 @@
+<view class="page-container" wx:if="{{$taroCompReady}}">
+    <view class="page-title-container">
+        <view class="search-bar-wrap">
+            <view bindtap="anonymousFunc0" class="search-bar">
+                <text class="icon icon-ic-sousuo"></text>
+                <input class="search-input" disabled="{{true}}" placeholder="搜索公司，了解评价信息" placeholderClass="search-input-placeholder"></input>
+            </view>
+            <view bindtap="anonymousFunc1" class="filter-item">
+                <text class="cityText single_text">{{selectCityName}}</text>{{' '}}<text class="icon icon-xialasanjiao"></text>
+            </view>
+        </view>
+    </view>
+    <view class="part-container">
+        <view class="page-title-container page-title-flex">
+            <view class="page-title">企业热评</view>
+            <view bindtap="anonymousFunc2" class="more">查看全部<text class="icon icon-jiantou"></text>
+            </view>
+        </view>
+        <company-card compid="{{item[$compid__2790]}}" wx:for="{{loopArray1384}}" wx:for-index="__index3"></company-card>
+        <view class="empty-card" wx:if="{{companyList.length===0}}">当前城市没有企业热评，<text bindtap="anonymousFunc5" class="empty-text">换个城市</text>吧~</view>
+    </view>
+    <view class="part-container">
+        <view class="page-title-container page-title-flex">
+            <view class="page-title">学生点评</view>
+        </view>
+        <company-reviews compid="{{item[$compid__2791]}}" wx:for="{{loopArray1385}}" wx:for-index="_anonIdx2"></company-reviews>
+        <list-status-bar compid="{{$compid__2792}}" wx:if="{{dataList.length>0}}"></list-status-bar>
+        <view class="empty-card" wx:if="{{isEmpty}}">当前城市没有学生点评，<text bindtap="anonymousFunc6" class="empty-text">换个城市</text>吧~</view>
+    </view>
+    <city-select compid="{{$compid__2793}}" id="citySelect"></city-select>
+</view>

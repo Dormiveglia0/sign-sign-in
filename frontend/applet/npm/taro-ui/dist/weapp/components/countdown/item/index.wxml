@@ -1,0 +1,6 @@
+<view class="at-countdown__item" wx:if="{{$taroCompReady}}">
+    <view class="at-countdown__time-box">
+        <text class="at-countdown__time">{{anonymousState__temp}}</text>
+    </view>
+    <text class="at-countdown__separator">{{separator}}</text>
+</view>

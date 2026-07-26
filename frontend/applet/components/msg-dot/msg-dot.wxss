@@ -1,0 +1,25 @@
+.red {
+    background-color: #fd4848;
+    border-radius: 8rpx;
+    height: 16rpx;
+    width: 16rpx
+}
+
+.red_num,.red_num_99 {
+    background: red;
+    border: 2rpx solid #fff;
+    border-radius: 200rpx;
+    color: #fff;
+    font-size: 22rpx;
+    font-weight: 600;
+    height: 36rpx;
+    line-height: 36rpx;
+    text-align: center;
+    width: 36rpx
+}
+
+.red_num_99 {
+    border-radius: 20rpx;
+    font-size: 24rpx;
+    width: 56rpx
+}

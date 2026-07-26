@@ -14,6 +14,7 @@ from app.apis import xybsyw
 from app.mitm.embedded_runner import build_mitmdump_args
 from app.mitm.service import MitmService
 from app.utils import files as file_utils
+from webapp.runtime import TaskManager
 
 
 def check_session_cache_has_no_local_expiry():
@@ -56,9 +57,100 @@ def check_consumed_code_message():
             raise AssertionError("Consumed Code should fail")
 
 
+def check_silent_session_renewal():
+    original = file_utils.SESSION_CACHE_FILE
+    config = {
+        "userAgent": "test",
+        "device": {
+            "brand": "OnePlus",
+            "model": "PHP110",
+            "system": "Android 15",
+            "platform": "android",
+        },
+    }
+    response = SimpleNamespace(
+        status_code=200,
+        json=lambda: {
+            "code": "200",
+            "data": {
+                "sessionId": "new-session",
+                "encryptValue": "new-encrypt",
+            },
+        },
+    )
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
+            file_utils.save_session_cache(
+                "old-session",
+                "old-encrypt",
+                "open",
+                "union",
+            )
+            xybsyw.handle_invalid_session()
+            assert file_utils.get_valid_session_cache() is None
+            assert file_utils.load_session_cache()["encryptValue"] == "old-encrypt"
+            with (
+                patch.object(
+                    xybsyw,
+                    "_build_security_context",
+                    return_value={"params": {}, "url_token": "token"},
+                ),
+                patch.object(xybsyw, "get_device_code", return_value="device"),
+                patch.object(
+                    xybsyw.requests,
+                    "post",
+                    return_value=response,
+                ) as post,
+            ):
+                renewed = xybsyw.auto_login(config)
+            assert renewed["sessionId"] == "new-session"
+            assert renewed["openId"] == "open"
+            assert file_utils.get_valid_session_cache()["encryptValue"] == "new-encrypt"
+            _, request = post.call_args
+            assert request["data"]["encryptValue"] == "old-encrypt"
+            assert request["cookies"]["JSESSIONID"] == "old-session"
+            assert request["headers"]["devicecode"] == "device"
+    finally:
+        file_utils.SESSION_CACHE_FILE = original
+
+
+def check_task_retries_after_silent_renewal():
+    manager = TaskManager()
+    calls = 0
+
+    def target(_flow):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            try:
+                raise xybsyw.SessionExpired("expired")
+            except xybsyw.SessionExpired as exc:
+                raise RuntimeError("wrapped") from exc
+        return {"ok": True}
+
+    with (
+        patch("webapp.runtime.auto_login") as renew,
+        patch("webapp.runtime._save_history"),
+        patch.object(TaskManager, "_notify_result"),
+    ):
+        manager._start(
+            mode="in",
+            action="check",
+            source="selfcheck",
+            target=target,
+        )
+        manager.thread.join(timeout=3)
+    assert manager.snapshot()["status"] == "success"
+    assert calls == 2
+    renew.assert_called_once()
+
+
 def main():
     check_session_cache_has_no_local_expiry()
     check_consumed_code_message()
+    check_silent_session_renewal()
+    check_task_retries_after_silent_renewal()
     capture_command = MitmService(
         host="0.0.0.0",
         allowed_client_ip="203.0.113.7",

@@ -1,0 +1,254 @@
+@-webkit-keyframes fadenum {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        opacity: 0
+    }
+}
+
+@keyframes fadenum {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        opacity: 0
+    }
+}
+
+.loginBox {
+    background: #fff;
+    height: 323rpx;
+    width: 100%
+}
+
+.loginBox_iphonex {
+    height: 391rpx
+}
+
+.loginBox .title {
+    color: #333;
+    font-size: 34rpx;
+    height: auto;
+    line-height: 120rpx;
+    position: relative;
+    text-align: center
+}
+
+.loginBox .title wx-text {
+    color: #757575;
+    display: block;
+    height: 45rpx;
+    line-height: 45rpx;
+    position: absolute;
+    right: 23rpx;
+    text-align: center;
+    top: -3rpx;
+    width: 45rpx
+}
+
+.loginBox .closeImg {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/markJobStatus202104_03.png) 50% no-repeat;
+    background-size: 30rpx 30rpx;
+    height: 30rpx;
+    padding: 10rpx;
+    position: absolute;
+    right: 23rpx;
+    top: -3rpx;
+    width: 30rpx
+}
+
+.loginBox .no_login {
+    color: #333;
+    font-size: 34rpx;
+    font-weight: 500;
+    line-height: 48rpx;
+    margin: 30rpx 0 0 48rpx
+}
+
+.login_btn {
+    -ms-flex-pack: justify;
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.getinfo_btn,.getinfo_btn2,.login_btn {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.getinfo_btn {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #02c160;
+    border: 0;
+    border-radius: 10rpx;
+    color: #fff;
+    font-size: 34rpx;
+    height: 80rpx;
+    line-height: 80rpx;
+    margin: 85rpx auto 41rpx;
+    padding: 0;
+    text-align: center;
+    width: 300rpx
+}
+
+.getinfo_btn2 {
+    -ms-flex-pack: center;
+    -webkit-justify-content: center;
+    justify-content: center;
+    width: 380rpx
+}
+
+.getinfo_btn .weixinIcon {
+    height: 36rpx;
+    margin-right: 16rpx;
+    position: relative;
+    top: 1rpx;
+    width: 44rpx
+}
+
+.loginBox wx-button wx-text {
+    font-size: 40rpx;
+    margin-right: 14rpx;
+    position: relative;
+    top: 2rpx
+}
+
+.bindBox {
+    background: #fff;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 371rpx;
+    padding-top: 120rpx
+}
+
+.loginBox .login_phone {
+    color: #333;
+    font-size: 34rpx;
+    font-weight: 500;
+    line-height: 48rpx;
+    margin: 30rpx 0 0 48rpx
+}
+
+.loginBox .bottom,.tipToast,.user-agreement {
+    -ms-flex-pack: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: center;
+    justify-content: center
+}
+
+.loginBox .bottom {
+    width: 100%
+}
+
+.loginBox .getmobile_btn {
+    background: #02c160;
+    border-radius: 10rpx;
+    color: #fff;
+    font-family: Helvetica;
+    font-size: 34rpx;
+    height: 80rpx;
+    line-height: 80rpx;
+    margin-top: 85rpx;
+    padding: 0;
+    text-align: center;
+    width: 380rpx
+}
+
+.tipToast,.user-agreement {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center
+}
+
+.tipToast {
+    -ms-flex-line-pack: center;
+    -webkit-align-content: center;
+    align-content: center;
+    background: #fff;
+    border-radius: 38rpx;
+    -webkit-box-shadow: 0 15rpx 24rpx 0 rgba(0,0,0,.16);
+    box-shadow: 0 15rpx 24rpx 0 rgba(0,0,0,.16);
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #333;
+    font-size: 29rpx;
+    font-weight: 500;
+    height: 80rpx;
+    left: 50%;
+    line-height: 80rpx;
+    position: absolute;
+    top: 0;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+    width: 256rpx;
+    z-index: 999
+}
+
+.tipToast .successIcon {
+    height: 30rpx;
+    margin-right: 15rpx;
+    width: 31rpx
+}
+
+.user-agreement {
+    color: #999;
+    font-size: 22rpx;
+    line-height: 36rpx;
+    text-align: center
+}
+
+.user-agreement .link {
+    color: #3b92d7
+}
+
+.tips_image2 {
+    height: 24rpx;
+    padding: 10rpx;
+    width: 24rpx
+}
+
+.certification-loading-hide {
+    -webkit-animation: fadenum .5s infinite;
+    animation: fadenum .5s infinite
+}
+
+.certification-loading {
+    -ms-flex-align: center;
+    -ms-flex-pack: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: rgba(0,0,0,.57);
+    border-radius: 28rpx;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    height: 300rpx;
+    -webkit-justify-content: center;
+    justify-content: center;
+    left: 50%;
+    position: fixed;
+    top: 40%;
+    -webkit-transform: translate(-50%,-50%);
+    -ms-transform: translate(-50%,-50%);
+    transform: translate(-50%,-50%);
+    width: 560rpx;
+    z-index: 99
+}
+
+.certification-loading>wx-view {
+    color: #fff;
+    font-size: 30rpx;
+    margin-top: 35rpx
+}

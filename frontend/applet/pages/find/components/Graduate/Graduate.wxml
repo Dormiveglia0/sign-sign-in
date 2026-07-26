@@ -1,0 +1,108 @@
+<view wx:if="{{$taroCompReady}}">
+    <view class="modal_box"></view>
+    <view class="graduate-container">
+        <fastlogin compid="{{$compid__2796}}" id="fastlogin"></fastlogin>
+        <view wx:if="{{login&&userid!='292903'}}">
+            <view class="graduate-card-AI">
+                <view class="graduate-card-title-one">
+                    <view class="left-title-text">
+                        <lottie-icon compid="{{$compid__2797}}"></lottie-icon>
+                        <view class="text-box">
+                            <text class="text-one">AI热榜</text>
+                            <text class="point_icon">·</text>
+                            <text class="text-one">大家最关心什么？</text>
+                        </view>
+                    </view>
+                    <view bindtap="anonymousFunc2" class="right_text">我也去问问</view>
+                </view>
+                <danmu-scroll></danmu-scroll>
+            </view>
+            <view class="graduate-card">
+                <view class="graduate-card-aiIndex">
+                    <image class="ai-index-icon" src="https://xcxstatic.xybsyw.com/xcx/images/icon-index-ai.png"></image>
+                    <view class="ai-text-box">
+                        <block wx:if="{{completeCount==0}}">
+                            <view class="ai-text-frame">
+                                <text class="text-one">职场黑科技   AI助你生涯规划</text>
+                                <text class="people_num" wx:if="{{complateNum}}">{{complateNum}}人完成</text>
+                            </view>
+                            <text bindtap="anonymousFunc3" class="jump-text">开启体验 → </text>
+                        </block>
+                        <block wx:if="{{completeCount==1||completeCount==2}}">
+                            <view class="ai-text-frame">
+                                <text class="text-one">你生涯规划的旅程尚未结束</text>
+                                <text class="people_num" wx:if="{{complateNum}}">{{complateNum}}人完成</text>
+                            </view>
+                            <text bindtap="anonymousFunc4" class="jump-text">行则将至，快来完善吧！ → </text>
+                        </block>
+                        <block wx:if="{{completeCount==3}}">
+                            <view class="ai-text-frame">
+                                <text class="text-one">你有一份职业生涯报告待查收</text>
+                                <text class="people_num" wx:if="{{complateNum}}">{{complateNum}}人完成</text>
+                            </view>
+                            <text bindtap="anonymousFunc5" class="jump-text">短期目标还没设置哦，快来完善吧！ →</text>
+                        </block>
+                        <block wx:if="{{completeCount==4}}">
+                            <view class="ai-text-frame">
+                                <text class="text-one">你有一份职业生涯报告待查收</text>
+                                <text class="people_num" wx:if="{{complateNum}}">{{complateNum}}人完成</text>
+                            </view>
+                            <text bindtap="anonymousFunc6" class="jump-text">长期目标还没确定？试着设立一下 → </text>
+                        </block>
+                        <block wx:if="{{completeCount==5&&shortTermGoal!==2}}">
+                            <view class="ai-text-frame">
+                                <text class="text-one">你有一份职业生涯报告待查收</text>
+                                <text class="people_num" wx:if="{{complateNum}}">{{complateNum}}人完成</text>
+                            </view>
+                            <text bindtap="anonymousFunc7" class="jump-text">立即查收 → </text>
+                        </block>
+                        <block wx:if="{{completeCount==5&&shortTermGoal==2}}">
+                            <view class="ai-text-frame">
+                                <text class="text-one">你有一份职业生涯报告待查收</text>
+                                <text class="people_num" wx:if="{{complateNum}}">{{complateNum}}人完成</text>
+                            </view>
+                            <view bindtap="anonymousFunc8" class="jump-text">短期目标有变化？快来更新下 →</view>
+                        </block>
+                    </view>
+                </view>
+            </view>
+        </view>
+        <view class="graduate-card" style="padding-bottom:48rpx">
+            <view class="graduate-card-title graduate-card-flex">资讯情报站<view bindtap="anonymousFunc9" class="more">查看全部<text class="icon icon-jiantou"></text>{{' '}}</view>
+            </view>
+            <block wx:if="{{informationList.length>0}}">
+                <view class="info-item" wx:for="{{informationList}}" wx:key="index">
+                    <item-info-post itemData="{{item}}" itemIndex="{{index}}" key="{{index}}"></item-info-post>
+                </view>
+            </block>
+        </view>
+        <view bindtap="anonymousFunc10" class="filter-bar">
+            <view class="special-name">{{professionData.name||'您还未选择专业信息'}}</view>
+            <view class="filter-btn">更换专业<text class="icon icon-xialasanjiao"></text>{{' '}}</view>
+        </view>
+        <view class="graduate-card">
+            <view class="graduate-card-title graduate-card-flex">学长学姐就业选择</view>
+            <view class="rank-list">
+                <view class="rank-empty" wx:if="{{whereData.topDtoList.length===0}}">本专业学生样本较少，<view bindtap="anonymousFunc11" class="empty-button">换个专业</view>吧~</view>
+                <view bindtap="anonymousFunc12" class="posCell" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" data-id="{{item[$original].vocationId}}" wx:for="{{loopArray1391}}" wx:key="vocationId">
+                    <image class="numImg" src="{{'https://xcxstatic.xybsyw.com/xcx/images/book_num_'+index+1+'.png'}}"></image>
+                    <view class="list_top">
+                        <view class="name">{{item[$original].name}}</view>
+                        <view class="{{'pesent '+(index<3?'pesent'+index:'')}}">{{item[$original].percent}}</view>
+                    </view>
+                    <view class="list_bottom">{{'平均月薪：'+item[$original].averageSalary}}</view>
+                </view>
+                <view bindtap="anonymousFunc13" class="more-button" wx:if="{{whereData.topDtoList.length>3&&!showMore}}">展开全部<text class="icon icon-fanhui-copy"></text>{{' '}}</view>
+                <view bindtap="anonymousFunc14" class="more" wx:if="{{showMore}}">点击查看更多职业百科<text class="icon icon-jiantou"></text>{{' '}}</view>
+            </view>
+        </view>
+        <view class="graduate-card" wx:if="{{postList.length>0}}">
+            <view class="graduate-card-title graduate-card-flex">推荐岗位<view bindtap="anonymousFunc15" class="more">查看全部<text class="icon icon-jiantou"></text>{{' '}}</view>
+            </view>
+            <view class="post-list">
+                <post-card compid="{{item[$compid__2795]}}" wx:for="{{loopArray1392}}"></post-card>
+            </view>
+        </view>
+        <profession-select compid="{{$compid__2798}}" id="profession"></profession-select>
+    </view>
+</view>

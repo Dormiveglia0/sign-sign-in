@@ -1,0 +1,5 @@
+<view class="{{[props.type==0?'rate_main':'','rate']}}" wx:if="{{$taroCompReady}}">
+    <view class="rate-name" wx:if="{{nameVisible&&sizeVal!==10}}">{{name}}：</view>
+    <van-rate color="#FFC67D" customClass="icon_class" readonly="{{true}}" size="{{sizeVal}}" value="{{props.value}}" voidColor="#EFEFEF" voidIcon="star"></van-rate>
+    <view class="rate-value">{{valueText}}</view>
+</view>

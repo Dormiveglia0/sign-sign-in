@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "company-rate": "../CompanyRate/CompanyRate",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  }
+}

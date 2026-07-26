@@ -1,0 +1,203 @@
+.company-reviews-card {
+    background-color: #fff;
+    border-radius: 16rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin-bottom: 20rpx;
+    padding: 32rpx 24rpx 24rpx;
+    width: 100%
+}
+
+.company-reviews-card,.company-reviews-card.border {
+    border: 2rpx solid #ededed
+}
+
+.post-box {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    margin: 30rpx 0 10rpx
+}
+
+.post-name,.post-value {
+    color: #a8a9b3;
+    font-size: 26rpx;
+    font-weight: 400;
+    line-height: 37rpx
+}
+
+.post-value {
+    color: #333;
+    font-weight: 500;
+    line-height: 40rpx;
+    margin-left: 10rpx
+}
+
+.avatar {
+    border-radius: 50%;
+    height: 72rpx;
+    margin-right: 17rpx;
+    width: 72rpx
+}
+
+.company-reviews-info {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.student-name {
+    color: #333;
+    font-size: 28rpx;
+    font-weight: 500;
+    line-height: 40rpx;
+    margin-right: 16rpx;
+    max-width: 16em
+}
+
+.auth-tag {
+    background: rgba(24,193,154,.1);
+    border-radius: 4rpx;
+    color: #18c19a;
+    font-size: 22rpx;
+    line-height: 32rpx;
+    padding: 0 8rpx
+}
+
+.company-info {
+    color: #6e8eb2;
+    font-size: 28rpx;
+    line-height: 40rpx;
+    margin: 30rpx 0 10rpx
+}
+
+.company-info .field {
+    color: #999
+}
+
+.frame_box {
+    background: #f9fafe;
+    padding: 20rpx
+}
+
+.tag_box {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-wrap: wrap;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    margin-bottom: 10rpx
+}
+
+.comments,.tag_box .tag_index {
+    font-size: 26rpx;
+    font-weight: 400
+}
+
+.tag_box .tag_index {
+    background: #fff3ec;
+    border-radius: 32rpx;
+    color: #fe8838;
+    height: 48rpx;
+    line-height: 48rpx;
+    margin-bottom: 10rpx;
+    margin-right: 10rpx;
+    padding: 0 16rpx;
+    text-align: center
+}
+
+.comments {
+    background: #f9fafe;
+    border-radius: 8rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #5c5c66;
+    line-height: 42rpx;
+    margin: 30rpx 0 24rpx;
+    padding: 20rpx;
+    white-space: pre-line
+}
+
+.company-reviews-footer {
+    -ms-flex-pack: justify;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.comments-like,.comments-time {
+    color: #a8a9b3;
+    font-size: 24rpx;
+    font-weight: 400;
+    line-height: 33rpx
+}
+
+.comments-like {
+    -ms-flex-align: center;
+    -ms-flex-pack: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: 0 0;
+    border: 1px solid #d9d9d9;
+    border-radius: 28rpx;
+    color: #999;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    font-size: 20rpx;
+    height: 56rpx;
+    -webkit-justify-content: center;
+    justify-content: center;
+    line-height: 28rpx;
+    width: 130rpx
+}
+
+.comments-like .icon {
+    color: #999;
+    font-size: 33rpx;
+    margin-right: 5rpx;
+    margin-top: 4rpx
+}
+
+.comments-like.active {
+    background-color: #f9ebeb;
+    color: #ff453a
+}
+
+.comments-like.active .icon {
+    color: #ff453a
+}
+
+.company-reply {
+    border-radius: 16rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #333;
+    line-height: 40rpx;
+    margin-top: 12rpx;
+    width: 100%
+}
+
+.company-reply>.field {
+    color: #6e8eb2;
+    font-size: 24rpx;
+    font-weight: 500
+}
+
+.company-reply .reply_content {
+    color: #5c5c66;
+    font-size: 26rpx;
+    font-weight: 400
+}

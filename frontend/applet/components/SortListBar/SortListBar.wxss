@@ -1,0 +1,36 @@
+.barItem,.barItem .iconView {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.barItem {
+    color: #666;
+    font-size: 26rpx;
+    font-weight: 700;
+    height: 96rpx;
+    line-height: 96rpx;
+    position: relative;
+    z-index: 1
+}
+
+.barItem .iconView {
+    -ms-flex-pack: center;
+    height: 88rpx;
+    -webkit-justify-content: center;
+    justify-content: center;
+    margin-left: 13rpx
+}
+
+.barItem .iconView .icon {
+    height: 22rpx;
+    width: 17rpx
+}
+
+.barItem .iconView .icon2 {
+    height: 24rpx;
+    width: 24rpx
+}

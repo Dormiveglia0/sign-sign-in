@@ -1,0 +1,87 @@
+.switch-bar,.switch-bar__item {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.switch-bar {
+    background: #f8e9e9;
+    border-radius: 36rpx;
+    height: 68rpx;
+    padding: 5rpx 6rpx;
+    position: relative;
+    width: 252rpx
+}
+
+.switch-bar__item {
+    -ms-flex-pack: center;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    color: #666680;
+    cursor: pointer;
+    -webkit-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    font-size: 28rpx;
+    -webkit-justify-content: center;
+    justify-content: center;
+    -webkit-transition: all .3s ease-in-out;
+    -o-transition: all .3s ease-in-out;
+    transition: all .3s ease-in-out;
+    z-index: 2
+}
+
+.switch-bar__item--active {
+    color: #1f1f2c;
+    font-size: 28rpx;
+    font-weight: 600
+}
+
+.switch-bar::after {
+    background: #fff;
+    border-radius: 30rpx;
+    -webkit-box-shadow: 2rpx 2rpx 4rpx 0 #cfd1d6;
+    box-shadow: 2rpx 2rpx 4rpx 0 #cfd1d6;
+    content: "";
+    height: 59rpx;
+    left: var(--left);
+    position: absolute;
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+    -webkit-transition: left .3s ease-in-out;
+    -o-transition: left .3s ease-in-out;
+    transition: left .3s ease-in-out;
+    width: var(--width)
+}
+
+.switch-bar--blue,.switch-bar--green {
+    background: hsla(0,0%,100%,.6)
+}
+
+.switch-bar--green .switch-bar__item--active {
+    color: #06a674
+}
+
+.switch-bar--blue .switch-bar__item--active {
+    color: #4c7de2
+}
+
+.switch-bar--offer-hero {
+    background: #f3e5ff
+}
+
+.offer-hero-text {
+    -webkit-text-fill-color: transparent;
+    background: -webkit-gradient(linear,left top,right top,from(#5978f1),to(#d153ff));
+    background: -webkit-linear-gradient(left,#5978f1,#d153ff);
+    background: -o-linear-gradient(left,#5978f1 0,#d153ff 100%);
+    background: linear-gradient(90deg,#5978f1,#d153ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    font-size: 28rpx;
+    font-weight: 800;
+    line-height: 36rpx
+}

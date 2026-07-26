@@ -1,0 +1,42 @@
+<block wx:if="{{$taroCompReady}}">
+    <view class="tipToast" style="{{'top:'+statusHeight+'px;'}}" wx:if="{{tipFlag}}">
+        <image class="successIcon" src="https://xcxstatic.xybsyw.com/xcx/images/blogOptimize202103_22.png"></image>登录成功</view>
+    <van-popup __fn_onClose="{{true}}" bindclose="closeLogin" customClass="xyb_popup" customStyle="border-radius:28rpx 28rpx 0rpx 0rpx;background-color:#FFFFFF" overlayStyle="background-color:rgba(0,0,0,0.4)" position="bottom" show="{{showLogin}}">
+        <view class="{{'loginBox '+(ifIphoneX?'loginBox_iphonex':'')}}">
+            <view class="title">
+                <view catchtap="anonymousFunc0" class="closeImg" wx:if="{{!isFromRecomm}}"></view>
+            </view>
+            <view class="no_login">{{posResumeMatch?'亲，登录后才能完成操作哦':'您尚未登录'}}</view>
+            <view class="login_btn" hoverClass="none" hoverStopPropagation="false">
+                <block wx:if="{{!currentEnvironment}}">
+                    <button bindtap="toAccountLogin" class="getinfo_btn getinfo_btn2" lang="zh_CN" wx:if="{{!canFastLogin&&selectDeal2}}">手机号快捷登录</button>
+                    <button bindtap="fastLogin" class="getinfo_btn getinfo_btn2" data-e-tap-so="this" wx:if="{{canFastLogin&&selectDeal2}}">手机号快捷登录</button>
+                    <button bindtap="anonymousFunc1" class="getinfo_btn getinfo_btn2" wx:if="{{!selectDeal2}}">手机号快捷登录</button>
+                </block>
+                <button bindgetphonenumber="enterpriseLogin" class="getinfo_btn getinfo_btn2" openType="getPhoneNumber" wx:if="{{currentEnvironment=='wxwork'}}">企业微信快速登录</button>
+            </view>
+            <view class="user-agreement">
+                <image binderror="{{true}}" bindload="{{true}}" bindtap="anonymousFunc2" class="tips_image2" lazyLoad="false" mode="aspectFit" src="https://xcxstatic.xybsyw.com/xcx/images/checkbox_48.png" wx:if="{{!selectDeal2}}"></image>
+                <image binderror="{{true}}" bindload="{{true}}" bindtap="anonymousFunc3" class="tips_image2" lazyLoad="false" mode="aspectFit" src="https://xcxstatic.xybsyw.com/xcx/images/checkbox_48_on.png" wx:if="{{selectDeal2}}"></image>
+                <text bindtap="anonymousFunc4">我已阅读并同意校友邦 </text>
+                <text bindtap="anonymousFunc5" class="link">《用户协议》</text>和<text bindtap="anonymousFunc6" class="link">《隐私政策》</text>
+            </view>
+        </view>
+    </van-popup>
+    <van-popup customClass="xyb_popup" customStyle="border-radius:28rpx 28rpx 0rpx 0rpx;" overlayStyle="background-color:rgba(0,0,0,0.4)" position="bottom" show="{{showbind}}">
+        <view class="{{'loginBox '+(ifIphoneX?'loginBox_iphonex':'')}}">
+            <view class="title">
+                <view catchtap="anonymousFunc7" class="closeImg"></view>
+            </view>
+            <view class="login_phone">校友邦申请绑定您的手机号</view>
+            <view class="bottom">
+                <button bindgetphonenumber="getPhoneNumber" class="getmobile_btn" openType="getPhoneNumber" wx:if="{{!currentEnvironment}}">绑定手机号</button>
+                <button bindgetphonenumber="getEnterpriseUserPhone" class="getmobile_btn" openType="getPhoneNumber" wx:if="{{currentEnvironment=='wxwork'}}">绑定手机号</button>
+            </view>
+        </view>
+    </van-popup>
+    <view class="{{anonymousState__temp}}" wx:if="{{isShowLoading}}">
+        <at-activity-indicator compid="{{$compid__2818}}"></at-activity-indicator>
+        <view>登录成功，开启学籍认证</view>
+    </view>
+</block>

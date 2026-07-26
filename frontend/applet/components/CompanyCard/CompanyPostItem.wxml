@@ -1,0 +1,14 @@
+<view catchtap="anonymousFunc0" class="company-post-item" wx:if="{{$taroCompReady}}">
+    <view class="company-post-item__row">
+        <view class="company-post-item__name cut_text">{{_item.name}}</view>
+        <view class="company-post-item__salary">
+            <text>{{anonymousState__temp}}</text>
+        </view>
+    </view>
+    <view class="company-post-item__row">
+        <view class="company-post-item__tags">
+            <view class="{{tag[$loopState__temp3]}}" wx:for="{{loopArray1420}}" wx:for-index="_anonIdx2" wx:for-item="tag" wx:key="$original">{{tag[$original]}}</view>
+        </view>
+        <view class="company-post-item__location">{{_item.location||''}}</view>
+    </view>
+</view>

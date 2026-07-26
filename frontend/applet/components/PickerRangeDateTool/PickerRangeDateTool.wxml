@@ -1,0 +1,4 @@
+<block wx:if="{{$taroCompReady}}">
+    <picker-date-tool compid="{{$compid__2746}}"></picker-date-tool>
+    <picker-date-tool compid="{{$compid__2747}}"></picker-date-tool>
+</block>

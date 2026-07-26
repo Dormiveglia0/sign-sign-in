@@ -1,0 +1,9 @@
+{
+  "component": true,
+  "usingComponents": {
+    "at-input": "../../npm/taro-ui/dist/weapp/components/input/index",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  },
+  "navigationBarTitleText": ""
+}

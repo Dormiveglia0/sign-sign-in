@@ -1,0 +1,15 @@
+<view class="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <block wx:if="{{fileList}}">
+        <view class="image-item" wx:for="{{loopArray1341}}" wx:key="index">
+            <image bindtap="anonymousFunc0" class="pic" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" mode="aspectFill" src="{{item[$original].originalPath?item[$original].originalPath:item[$original][urlField]}}"></image>
+            <image bindtap="anonymousFunc1" class="delete" data-e-tap-a-a="{{item[_$indexKey2]}}" data-e-tap-so="this" src="https://xcxstatic.xybsyw.com/xcx/images/ic_shanchu.png" wx:if="{{!previewMode}}"></image>
+        </view>
+    </block>
+    <view class="image-item upload-item" wx:if="{{fileList.length<maxLength&&!previewMode}}">
+        <view bindtap="anonymousFunc2" class="img_pic2" wx:if="{{uploadImgType!=='DEFAULT'}}">
+            <image class="pic2" mode="aspectFill" src="https://xcxstatic.xybsyw.com/xcx/images/offwork_addImg.png"></image>
+            <text class="image-item__text">{{fileList.length}}/{{maxLength}}</text>
+        </view>
+        <image bindtap="anonymousFunc3" class="pic" mode="aspectFill" src="https://xcxstatic.xybsyw.com/static/upload_img_info_add.png" wx:if="{{uploadImgType==='DEFAULT'}}"></image>
+    </view>
+</view>

@@ -1,0 +1,25 @@
+<popup compid="{{$compid__2773}}" wx:if="{{$taroCompReady}}">
+    <view class="{{['win_main',noTitle?'notitle':'']}}">
+        <view class="win_title">
+            <text class="win_name">{{winName}}</text>
+            <view bindtap="closeWinBox" class="gunbi_icon" data-e-tap-so="this" wx:if="{{closeIcon}}">
+                <text wx:if="{{closeText}}">{{closeText}}</text>
+                <at-icon compid="{{$compid__2774}}" wx:else></at-icon>
+            </view>
+        </view>
+        <view class="school_list" wx:if="{{listData.length>0}}">
+            <view catchtap="anonymousFunc0" class="{{item[$loopState__temp2]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" data-obj="{{item[$original]}}" hoverClass="click_hover" wx:for="{{loopArray1370}}" wx:key="index">
+                <view class="item-name">{{item[$original].name}}<van-icon name="success" size="40rpx" wx:if="{{item[$original].id===choosedId&&needActive&&!needArrow}}"></van-icon>
+                    <van-icon color="#D8D8D8" name="arrow" size="30rpx" wx:if="{{!needActive&&needArrow}}"></van-icon>
+                </view>
+                <view class="school_sub_item" wx:if="{{item[$original].describe}}">{{item[$original].describe}}</view>
+            </view>
+        </view>
+        <view wx:if="{{listData.length===0}}">
+            <view class="no_answer_other_container">
+                <image src="https://xcxstatic.xybsyw.com/static/nodata_2.png"></image>
+                <text class="no_answer_other_container_des">暂无{{winName}}信息</text>
+            </view>
+        </view>
+    </view>
+</popup>

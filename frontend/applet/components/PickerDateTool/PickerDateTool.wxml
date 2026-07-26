@@ -1,0 +1,27 @@
+<popup compid="{{$compid__2743}}" wx:if="{{$taroCompReady}}">
+    <block wx:if="{{isShow}}">
+        <popup-title compid="{{$compid__2744}}"></popup-title>
+        <view style="background:#fff;">
+            <picker-view bindchange="handleChange" class="picker" data-e-change-so="this" indicatorStyle="height: 48px;" style="width:100%;height:516rpx;text-align:center;" value="{{value}}">
+                <picker-view-column>
+                    <view style="line-height:48px" wx:for="{{years}}" wx:for-index="idx" wx:key="idx">{{item}}年</view>
+                </picker-view-column>
+                <view class="mid_line">
+                    <text class="line">-</text>
+                </view>
+                <picker-view-column>
+                    <view style="line-height:48px" wx:for="{{months}}" wx:for-index="idx" wx:key="idx">{{item}}月</view>
+                </picker-view-column>
+                <block wx:if="{{needDays}}">
+                    <view class="mid_line">
+                        <text class="line">-</text>
+                    </view>
+                    <picker-view-column>
+                        <view style="line-height:48px" wx:for="{{days}}" wx:for-index="idx" wx:key="idx">{{item}}日</view>
+                    </picker-view-column>
+                </block>
+            </picker-view>
+        </view>
+        <view style="background:#fff;height:143rpx"></view>
+    </block>
+</popup>

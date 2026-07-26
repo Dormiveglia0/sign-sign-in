@@ -1,0 +1,131 @@
+@-webkit-keyframes hidetip {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        display: none;
+        opacity: 0;
+        z-index: -2
+    }
+}
+
+@keyframes hidetip {
+    0% {
+        opacity: 1
+    }
+
+    to {
+        display: none;
+        opacity: 0;
+        z-index: -2
+    }
+}
+
+.NewsMessage {
+    position: fixed;
+    right: 0;
+    top: 40vh;
+    z-index: 999
+}
+
+.NewsMessage .newsMessage_icons {
+    -ms-flex-align: end;
+    -webkit-align-items: flex-end;
+    align-items: flex-end;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column
+}
+
+.NewsMessage .newsMessage_icons .newsMessagei_close {
+    border-radius: 50%;
+    height: 28rpx;
+    margin-bottom: 16rpx;
+    margin-right: 38rpx;
+    width: 28rpx
+}
+
+.NewsMessage .newsMessage_icons .newsMessagei_img {
+    height: 98rpx;
+    width: 98rpx
+}
+
+.NewsMessage .news_list {
+    background: #fff;
+    border: 1rpx solid #dbdbdb;
+    border-radius: 28rpx 0 28rpx 28rpx;
+    -webkit-box-shadow: 0 24rpx 48rpx 0 rgba(0,0,0,.1);
+    box-shadow: 0 24rpx 48rpx 0 rgba(0,0,0,.1);
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 15rpx 0 24rpx;
+    position: absolute;
+    right: 70rpx;
+    top: 140rpx;
+    width: 467rpx
+}
+
+.NewsMessage .news_list .news_list_item_active {
+    background: #d5f4dc
+}
+
+.NewsMessage .news_list .news_list_item {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    height: 64rpx;
+    padding-left: 24rpx
+}
+
+.NewsMessage .news_list .news_list_item .nli_companyname {
+    color: #333;
+    font-size: 26rpx;
+    max-width: 367rpx;
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.NewsMessage .news_list .news_list_item .nli_mark {
+    background: red;
+    border-radius: 200rpx;
+    color: #fff;
+    font-family: PingFangSC-Semibold,PingFang SC;
+    font-size: 24rpx;
+    font-weight: 600;
+    line-height: 36rpx;
+    margin-left: 10rpx;
+    text-align: center;
+    width: 36rpx
+}
+
+.NewsMessage .news_list .news_list_allread {
+    color: #4990e2;
+    font-size: 24rpx;
+    line-height: 33rpx;
+    margin-right: 34rpx;
+    text-align: right;
+    text-decoration: underline
+}
+
+.NewsMessage_box {
+    height: 100vh;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100vw;
+    z-index: 998
+}
+
+.NewsMessage_hide {
+    -webkit-animation: hidetip .5s 1 forwards;
+    animation: hidetip .5s 1 forwards
+}

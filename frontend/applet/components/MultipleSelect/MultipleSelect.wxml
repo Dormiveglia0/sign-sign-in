@@ -1,0 +1,18 @@
+<popup compid="{{$compid__2756}}" wx:if="{{$taroCompReady}}">
+    <view class="win_main">
+        <popup-title compid="{{$compid__2757}}"></popup-title>
+        <view class="school_list" wx:if="{{listData.length>0}}">
+            <view catchtap="anonymousFunc0" class="{{item[$loopState__temp2]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" data-obj="{{item[$original]}}" hoverClass="click_hover" wx:for="{{loopArray1365}}" wx:key="index">
+                <view class="item-name">{{item[$original].name}}<van-icon name="success" size="40rpx" wx:if="{{item[$loopState__temp4]}}"></van-icon>
+                </view>
+                <view class="school_sub_item" wx:if="{{item[$original].describe}}">{{item[$original].describe}}</view>
+            </view>
+        </view>
+        <view wx:if="{{listData.length===0}}">
+            <view class="no_answer_other_container">
+                <image src="https://xcxstatic.xybsyw.com/xcx/images/nodata_2.png"></image>
+                <text class="no_answer_other_container_des">暂无{{winName}}信息</text>
+            </view>
+        </view>
+    </view>
+</popup>

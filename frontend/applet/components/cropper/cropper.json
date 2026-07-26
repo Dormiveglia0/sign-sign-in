@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "image-cropper": "../image-cropper/image-cropper",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  }
+}

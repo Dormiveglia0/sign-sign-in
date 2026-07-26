@@ -1,0 +1,26 @@
+<view class="ai-container-wrap" style="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <view class="ai-container">
+        <image class="ai-avatar-big" src="https://xcxstatic.xybsyw.com/xcx/images/ai-avatar.png"></image>
+        <view class="ai-card-list">
+            <view class="ai-text">Hi，我是你的新朋友“校友邦AI小助手”，我呢，可以回答你的各种问题，给你提供实习指导、职业规划、就业咨询相关的帮助，还能随时陪你聊天哦~</view>
+            <view bindtap="anonymousFunc0" class="ai-item" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1374}}">
+                <view class="ai-avatar-wrap">
+                    <image class="ai-avatar" src="{{item[$original].avatarIcon}}"></image>
+                    <view class="{{'ai-tag '+item[$original].tagClassName}}">{{item[$original].tagName}}</view>
+                </view>
+                <view style="flex:1">
+                    <view class="ai-item-title">{{item[$original].name}}</view>
+                    <view class="ai-item-desc">{{item[$original].desc}}</view>
+                </view>
+                <text class="iconfont icon-jiantou"></text>
+            </view>
+            <view bindtap="anonymousFunc1" class="input-container">
+                <text class="placeholder">可以问我求职相关的任何问题哦</text>
+                <view class="arrow-right">
+                    <text class="iconfont icon-shangjiantou"></text>
+                </view>
+            </view>
+        </view>
+    </view>
+    <fastlogin compid="{{$compid__2782}}"></fastlogin>
+</view>

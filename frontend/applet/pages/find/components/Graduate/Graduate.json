@@ -1,0 +1,13 @@
+{
+  "component": true,
+  "usingComponents": {
+    "fastlogin": "../../../../components/fastlogin/fastlogin",
+    "lottie-icon": "../../../../components/LottieIcon/LottieIcon",
+    "danmu-scroll": "Inc/DanmuScroll/DanmuScroll",
+    "post-card": "../PostCard/PostCard",
+    "profession-select": "../../../../components/professionselect/professionselect",
+    "item-info-post": "../itemInfoPost/itemInfoPost",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  }
+}

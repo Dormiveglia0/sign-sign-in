@@ -1,0 +1,11 @@
+{
+  "component": true,
+  "usingComponents": {
+    "company-card": "../../../../components/CompanyCard/CompanyCard",
+    "company-reviews": "../../../../components/CompanyReviews/CompanyReviews",
+    "list-status-bar": "../../../../components/ListStatusBar/ListStatusBar",
+    "city-select": "../../../../components/CitySelect/citySelect",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  }
+}

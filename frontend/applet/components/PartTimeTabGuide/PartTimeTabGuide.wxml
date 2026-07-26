@@ -1,0 +1,13 @@
+<block wx:if="{{$taroCompReady}}">
+    <block wx:if="{{!visible}}"></block>
+    <block wx:else>
+        <view catchTouchMove="anonymousState__temp" class="part-time-tab-guide__mask"></view>
+        <view catchTouchMove="anonymousState__temp4" class="{{anonymousState__temp2}}" style="{{anonymousState__temp3}}">
+            <view class="{{anonymousState__temp5}}"></view>
+            <text class="part-time-tab-guide__title">【兼职】板块上线啦🎉~</text>
+            <text class="part-time-tab-guide__desc">
+                <text class="part-time-tab-guide__desc-underline">课余/下班</text>碎片化时间均可接单</text>
+            <view catchtap="handleConfirm" class="part-time-tab-guide__btn">知道了</view>
+        </view>
+    </block>
+</block>

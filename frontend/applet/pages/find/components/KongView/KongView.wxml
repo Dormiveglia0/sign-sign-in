@@ -1,0 +1,24 @@
+<block wx:if="{{$taroCompReady}}">
+    <scroll-view class="{{anonymousState__temp}}" enableFlex="{{true}}" enhanced="{{true}}" scrollX="{{true}}" showScrollbar="{{false}}" wx:if="{{hasLoad&&list&&list.length>0}}">
+        <view bindtap="anonymousFunc0" class="kong-item" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1070}}" wx:for-index="__index0" wx:key="id">
+            <image class="kong-image" mode="widthFix" src="{{item[$original].iconUrl+'?x-oss-process=image/resize,m_fixed,w_90'}}"></image>
+            <view class="kong-text">{{item[$original].name}}</view>
+            <view class="kong-red-dot" wx:if="{{item[$loopState__temp3]}}"></view>
+        </view>
+        <view class="kong-item-placeholder"></view>
+    </scroll-view>
+    <scroll-view class="kong-view default" enableFlex="{{true}}" scrollX="{{true}}" wx:if="{{hasLoad&&list.length===0}}">
+        <view bindtap="anonymousFunc1" class="kong-item">
+            <image class="kong-image" mode="aspectFit" src="https://xcxstatic.xybsyw.com/xcx/images/kong-mqws.png"></image>
+            <view class="kong-text">名企岗位</view>
+        </view>
+        <view bindtap="anonymousFunc2" class="kong-item">
+            <image class="kong-image" mode="aspectFit" src="https://xcxstatic.xybsyw.com/xcx/images/kong-sxh.png"></image>
+            <view class="kong-text">双选会</view>
+        </view>
+        <view bindtap="anonymousFunc3" class="kong-item">
+            <image class="kong-image" mode="aspectFit" src="https://ss0.xybsyw.com/permanent/system/studentapp/homepage/11734423/202603241703921.png?x-oss-process=image/resize,m_fixed,w_90"></image>
+            <view class="kong-text">宣讲会</view>
+        </view>
+    </scroll-view>
+</block>

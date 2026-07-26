@@ -1,0 +1,45 @@
+<view bindtap="anonymousFunc0" class="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <view class="company-card-header">
+        <image binderror="anonymousFunc1" class="company-logo" mode="aspectFill" src="{{logo||'https://xcxstatic.xybsyw.com/xcx/images/com_default.png'}}"></image>
+        <view class="company-right">
+            <view class="company-name-row">
+                <view class="company-name">{{item.enterpriseName}}</view>
+                <text class="icon icon-jiantou company-name-arrow" wx:if="{{props.hasPost}}"></text>
+            </view>
+            <view class="company-info">
+                <view class="company-info-item" wx:if="{{item.nature}}">{{item.nature}}</view>
+                <view class="company-info-item" wx:if="{{item.industry}}">{{item.industry}}</view>
+                <view class="company-info-item cut_text" wx:if="{{!item.industry&&item.industryList&&item.industryList.length>0}}">{{anonymousState__temp2}}</view>
+                <view class="company-info-item" wx:if="{{item.scale}}">{{item.scale}}</view>
+            </view>
+        </view>
+    </view>
+    <block wx:if="{{props.hasPost&&!props.hasComment&&props.showScore}}">
+        <company-rate compid="{{$compid__2823}}" wx:if="{{item.entScore}}"></company-rate>
+        <company-rate compid="{{$compid__2824}}" wx:if="{{item.score}}"></company-rate>
+    </block>
+    <block wx:if="{{props.hasPost&&postList.length>0}}">
+        <view class="post-list">
+            <company-post-item compid="{{_item[$compid__2822]}}" wx:for="{{loopArray1421}}" wx:for-index="__index2" wx:for-item="_item" wx:key="$loopState__temp4"></company-post-item>
+        </view>
+        <view catchtap="anonymousFunc3" class="company-card-footer" wx:if="{{remainingPostCount>0}}">
+            <text class="icon icon-fanhui-copy" wx:if="{{isExpandMode}}"></text>{{isExpandMode?'展开剩余':'查看剩余'}}<text class="footer-count">{{remainingPostCount}}</text>个<text class="icon icon-jiantou" wx:if="{{!isExpandMode}}"></text>
+        </view>
+    </block>
+    <view catchtap="anonymousFunc4" class="comment-container" wx:if="{{props.hasComment&&scoreText!=='0.0'}}">
+        <view class="comment-rate">
+            <view class="rate-text">{{scoreText}}<view class="rate-text-arrow">综合评分<text class="icon icon-jiantou"></text>
+                </view>
+            </view>
+            <van-rate color="#FFC67D" readonly="true" size="{{16}}" value="{{item.entScore}}" voidColor="#EFEFEF" voidIcon="star" wx:if="{{item.entScore}}"></van-rate>
+            <van-rate color="#FFC67D" readonly="true" size="{{16}}" value="{{item.score}}" voidColor="#EFEFEF" voidIcon="star" wx:if="{{item.score}}"></van-rate>
+        </view>
+        <view class="comments" wx:if="{{item.practiceNum}}">
+            <text wx:if="{{item.practiceNum}}"> {{item.practiceNum}} 人实习过</text>
+            <view style="font-size:22rpx;color:#999999">
+                <text wx:if="{{item.sameSpecialNum}}">{{item.sameSpecialNum?'同专业 '+item.sameSpecialNum+' 人':''}}</text>
+                <text wx:if="{{item.sameSchoolNum}}">{{item.sameSchoolNum?'本校 '+item.sameSchoolNum+' 人':''}}</text>
+            </view>
+        </view>
+    </view>
+</view>

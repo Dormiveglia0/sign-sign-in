@@ -1,0 +1,212 @@
+.posList {
+    border-radius: 28rpx
+}
+
+.posList,.posList1 {
+    background: #fff;
+    margin-bottom: 16rpx;
+    padding: 32rpx;
+    position: relative
+}
+
+.pos_header {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column
+}
+
+.pos_header .topLayout {
+    -ms-flex-pack: justify;
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.pos_header .rightTitle,.pos_header .topLayout {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row
+}
+
+.pos_header .desLayout {
+    -ms-flex-pack: justify;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    margin-top: 12rpx
+}
+
+.pos_header .desLayout,.pos_header .rightWelfare {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row
+}
+
+.pos_header .welfareLayout {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #f3f3f3;
+    margin-right: 16rpx
+}
+
+.pos_header .welfareLayout .txt {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    color: #666;
+    display: -webkit-box;
+    font-size: 20rpx;
+    height: 32rpx;
+    line-height: 32rpx;
+    max-width: 153rpx;
+    overflow: hidden;
+    padding: 2rpx 4rpx;
+    text-align: center;
+    word-break: break-word
+}
+
+.pos_header .left {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row
+}
+
+.pos_header .name {
+    color: #000;
+    float: left;
+    font-size: 32rpx;
+    font-weight: 700;
+    max-width: 300rpx
+}
+
+.pos_header .nature,.pos_header .status {
+    float: left;
+    font-size: 18rpx;
+    margin-left: 10rpx;
+    margin-top: 6rpx
+}
+
+.pos_header .nature {
+    border: 1rpx solid #0589dd;
+    border-radius: 2rpx;
+    color: #0589dd;
+    line-height: 30rpx;
+    padding: 0 6rpx
+}
+
+.pos_header .status {
+    background: -webkit-linear-gradient(310deg,#ff6d6d,red);
+    background: -o-linear-gradient(310deg,#ff6d6d 0,red 100%);
+    background: linear-gradient(140deg,#ff6d6d,red);
+    border-radius: 4rpx;
+    color: #fff;
+    height: 32rpx;
+    line-height: 32rpx;
+    text-align: center;
+    width: 48rpx
+}
+
+.pos_header .salary {
+    color: #ff453a;
+    float: right;
+    font-size: 32rpx
+}
+
+.pos_main {
+    height: 72rpx;
+    margin-top: 24rpx;
+    width: 100%
+}
+
+.pos_main .logo {
+    border-radius: 4rpx;
+    float: left;
+    height: 72rpx;
+    margin-right: 16rpx;
+    overflow: hidden;
+    width: 72rpx
+}
+
+.pos_main .logo wx-image {
+    height: 100%;
+    width: 100%
+}
+
+.pos_info {
+    overflow: hidden
+}
+
+.pos_info .com_name {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    line-height: 40rpx
+}
+
+.pos_info .com_info,.pos_info .com_info_layout,.pos_info .com_name {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row
+}
+
+.pos_info .com_info_layout {
+    -ms-flex-pack: justify;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    margin-top: 4rpx
+}
+
+.pos_info .com_info {
+    line-height: 30rpx;
+    overflow: hidden
+}
+
+.pos_info .com_info,.pos_info .tag,.pos_time {
+    color: #999;
+    font-size: 22rpx
+}
+
+.pos_time {
+    font-size: 24rpx;
+    height: 33rpx;
+    line-height: 33rpx;
+    margin-top: 6rpx;
+    text-align: right
+}
+
+.tagJidi {
+    background: #e3fffe;
+    border-radius: 4rpx;
+    color: #47c4c0;
+    font-size: 18rpx;
+    line-height: 28rpx;
+    margin-left: 10rpx;
+    padding: 0 6rpx
+}
+
+.icon-qizi {
+    font-size: 16rpx
+}

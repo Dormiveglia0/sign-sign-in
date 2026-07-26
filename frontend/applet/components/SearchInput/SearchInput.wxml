@@ -1,0 +1,4 @@
+<view class="{{['searchInput',caretColor=='red'?'searchInput2':'','search-class']}}" wx:if="{{$taroCompReady}}">
+    <image class="search_icon" src="https://xcxstatic.xybsyw.com/teacherXcx/images/search_icon.png"></image>
+    <at-input compid="{{$compid__2576}}"></at-input>
+</view>

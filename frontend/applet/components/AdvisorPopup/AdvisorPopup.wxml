@@ -1,0 +1,15 @@
+<popup compid="{{$compid__2636}}" wx:if="{{$taroCompReady}}">
+    <view class="popup-container">
+        <text bindtap="anonymousFunc1" class="iconfont icon-guanbi"></text>
+        <text class="iconfont iconguanbi"></text>
+        <view class="popup-title">查看指导老师<text class="tips">（首字母从A-Z排序）</text>
+        </view>
+        <scroll-view bindscrolltolower="anonymousFunc2" class="advisor-list" scrollY="{{true}}">
+            <view class="advisor-item" wx:for="{{dataList}}" wx:key="index">
+                <text class="advisor-name">{{item.name}}</text>
+                <text class="advisor-faculty cut_text">{{item.obj}}</text>
+            </view>
+            <view class="empty-container" hidden="{{!isEmpty}}">暂无指导老师</view>
+        </scroll-view>
+    </view>
+</popup>

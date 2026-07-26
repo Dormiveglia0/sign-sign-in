@@ -1,0 +1,87 @@
+.part-time-tab-guide__mask {
+    background: rgba(78,89,105,.7);
+    height: 100vh;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100vw;
+    z-index: 1003
+}
+
+.part-time-tab-guide__bubble {
+    background: #fff;
+    border-radius: 16rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 32rpx;
+    position: fixed;
+    width: 472rpx;
+    z-index: 1006
+}
+
+.part-time-tab-guide__arrow,.part-time-tab-guide__bubble--fallback {
+    left: 50%;
+    top: 188rpx;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%)
+}
+
+.part-time-tab-guide__arrow {
+    border-bottom: 16rpx solid #fff;
+    border-left: 16rpx solid transparent;
+    border-right: 16rpx solid transparent;
+    height: 0;
+    left: 36%;
+    position: absolute;
+    top: -16rpx;
+    width: 0
+}
+
+.part-time-tab-guide__arrow--fixed {
+    left: 48rpx;
+    -webkit-transform: none;
+    -ms-transform: none;
+    transform: none
+}
+
+.part-time-tab-guide__title {
+    color: #13151a;
+    display: block;
+    font-size: 32rpx;
+    font-weight: 500;
+    line-height: 48rpx;
+    margin-left: -16rpx
+}
+
+.part-time-tab-guide__desc {
+    color: #86909c;
+    display: block;
+    font-size: 28rpx;
+    line-height: 44rpx;
+    margin-top: 8rpx
+}
+
+.part-time-tab-guide__desc-underline {
+    text-decoration: underline;
+    -webkit-text-decoration-color: #57a9fb;
+    text-decoration-color: #57a9fb;
+    -webkit-text-decoration-style: dashed;
+    text-decoration-style: dashed;
+    text-underline-offset: 8rpx
+}
+
+.part-time-tab-guide__btn {
+    border: 1rpx solid #57a9fb;
+    border-radius: 90rpx;
+    color: #57a9fb;
+    font-size: 26rpx;
+    font-weight: 500;
+    line-height: 44rpx;
+    margin-left: auto;
+    margin-top: 32rpx;
+    padding: 16rpx 48rpx;
+    width: -webkit-fit-content;
+    width: -moz-fit-content;
+    width: fit-content
+}

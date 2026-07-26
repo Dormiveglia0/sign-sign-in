@@ -1,0 +1,92 @@
+<van-popup __fn_onClose="{{true}}" bindclose="onClose" closeOnClickOverlay="{{false}}" customStyle="border-radius: 28px 28px 0px 0px;" position="bottom" show="{{isShow}}" zIndex="{{1000}}" wx:if="{{$taroCompReady}}">
+    <view class="container">
+        <image class="submitresultbg1" src="https://xcxstatic.xybsyw.com/static/submit_result_bg1.png"></image>
+        <image class="submitresultbg2" src="https://xcxstatic.xybsyw.com/static/submit_result_bg2.png"></image>
+        <view class="topItem">
+            <view class="topText">
+                <text wx:if="{{lastPageType==1||otherFlag}}">提交成功！</text>
+                <text wx:if="{{lastPageType!=1&&!otherFlag}}">签到成功！</text>
+                <text wx:if="{{integrateFlag==1}}">获得5积分</text>
+            </view>
+            <view class="topItem_line"></view>
+            <view class="promptText">
+                <text wx:if="{{lastPageType==1&&journalType==0&&randomNumber==0}}">悄悄告诉你，你是本班今天第{{submitNum}}个提交的同学~</text>
+                <text wx:if="{{lastPageType==1&&journalType==1&&randomNumber==0}}">悄悄告诉你，你是本班这周第{{submitNum}}个提交的同学~{{' '}}</text>
+                <text wx:if="{{lastPageType==1&&journalType==2&&randomNumber==0}}">悄悄告诉你，你是本班本月第{{submitNum}}个提交的同学~</text>
+                <text wx:if="{{lastPageType==1&&randomNumber==1&&startTraineeDayNum>0}}">本次实习还剩下{{startTraineeDayNum}}天，继续努力鸭~</text>
+                <view wx:if="{{lastPageType==1&&randomNumber==1&&startTraineeDayNum<=0}}">(๑•̀ㅂ•́)و✧</view>
+                <block wx:if="{{lastPageType!==1&&!otherFlag}}">
+                    <text wx:if="{{lastPageType!=1&&signRandomNumber==0}}">悄悄告诉你，你是本班今天第{{signPersonNum}}个签到的同学~</text>
+                    <text wx:if="{{lastPageType!=1&&signRandomNumber==1}}">今天是实习的第{{startTraineeDayNum}}天，希望你每一天愉快而有意义</text>
+                    <block wx:if="{{lastPageType!=1&&signRandomNumber==2}}">
+                        <view wx:if="{{signRandomNumber2==0}}">每一天的努力，都将收获生命的意义</view>
+                        <view wx:if="{{signRandomNumber2==1}}">拥有梦想的人，不做选择题，他们只做证明题。</view>
+                        <view wx:if="{{signRandomNumber2==2}}">ヾ(@^▽^@)ノ</view>
+                        <view wx:if="{{signRandomNumber2==3}}">(๑•̀ㅂ•́)و✧</view>
+                        <view wx:if="{{signRandomNumber2==4}}">{{' '}}{{'(o゜▽゜)o☆[BINGO!]'}}</view>
+                        <view wx:if="{{signRandomNumber2==5}}">{{' '}}{{'ヾ(≧∇≦*)ゝ'}}{{' '}}</view>
+                        <view wx:if="{{signRandomNumber2==6}}">(o゜▽゜)o☆</view>
+                    </block>
+                </block>
+                <text wx:if="{{otherFlag}}">提交成功！</text>
+            </view>
+            <view bindtap="editAgain" class="journal_box" wx:if="{{lastPageType==1}}">再来一篇</view>
+        </view>
+        <view bindtap="toposDetail" class="recommendItem" data-item="{{postInfo}}" wx:if="{{postSize>0}}">
+            <view class="recommendItemTop">
+                <view class="recommendItemTop_title">职位推荐</view>
+                <view bindtap="toQiuzhi" class="recommendItemTop_r" data-e-tap-so="this" wx:if="{{postSize>=2}}">查看更多<text class="icon icon-jiantou"></text>
+                </view>
+            </view>
+            <view bindtap="toposDetail" class="item_info" data-item="{{postInfoItem[$original]}}" wx:for="{{loopArray1261}}" wx:for-item="postInfoItem" wx:key="index">
+                <view class="iteminfo_top">
+                    <view class="iteminfo_top_name">{{postInfoItem[$original].name}}</view>
+                    <view class="iteminfo_top_tag" wx:if="{{postInfoItem[$original].entDealRate>70}}">
+                        <view class="doc"></view>响应积极</view>
+                    <view class="iteminfo_top_tag1" wx:if="{{postInfoItem[$original].publishNewFlag===1}}">最近更新</view>
+                    <view class="nature_text" wx:if="{{postInfoItem[$original].nature=='兼职'}}">兼职</view>
+                    <view class="iteminfo_top_money">
+                        <text wx:if="{{postInfoItem[$original].salaryType==0}}">
+                            <text wx:if="{{!postInfoItem[$original].floorSalary&&!postInfoItem[$original].upperSalary}}">面谈</text>
+                            <text wx:if="{{postInfoItem[$original].floorSalary||postInfoItem[$original].upperSalary}}">{{(postInfoItem[$original].floorSalary||0)+'-'+(postInfoItem[$original].upperSalary||0)+'/月'}}</text>
+                        </text>
+                        <text class="salary" wx:if="{{postInfoItem[$original].salaryType==2}}">
+                            <text wx:if="{{!postInfoItem[$original].upperSalary}}">面谈</text>
+                            <text wx:if="{{postInfoItem[$original].upperSalary}}">{{postInfoItem[$original].upperSalary+'/月'}}</text>
+                        </text>
+                        <text wx:if="{{postInfoItem[$original].salaryType==1}}">
+                            <text wx:if="{{!postInfoItem[$original].daySalary}}">面谈</text>
+                            <text wx:if="{{postInfoItem[$original].miniDaySalary===null&&postInfoItem[$original].daySalary}}">{{postInfoItem[$original].daySalary+'元/天'}}</text>
+                            <text wx:if="{{postInfoItem[$original].miniDaySalary!==null&&postInfoItem[$original].daySalary}}">{{(postInfoItem[$original].miniDaySalary||0)+'-'+(postInfoItem[$original].daySalary||0)+'元/天'}}</text>
+                        </text>
+                        <text class="salary" wx:if="{{postInfoItem[$original].salaryType==3}}">
+                            <text wx:if="{{!postInfoItem[$original].daySalary}}">面谈</text>
+                            <text wx:if="{{postInfoItem[$original].daySalary}}">{{postInfoItem[$original].daySalary+'元/天'}}</text>
+                        </text>
+                        <text class="salary" wx:if="{{postInfoItem[$original].salaryType==4}}">面谈</text>
+                    </view>
+                </view>
+                <view class="iteminfo_tag">
+                    <view class="iteminfo_tag_item" wx:for="{{postInfoItem[$anonymousCallee__162]}}" wx:for-index="_anonIdx2" wx:for-item="welfare" wx:key="welfare">{{welfare}}</view>
+                    <view class="iteminfo_tag_item" wx:if="{{postInfoItem[$original].welfareLabels.length>4}}">...</view>
+                </view>
+                <view class="itembottom">
+                    <image class="itembottom_head" src="{{postInfoItem[$original].logoUrl}}" wx:if="{{postInfoItem[$original].logoUrl}}"></image>
+                    <image class="itembottom_head" src="data:image/png;base64,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" wx:if="{{!postInfoItem[$original].logoUrl}}"></image>
+                    <view class="itembottom_name">{{postInfoItem[$original].enterpriseName}}</view>
+                    <view class="itembottom_hy">{{postInfoItem[$original].industry}}</view>
+                    <view class="itembottom_line"></view>
+                    <view class="itembottom_num">{{postInfoItem[$original].scale}}</view>
+                    <view class="itembottom_addr">{{postInfoItem[$original].location||''}}</view>
+                </view>
+            </view>
+        </view>
+        <view bindtap="anonymousFunc0" class="perfect_information" wx:if="{{!jobHunt}}">
+            <text class="perfect_information1">完善的求职意向有助于更精确推荐职位哦！</text>
+            <text class="perfect_information2">去完善 →</text>
+        </view>
+        <view bindtap="backCallback" class="determine" data-e-tap-so="this" wx:if="{{postSize!=0&&!jobHunt}}">确定</view>
+        <view bindtap="backCallback" class="{{['determine',postSize==0&&'determine_top']}}" data-e-tap-so="this" wx:if="{{postSize==0||postSize!=0&&jobHunt}}">确定<text class="determine_miao" wx:if="{{countDownTime!=0}}">（{{countDownTime}}s）</text>
+        </view>
+    </view>
+</van-popup>

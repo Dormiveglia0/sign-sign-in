@@ -1,0 +1,19 @@
+<view class="BriefingSessionCard" wx:if="{{$taroCompReady}}">
+    <block wx:if="{{sessionLength===1&&bannerLength===0}}">
+        <view class="card-content-wrap" data-id="{{item[$original].id}}" data-index="{{index}}" wx:for="{{loopArray1061}}" wx:key="id">
+            <briefing-session-card-item compid="{{item[$compid__2207]}}" id="{{item[$loopState__temp2]}}"></briefing-session-card-item>
+        </view>
+    </block>
+    <swiper autoplay="{{!isPlay}}" bindchange="swiperChange" circular="{{true}}" class="swiper-wrap" interval="{{3000}}" wx:if="{{totalLength>=0&&!(sessionLength===1&&bannerLength===0)}}">
+        <swiper-item wx:for="{{loopArray1062}}" wx:key="id">
+            <view class="card-content-wrap" data-id="{{item[$original].id}}" data-index="{{index}}">
+                <briefing-session-card-item compid="{{item[$compid__2208]}}" id="{{item[$loopState__temp4]}}"></briefing-session-card-item>
+            </view>
+        </swiper-item>
+        <swiper-item class="card-wrap" wx:for="{{bannerList}}">
+            <view class="banner-wrap">
+                <image bindtap="toBannerDetailOld" class="banner-img" data-e-tap-so="this" data-item="{{item}}" mode="aspectFill" src="{{item.bannerImgUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}"></image>
+            </view>
+        </swiper-item>
+    </swiper>
+</view>

@@ -1,0 +1,15 @@
+{
+  "component": true,
+  "usingComponents": {
+    "post-card": "../PostCard/PostCard",
+    "custom-size-ad": "../../../../componentsBag/CustomSizeAd/CustomSizeAd",
+    "at-activity-indicator": "../../../../npm/taro-ui/dist/weapp/components/activity-indicator/index",
+    "bottom-block": "BottomBlock/BottomBlock",
+    "live-broadcast-bar": "../../../../components/BriefingSessionCard/LiveBroadcastBar/LiveBroadcastBar",
+    "van-icon": "../../../../vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  },
+  "componentPlaceholder": {
+    "custom-size-ad": "view"
+  }
+}

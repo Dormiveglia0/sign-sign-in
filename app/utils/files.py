@@ -286,15 +286,22 @@ def save_session_cache(session_id: str, encrypt_value: str, open_id: str, union_
         "unionId": union_id,
         "traineeId": trainee_id,
         "timestamp": int(time.time()),
+        "valid": True,
     }
     ensure_dir(os.path.dirname(SESSION_CACHE_FILE))
     save_json_file(SESSION_CACHE_FILE, cache)
+    try:
+        os.chmod(SESSION_CACHE_FILE, 0o600)
+    except OSError:
+        pass
 
 
 def get_valid_session_cache() -> dict:
     """读取会话缓存；服务端返回未登录时由请求层清除。"""
     cache = load_session_cache()
     if not cache:
+        return None
+    if cache.get("valid") is False:
         return None
 
     required = ("sessionId", "encryptValue", "openId", "unionId")
@@ -308,6 +315,18 @@ def get_valid_session_cache() -> dict:
         "unionId": cache.get("unionId"),
         "traineeId": cache.get("traineeId")
     }
+
+
+def invalidate_session_cache():
+    """保留静默续期凭证，只把当前 SESSION 标记为失效。"""
+    cache = load_session_cache()
+    if cache:
+        cache["valid"] = False
+        save_json_file(SESSION_CACHE_FILE, cache)
+        try:
+            os.chmod(SESSION_CACHE_FILE, 0o600)
+        except OSError:
+            pass
 
 
 def clear_session_cache():

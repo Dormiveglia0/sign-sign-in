@@ -1,0 +1,19 @@
+.logo {
+    border-radius: 50%;
+    display: block;
+    height: 120rpx;
+    margin: 0 auto 22rpx;
+    width: 120rpx
+}
+
+.describe {
+    color: gray;
+    font-size: 24rpx;
+    font-weight: 500;
+    padding: 24rpx 0;
+    text-align: center
+}
+
+.describe>wx-text {
+    color: #ff453a
+}

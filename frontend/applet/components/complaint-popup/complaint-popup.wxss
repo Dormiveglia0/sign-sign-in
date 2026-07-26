@@ -1,0 +1,191 @@
+.container,.main_container,.top_container {
+    -ms-flex-align: center;
+    -ms-flex-pack: justify;
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.container {
+    background: #f5f5f5
+}
+
+.main_container,.top_container {
+    width: 100%
+}
+
+.top_container {
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row;
+    height: 96rpx;
+    padding-left: 32rpx;
+    padding-right: 32rpx
+}
+
+.top_container .title {
+    size: 34rpx;
+    color: #333;
+    font-weight: 700
+}
+
+.top_container wx-image {
+    height: 24rpx;
+    width: 24rpx
+}
+
+.content_container,.content_container .lab_container {
+    -ms-flex-pack: start;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: start;
+    justify-content: start
+}
+
+.content_container {
+    background: #fff;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 32rpx 32rpx 10rpx
+}
+
+.content_container .lab_container {
+    margin-bottom: 24rpx
+}
+
+.content_container,.content_container .lab_container,.content_container .reason_container {
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    width: 100%
+}
+
+.lab {
+    size: 26rpx;
+    color: #999;
+    margin-bottom: 24rpx
+}
+
+.content_container .reason_container,.radio-group {
+    -ms-flex-pack: start;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: start;
+    justify-content: start
+}
+
+.radio-group {
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row;
+    -webkit-flex-wrap: wrap;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap
+}
+
+.radio-group .radio {
+    background: #f5f5f5;
+    border-radius: 4rpx;
+    font-size: 24rpx;
+    height: 64rpx;
+    line-height: 64rpx;
+    margin-bottom: 24rpx;
+    margin-right: 20rpx;
+    padding: 0 28rpx
+}
+
+.radio-group .active {
+    background: #fff;
+    border: 2rpx solid #ff453a;
+    color: #ff453a
+}
+
+.radio-group .disabled {
+    background: #f7f8fb;
+    color: #999
+}
+
+.loading_container,.ql-container,.submit_container {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 100%
+}
+
+.ql-container {
+    background: #f5f5f5;
+    border-radius: 4rpx;
+    color: #333;
+    font-size: 26rpx;
+    height: 110rpx;
+    line-height: 36rpx;
+    max-height: 110rpx;
+    min-height: 110rpx;
+    padding: 15rpx 24rpx
+}
+
+.loading_container,.submit_container {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #fff;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column
+}
+
+.submit_container {
+    height: 100rpx;
+    margin-top: 10rpx
+}
+
+.submit_container .click,.submit_container .unclick {
+    color: #c1c1c1;
+    font-size: 36rpx;
+    line-height: 100rpx
+}
+
+.submit_container .click {
+    color: #fd4848
+}
+
+.loading_container {
+    min-height: 354rpx
+}
+
+.loading_container wx-text,.word_account {
+    color: #666;
+    font-size: 24rpx;
+    line-height: 354rpx
+}
+
+.word_account {
+    color: #999;
+    float: right;
+    font-weight: 400;
+    line-height: 70rpx
+}
+
+.word_account_text,.word_account_text_red {
+    color: #fd4848;
+    font-size: 24rpx;
+    font-weight: 400;
+    line-height: 70rpx
+}
+
+.word_account_text {
+    color: #999
+}

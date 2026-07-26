@@ -1,0 +1,89 @@
+.tooltips {
+    padding: 15rpx;
+    position: relative
+}
+
+.tooltips-trigger {
+    cursor: pointer
+}
+
+.tooltips-content {
+    background-color: rgba(0,0,0,.6);
+    border-radius: 20rpx;
+    color: #fff;
+    left: 20rpx;
+    line-height: 32rpx;
+    padding: 24rpx 12rpx;
+    position: fixed;
+    right: 20rpx;
+    white-space: pre-wrap;
+    z-index: 999
+}
+
+.tooltips-content.tooltips-content_w {
+    background-color: #fff;
+    -webkit-box-shadow: 0 4rpx 24rpx 0 rgba(0,0,0,.2);
+    box-shadow: 0 4rpx 24rpx 0 rgba(0,0,0,.2);
+    color: #333;
+    font-size: 24rpx;
+    line-height: 48rpx;
+    padding: 24rpx 16rpx 24rpx 32rpx
+}
+
+.tooltips-content .title_box {
+    margin-bottom: 20rpx
+}
+
+.tooltips-content .title_box .title_name {
+    font-size: 30rpx;
+    font-weight: 500
+}
+
+.tooltips-content .title_box .position_name {
+    font-size: 26rpx;
+    font-weight: 500;
+    margin-left: 10rpx
+}
+
+.tooltips-content .content_css {
+    font-size: 24rpx;
+    margin-top: 10rpx;
+    white-space: normal
+}
+
+.arrow {
+    border-color: rgba(0,0,0,.6) transparent transparent;
+    border-style: solid;
+    border-width: 8rpx 8rpx 0;
+    bottom: -8rpx;
+    height: 0;
+    left: 20rpx;
+    position: absolute;
+    width: 0
+}
+
+.arrow_top {
+    border-color: transparent transparent rgba(0,0,0,.6);
+    border-width: 0 8rpx 8rpx;
+    top: -8rpx
+}
+
+.arrow_top,.arrow_top_w,.arrow_w {
+    border-style: solid;
+    height: 0;
+    left: 20rpx;
+    position: absolute;
+    width: 0
+}
+
+.arrow_w {
+    border-color: #fff transparent transparent;
+    border-width: 8rpx 8rpx 0;
+    bottom: -8rpx
+}
+
+.arrow_top_w {
+    border-color: transparent transparent #fff;
+    border-width: 0 8rpx 8rpx;
+    top: -8rpx
+}

@@ -1,0 +1,32 @@
+<popup compid="{{$compid__2637}}" wx:if="{{$taroCompReady}}">
+    <view class="advisor-selector-container" hidden="{{!visible}}">
+        <view class="title">请选择<text class="num">{{currentInfo.limitLength}}</text>位指导老师<text bindtap="anonymousFunc1" class="iconfont icon-guanbi"></text>
+        </view>
+        <view class="search-input">
+            <text class="iconfont icon-ic_sousuo_huidi"></text>
+            <input bindblur="anonymousFunc4" bindconfirm="anonymousFunc3" bindinput="anonymousFunc2" class="input-view" placeholder="请输入指导老师姓名"></input>
+        </view>
+        <scroll-view bindscrolltolower="anonymousFunc5" class="scroll-view" scrollY="{{true}}">
+            <view class="advisor-list">
+                <view bindtap="anonymousFunc6" class="{{item[$loopState__temp2]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1306}}">
+                    <view class="advisor-wrap">
+                        <view class="advisor-name">{{item[$original].name}}</view>
+                        <view class="advisor-faculty cut_text">{{item[$loopState__temp4]}}</view>
+                    </view>
+                    <checkbox checked="{{item[$original].checked}}" value="" wx:if="{{item[$original].checked||checkedList.length<currentInfo.limitLength}}"></checkbox>
+                    <view class="checkbox-disabled" wx:else></view>
+                </view>
+                <view class="empty-container" hidden="{{!isEmpty}}">暂无指导老师</view>
+            </view>
+        </scroll-view>
+        <view class="teacher-operation-bar">
+            <view class="checked-list" wx:if="{{checkedList.length>0}}">
+                <view class="checked-label">已选<text class="checked-num">{{checkedList.length}}</text>：</view>
+                <view bindtap="anonymousFunc7" class="checked-item" data-e-tap-a-a="{{item[_$indexKey2]}}" data-e-tap-so="this" wx:for="{{loopArray1307}}" wx:for-index="__index7">{{item[$original].name}}<text class="iconfont icon-guanbi"></text>
+                </view>
+            </view>
+            <view bindtap="anonymousFunc8" class="xyb_button" style="{{anonymousState__temp5}}">{{currentInfo.hasPosition?'下一步':'确定'}}</view>
+            <view class="bottom-safe-block-20"></view>
+        </view>
+    </view>
+</popup>

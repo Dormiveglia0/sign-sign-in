@@ -1,0 +1,117 @@
+.more_guidance_box {
+    border-radius: 16rpx;
+    padding: 26rpx 24rpx 0
+}
+
+.more_guidance_box .title {
+    -ms-flex-pack: justify;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between
+}
+
+.more_guidance_box .title .title_text {
+    color: #1f1f2c;
+    font-size: 30rpx;
+    font-weight: 500;
+    line-height: 42rpx
+}
+
+.more_guidance_box .title .title_more {
+    color: #999;
+    display: -webkit-inline-flex;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    font-size: 24rpx;
+    line-height: 33rpx
+}
+
+.more_guidance_box .title .title_more .icon {
+    display: block;
+    font-size: 32rpx
+}
+
+.more_guidance_box .title_tip {
+    color: #a8a9b3;
+    font-size: 24rpx;
+    line-height: 33rpx;
+    margin-top: 16rpx
+}
+
+.more_guidance_box .more_guidance_list {
+    padding-bottom: 32rpx
+}
+
+.more_guidance_box .more_guidance_list .more_guidance_item {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    margin-top: 32rpx
+}
+
+.more_guidance_box .more_guidance_list .more_guidance_item .tem_img {
+    border-radius: 8rpx;
+    height: 140rpx;
+    width: 184rpx
+}
+
+.more_guidance_box .more_guidance_list .more_guidance_item .tem_img_r {
+    -ms-flex-negative: 0;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    -webkit-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
+    padding-left: 24rpx
+}
+
+.more_guidance_box .more_guidance_list .more_guidance_item .tem_img_r .more_guidance_name {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    color: #1f1f2c;
+    display: -webkit-box;
+    font-size: 30rpx;
+    font-weight: 500;
+    line-height: 42rpx;
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    word-break: break-all
+}
+
+.more_guidance_box .more_guidance_list .more_guidance_item .tem_img_r .more_guidance_sub {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: #a8a9b3;
+    display: -webkit-box;
+    font-size: 28rpx;
+    line-height: 40rpx;
+    margin-top: 8rpx;
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    word-break: break-all
+}
+
+.nodataList {
+    font-size: 32rpx;
+    line-height: 48rpx;
+    text-align: center;
+    width: 100%
+}
+
+.nodataList wx-image {
+    width: 100%
+}
+
+.nodataList .no_text {
+    color: #999;
+    padding-bottom: 32rpx
+}

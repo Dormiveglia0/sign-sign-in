@@ -1,0 +1,94 @@
+.main-box {
+    margin: 0 16rpx
+}
+
+.title-box {
+    color: #1f1f2c;
+    font-size: 32rpx;
+    font-weight: 600;
+    margin: 10rpx 0 25rpx 20rpx
+}
+
+.title-box-b {
+    margin: -40rpx 0 25rpx 20rpx!important
+}
+
+.modal_box {
+    background: -webkit-gradient(linear,left top,left bottom,from(#fff),to(hsla(0,0%,100%,0)));
+    background: -webkit-linear-gradient(top,#fff,hsla(0,0%,100%,0));
+    background: -o-linear-gradient(top,#fff 0,hsla(0,0%,100%,0) 100%);
+    background: linear-gradient(180deg,#fff,hsla(0,0%,100%,0));
+    height: 40rpx;
+    margin-top: -10rpx;
+    width: 100%
+}
+
+.modal_box_b {
+    height: 80rpx!important
+}
+
+.start-postgraduate-img {
+    bottom: 25%;
+    height: 130rpx;
+    position: fixed;
+    right: 5rpx;
+    width: 216rpx
+}
+
+.frame-box .content-item {
+    -ms-flex-pack: justify;
+    background: #fff;
+    border: 1rpx solid #fff;
+    border-radius: 24rpx;
+    height: 160rpx;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    margin-bottom: 15rpx
+}
+
+.frame-box .content-item,.frame-box .content-item .content-left {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.frame-box .content-item .content-item-img {
+    height: 92rpx;
+    margin: 20rpx;
+    width: 92rpx
+}
+
+.frame-box .content-item .content-middle {
+    -ms-flex-pack: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -webkit-justify-content: center;
+    justify-content: center
+}
+
+.frame-box .content-item .content-middle .middle-title {
+    color: #1f1f2c;
+    font-size: 28rpx;
+    font-weight: 700;
+    margin-bottom: 15rpx
+}
+
+.frame-box .content-item .content-middle .middle-tip {
+    color: #666680;
+    font-size: 24rpx;
+    font-weight: 400
+}
+
+.frame-box .content-item .icon-fanhui-copy-copy {
+    color: #d8d8d8;
+    font-size: 28rpx;
+    font-weight: 700;
+    margin-right: 20rpx
+}

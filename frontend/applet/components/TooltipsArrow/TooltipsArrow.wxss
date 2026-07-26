@@ -1,0 +1,66 @@
+.tooltips-full {
+    background: rgba(0,0,0,.6);
+    bottom: 0;
+    height: 100vh;
+    left: 0;
+    overflow: hidden;
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 100vw;
+    z-index: 11112
+}
+
+.tooltips-full .tooltips-container {
+    background: #fff;
+    border-radius: 8rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #333;
+    font-size: 26rpx;
+    left: 50%;
+    line-height: 48rpx;
+    margin-top: 24rpx;
+    padding: 24rpx 32rpx;
+    position: fixed;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+    white-space: pre-wrap;
+    width: 520rpx
+}
+
+.tooltips-full .tooltips-container .arrow {
+    border-color: transparent transparent #fff;
+    border-style: solid;
+    border-width: 0 10rpx 10rpx;
+    height: 0;
+    margin-left: 4rpx;
+    position: absolute;
+    top: -10rpx;
+    width: 0
+}
+
+.tooltips-full.blackColor {
+    background: 0 0
+}
+
+.tooltips-full.blackColor .tooltips-container {
+    background: rgba(0,0,0,.6);
+    border-radius: 8rpx;
+    color: #fff;
+    position: fixed
+}
+
+.tooltips-full.blackColor .tooltips-container .arrow {
+    border-color: transparent transparent rgba(0,0,0,.6)
+}
+
+.white-background {
+    background-color: initial
+}
+
+.white-background .tooltips-container {
+    -webkit-box-shadow: 0 4rpx 24rpx 0 rgba(0,0,0,.2);
+    box-shadow: 0 4rpx 24rpx 0 rgba(0,0,0,.2)
+}

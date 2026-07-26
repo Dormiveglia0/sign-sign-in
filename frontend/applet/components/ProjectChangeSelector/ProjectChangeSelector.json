@@ -1,0 +1,10 @@
+{
+  "component": true,
+  "usingComponents": {
+    "popup": "../Popup/Popup",
+    "advisor-selector": "../AdvisorSelector/AdvisorSelector",
+    "advisor-popup": "../AdvisorPopup/AdvisorPopup",
+    "van-search": "../../vant-weapp/dist/search/index",
+    "van-icon": "vant-weapp/dist/icon/index"
+  }
+}

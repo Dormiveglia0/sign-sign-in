@@ -1,0 +1,41 @@
+<view class="{{true}}" wx:if="{{$taroCompReady}}">
+    <view bindtap="jumpToPrivateSphere" class="top_jump" wx:if="{{sphereInfo.status}}">
+        <view class="img_icon"></view>
+        <text class="text" decode="{{true}}">{{sphereInfo.content}}</text>
+        <view class="right_btn">咨询</view>
+    </view>
+    <scroll-view bindscrolltolower="scrollToLower" scrollY="{{true}}" style="{{'height:'+maxHeight+'px;padding: 0 16rpx;box-sizing: border-box;'}}" wx:if="{{showChatFlag}}">
+        <view class="topic_list" data-id="{{item[$original].id}}" wx:for="{{loopArray1377}}" wx:key="index">
+            <view class="lock-box-mask" wx:if="{{!taskComplete&&(item[$original].id==31||item[$original].id==18)}}"></view>
+            <view bindtap="jumpNewPeople" class="lock-box" wx:if="{{!taskComplete&&(item[$original].id==31||item[$original].id==18)}}">
+                <image class="icon-suo-down" src="https://xcxstatic.xybsyw.com/xcx/images/icon-suo-down.png"></image>
+                <view class="lock-btn">点击完成新手任务可解锁</view>
+            </view>
+            <itemcourse compid="{{item[$compid__2785]}}"></itemcourse>
+        </view>
+        <view class="loading" wx:if="{{hasMore&&maxPage>1}}">
+            <at-activity-indicator compid="{{$compid__2786}}"></at-activity-indicator>
+        </view>
+        <view class="nodata" wx:if="{{!hasMore&&courseList.length>0}}">
+            <text>暂无更多课程</text>
+        </view>
+        <view class="no_answer_other_container" wx:if="{{!hasMore&&courseList.length==0}}">
+            <image src="https://xcxstatic.xybsyw.com/static/nodata_2.png"></image>
+            <text class="no_answer_other_container_des">暂未领取课程</text>
+        </view>
+    </scroll-view>
+    <view class="default_box" wx:if="{{!showChatFlag}}">
+        <view class="box_item">
+            <view class="box_top"></view>
+            <view class="box_bottom"></view>
+        </view>
+        <view class="box_item">
+            <view class="box_top"></view>
+            <view class="box_bottom"></view>
+        </view>
+        <view class="box_item">
+            <view class="box_top"></view>
+            <view class="box_bottom"></view>
+        </view>
+    </view>
+</view>

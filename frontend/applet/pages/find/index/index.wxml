@@ -1,0 +1,203 @@
+<block wx:if="{{$taroCompReady}}">
+    <homepage-guide compid="{{$compid__2836}}" wx:if="{{isLogin&&!bannerPopFlag&&revisionTipsFlag1}}"></homepage-guide>
+    <view class="{{anonymousState__temp}}" style="{{'padding-top:'+xybData.statusBarHeight+'px'}}">
+        <view class="top-bar-item">
+            <home-tab compid="{{$compid__2837}}"></home-tab>
+            <view bindtap="gotoSearch" class="top-icon" style="{{'right:'+capsuleRect.width-10+'px'}}" wx:if="{{switchBarId===0&&!partTimeGuideVisible}}">
+                <text class="icon icon-ic-sousuo "></text>搜岗位</view>
+        </view>
+    </view>
+    <part-time-tab-guide compid="{{$compid__2838}}" wx:if="{{isLogin&&partTimeGuideVisible}}"></part-time-tab-guide>
+    <view style="{{'height:calc('+xybData.statusBarHeight+'px + 108rpx)'}}"></view>
+    <view>
+        <view class="recommended-container" wx:if="{{switchBarId===0}}">
+            <view class="meeting_box">
+                <briefing-session-card compid="{{$compid__2839}}" wx:if="{{switchBarId===0&&(briefingSessionList&&briefingSessionList.length>0||bannerList&&bannerList.length>0)}}"></briefing-session-card>
+                <view class="kong-view-wrap">
+                    <kong-view compid="{{$compid__2840}}" wx:if="{{userid!='292903'}}"></kong-view>
+                </view>
+            </view>
+            <block wx:if="{{switchBarId===0}}">
+                <view class="intention-filter-bar">
+                    <view class="intention-list">
+                        <view bindtap="anonymousFunc1" class="{{item[$loopState__temp4]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1432}}">{{item[$original].name}}</view>
+                    </view>
+                    <view bindtap="toJobobjective" class="add-intention">
+                        <van-icon color="#333333" name="plus"></van-icon>
+                    </view>
+                </view>
+                <view class="top-bar-item-one">
+                    <scroll-view class="first-filter-list" enableFlex="{{true}}" enhanced="{{true}}" id="filter-scroll-view" scrollLeft="{{100}}" scrollWithAnimation="{{true}}" scrollX="{{true}}" showScrollbar="{{false}}">
+                        <block wx:if="{{currentJobHuntIndex===0}}">
+                            <view bindtap="anonymousFunc2" class="{{'first-filter-item '+(item[$original].name==='专业对口'?'zydk':'')+' '+(item[$original].name==='本校推荐'?'bxtj':'')+' '+(intentionStatus===item[$original].id?'active':'')}}" data-e-tap-a-a="{{item[_$indexKey2]}}" data-e-tap-so="this" id="{{'filter-scroll-view-item-'+index}}" wx:for="{{loopArray1433}}" wx:key="id">
+                                <text>{{item[$original].name}}</text>
+                            </view>
+                            <view style="width:1rpx;height:100%;flex-shrink:0;"></view>
+                        </block>
+                        <view class="first-filter-tip" wx:if="{{currentJobHuntIndex>0}}">校园好职位等你来投</view>
+                    </scroll-view>
+                    <view class="job-preference-wrap">
+                        <view bindtap="selectCityEvent" class="filter-bar-item">
+                            <text class="{{anonymousState__temp5}}">{{anonymousState__temp6}}</text>
+                            <text class="icon icon-xialasanjiao"></text>
+                        </view>
+                        <view bindtap="openMoreFilter" class="filter-bar-item">
+                            <text class="{{anonymousState__temp7}}">{{moreFilterLength>0?'筛选 · '+moreFilterLength:'筛选'}}</text>
+                            <text class="icon icon-xialasanjiao"></text>
+                        </view>
+                        <view class="tip_box" wx:if="{{jobPreference}}">
+                            <text>您还未设置职位偏好，无法匹配专属推荐</text>
+                            <text bindtap="closeJonPre" class="icon icon-guanbi"></text>
+                        </view>
+                        <view class="tip_box_update" wx:if="{{updateJobPre}}">
+                            <text>您最近未更新职位偏好，更新后将获得更精准推荐</text>
+                            <text bindtap="closeUpdateJobPre" class="icon icon-guanbi"></text>
+                        </view>
+                    </view>
+                </view>
+                <view class="relative" wx:if="{{isLogin&&applyPostRemindTip&&!entNum}}">
+                    <view bindtap="toFavorites" class="favorites_tip">您近期还收藏了{{applyPostRemindCount}}个岗位，记得去投递呀~<text class="arrow"></text>
+                    </view>
+                </view>
+                <view bindtap="anonymousFunc3" class="deliverInvite-box" wx:if="{{entNum>0}}">
+                    <view class="content"></view>
+                    <view class="deliverInvite-content">{{entNum}}家企业邀请你投递 ~</view>
+                    <view class="deliverInvite-arrow">立即查看<text class="icon icon-fanhui-copy-copy"></text>
+                    </view>
+                </view>
+            </block>
+            <view class="dataDetailView">
+                <block wx:if="{{showChatFlag}}">
+                    <post-card-list compid="{{$compid__2841}}" id="bhhbz"></post-card-list>
+                    <message-bar wx:if="{{isLogin}}"></message-bar>
+                </block>
+                <view class="unready_box1" wx:if="{{!showChatFlag}}">
+                    <view class="unready_item">
+                        <view class="unready_item_top">
+                            <view class="top_left"></view>
+                            <view class="top_right"></view>
+                        </view>
+                        <view class="unready_item_center">
+                            <view class="center1"></view>
+                            <view class="center1"></view>
+                            <view class="center2"></view>
+                        </view>
+                        <view class="unready_item_bottom">
+                            <view class="bottom"></view>
+                        </view>
+                    </view>
+                    <view class="unready_item">
+                        <view class="unready_item_top">
+                            <view class="top_left"></view>
+                            <view class="top_right"></view>
+                        </view>
+                        <view class="unready_item_center">
+                            <view class="center1"></view>
+                            <view class="center1"></view>
+                            <view class="center2"></view>
+                        </view>
+                        <view class="unready_item_bottom">
+                            <view class="bottom"></view>
+                        </view>
+                    </view>
+                </view>
+            </view>
+        </view>
+        <offer-hero compid="{{$compid__2842}}" wx:if="{{switchBarId===1&&offerHeroVisible}}"></offer-hero>
+        <part-time-job compid="{{$compid__2843}}" wx:if="{{switchBarId===2}}"></part-time-job>
+    </view>
+    <view class="blankView" wx:if="{{switchBarId===0}}"></view>
+    <view class="auto_sign_box" wx:if="{{autoSign}}">
+        <image bindtap="onClose" class="logo" src="https://xcxstatic.xybsyw.com/xcx/images/1566298333277.png"></image>
+    </view>
+    <van-popup closeOnClickOverlay="false" customClass="xyb_popup" customStyle="border-radius:14px;" overlayStyle="background-color:rgba(0,0,0,0.4)" show="{{bannerPopFlag&&!revisionTipsFlag}}">
+        <view bindtap="goPageDetails" class="bannerBox" style="{{'background:url('+bannerPopImgUrl+') 0 0 no-repeat;'}}">
+            <view class="bannerBoxTop">
+                <image catchtap="anonymousFunc9" class="close" src="https://xcxstatic.xybsyw.com/xcx/images/pop_close.png"></image>
+            </view>
+        </view>
+    </van-popup>
+    <van-popup bindclose="{{true}}" overlay="{{false}}" position="top" show="{{autoPopActivate}}" style="height:220rpx">
+        <view class="autoBox" style="{{'padding-top:'+statusHeight+5+'px;'}}">
+            <view class="autoActivate">
+                <text class="tipTxt">如需报名{{xybData.menuNoun.sjjxjh}}，请进行学籍认证</text>
+                <text bindtap="gotoActive" class="popBtn">立即前往</text>
+                <view bindtap="closePop" class="clossBtn"></view>
+            </view>
+        </view>
+    </van-popup>
+    <van-popup overlay="{{true}}" position="center" round="{{true}}" show="{{xjhSharePopup&&xjhShare.type==2}}" style="height:100vh">
+        <view class="xjhShareBox">
+            <view class="topView">
+                <text bindtap="closeXJH" class="icon icon-guanbi icon-guanbi1"></text>
+                <image class="xjhBgImg" src="{{xjhShare.picUrl}}" wx:if="{{!shareFail}}"></image>
+                <view class="failTitle" wx:if="{{shareFail}}">{{xjhShareFailTitle}}</view>
+            </view>
+            <view class="xjhTitle" wx:if="{{!shareFail}}">{{xjhShare.name}}</view>
+            <view class="xjhTime" wx:if="{{!shareFail}}">{{xjhShare.startTime}}</view>
+            <view class="failContent" wx:if="{{shareFail}}">{{shareFailText}}</view>
+            <view bindtap="shareXjhClick" class="xjhBtn">{{xjhShareBtn}}</view>
+        </view>
+    </van-popup>
+    <van-popup overlay="{{true}}" position="center" round="{{true}}" show="{{xjhPopup&&xjhShare.type==1}}" style="height:100vh;">
+        <view class="xjhBox">
+            <view class="topView">
+                <text bindtap="closeXJH" class="icon icon-guanbi icon-guanbi1"></text>
+                <view class="failTitle" wx:if="{{xjhLieType<5&&xjhLieType!=2}}">助力成功<text class="icon icon-ic_chenggong"></text>
+                </view>
+                <view class="failTitle" wx:if="{{xjhLieType>4||xjhLieType==2}}">助力失败<text class="icon icon-ic_shibai"></text>
+                </view>
+            </view>
+            <view class="centerView">
+                <image class="left" src="https://xcxstatic.xybsyw.com/xcx/images/xjhliebian_left.png" wx:if="{{xjhLieType<5}}"></image>
+                <image class="right" src="https://xcxstatic.xybsyw.com/xcx/images/xjhliebian_right.png" wx:if="{{xjhLieType<5}}"></image>
+                <view class="xjhTo" wx:if="{{xjhLieType<5&&xjhLieType!=2}}">你已帮助<text>{{xjhShare.inviter}}</text>
+                </view>
+                <view class="xjhContent" wx:if="{{xjhLieType<5&&xjhLieType!=2}}">解锁求职礼包任务</view>
+                <view class="xjhContent" wx:if="{{xjhLieType==5}}">无法为自己助力，还需邀请两位好友帮忙，才可解锁</view>
+                <view class="xjhContent" wx:if="{{xjhLieTyp==6}}">求职经验包已成功解锁</view>
+                <view class="xjhContent" wx:if="{{xjhLieType==2}}">登录后可帮助<text>{{xjhShare.inviter}}</text>完成任务</view>
+                <view class="xjhContent" wx:if="{{xjhLieType==7}}">超过每日上线，无法助力<text>{{xjhShare.inviter}}</text>
+                </view>
+                <view class="xjhContent" wx:if="{{xjhLieType==8}}">活动已结束，无法助力<text>{{xjhShare.inviter}}</text>
+                </view>
+                <view class="xjhDetail" wx:if="{{xjhLieType==3}}">学籍认证信息不在宣讲会覆盖院校，无法参与活动</view>
+                <view class="xjhDetail" wx:if="{{xjhLieType==4}}">如需领取求职经验包，请先进行学籍认证</view>
+                <view class="xjhDetail" wx:if="{{xjhLieType==7}}">今天已帮助三人助力，明天再来吧~</view>
+            </view>
+            <view bindtap="shareXjhClick" class="xjhBtn">{{xjhShareBtn}}</view>
+        </view>
+    </van-popup>
+    <fastlogin compid="{{$compid__2844}}" id="fastlogin"></fastlogin>
+    <van-dialog id="van-dialog"></van-dialog>
+    <bottom-tabbar compid="{{$compid__2845}}"></bottom-tabbar>
+    <forbiddenlogin compid="{{$compid__2846}}"></forbiddenlogin>
+    <view class="bookingSxh" wx:if="{{bookingSxhForm.bookingSxhStatus==1&&!revisionTipsFlag&&!bannerPopFlag}}">
+        <view class="bookingSxhContent">
+            <text bindtap="bookingSxhEvent" class="icon icon-guanbi"></text>
+            <view class="schoolInfo">
+                <image class="schoolLogo" src="{{bookingSxhForm.schoolLog}}" wx:if="{{bookingSxhForm.schoolLog}}"></image>
+                <image class="schoolLogo" src="https://xcxstatic.xybsyw.com/xcx/images/logo_school_def.png" wx:if="{{!bookingSxhForm.schoolLog}}"></image>
+                <text>老师提醒</text>
+            </view>
+            <view class="sxhNameDiv">
+                <view class="sxhName">{{'“'+bookingSxhForm.name+'”'}}</view>
+            </view>
+            <view class="text1">即将在我校举办</view>
+            <view class="deliveryTime">{{'投递时间：'+bookingSxhForm.startDate+'-'+bookingSxhForm.endDate}}</view>
+            <text bindtap="bookingSxhEvent" class="signUpBtn" data-type="2">查看详情</text>
+        </view>
+    </view>
+    <view class="fromStudentAppItem" style="{{'top:'+statusHeight+23+'px;'}}" wx:if="{{fromStudentAppFlag}}">欢迎使用校友邦小程序 (๑•̀ㅂ•́)و✧</view>
+    <job-status-popup compid="{{$compid__2847}}" id="JobStatusPopup"></job-status-popup>
+    <city-select compid="{{$compid__2848}}" id="citySelect"></city-select>
+    <view catchtouchmove="ture" class="revisionTips" wx:if="{{revisionTipsFlag&&isLogin}}">
+        <image bindtap="revisionTipsClickEvent" class="revisionTipsImg2" data-item="2" mode="scaleToFill" src="https://xcxstatic.xybsyw.com/xcx/images/home_tips.png" style="{{'top:'+revisionTipTop2+'px;'}}"></image>
+    </view>
+    <intention-popup compid="{{$compid__2849}}"></intention-popup>
+    <single-select compid="{{$compid__2850}}"></single-select>
+    <more-filter compid="{{$compid__2851}}"></more-filter>
+    <full-screen-ad></full-screen-ad>
+    <growth-plan-chat compid="{{$compid__2852}}" wx:if="{{switchBarId===0&&isLogin}}"></growth-plan-chat>
+    <internship-reminder-popup compid="{{$compid__2853}}"></internship-reminder-popup>
+</block>

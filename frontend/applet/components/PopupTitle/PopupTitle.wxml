@@ -1,0 +1,5 @@
+<view class="title_warp" wx:if="{{$taroCompReady}}">
+    <view bindtap="anonymousFunc0" class="l_warp">{{leftText}}</view>
+    <view class="m_warp">{{title}}</view>
+    <view bindtap="anonymousFunc1" class="r_warp">{{rightText}}</view>
+</view>

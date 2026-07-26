@@ -1,0 +1,56 @@
+.home-tab {
+    -ms-flex-align: end;
+    -webkit-align-items: flex-end;
+    align-items: flex-end;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    gap: 20rpx
+}
+
+.home-tab .home-tab-item {
+    position: relative
+}
+
+.home-tab .home-tab-item-text {
+    color: #86909c;
+    font-size: 32rpx;
+    font-weight: 500;
+    line-height: 36rpx;
+    position: relative
+}
+
+.home-tab .home-tab-item-text.active {
+    color: #1d2129;
+    font-size: 40rpx;
+    line-height: 40rpx
+}
+
+.home-tab .home-tab-item-text.part-time-tab-guide-active {
+    color: #57a9fb!important;
+    font-size: 32rpx!important;
+    line-height: 36rpx!important;
+    z-index: 1
+}
+
+.home-tab .home-tab-item-text.part-time-tab-guide-active::after {
+    background: #fff;
+    border-radius: 8rpx;
+    bottom: -8rpx;
+    content: "";
+    left: -12rpx;
+    position: absolute;
+    right: -14rpx;
+    top: -8rpx;
+    z-index: -1
+}
+
+.home-tab .home-tab-item-dot {
+    background: #ff453a;
+    border-radius: 50%;
+    height: 12rpx;
+    position: absolute;
+    right: -10rpx;
+    top: -8rpx;
+    width: 12rpx
+}

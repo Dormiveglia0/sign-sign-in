@@ -1,0 +1,156 @@
+.recommend_item_box {
+    background-color: #fff;
+    border-radius: 28rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 28rpx 0 0;
+    min-height: 156rpx;
+    padding: 0rpx 24rpx 37rpx 232rpx;
+    position: relative;
+    width: 100%
+}
+
+.news_img {
+    background: #d8d8d8;
+    border-radius: 16rpx;
+    left: 24rpx;
+    position: absolute;
+    top: 0rpx;
+    width: 180rpx
+}
+
+.news_img,.zxOneImg {
+    height: 100%
+}
+
+.no_data_img {
+    background: #d8d8d8;
+    border-radius: 16rpx;
+    height: 100%;
+    width: 180rpx
+}
+
+.news_main {
+    word-wrap: break-word;
+    color: #1f1f2c;
+    font-size: 30rpx;
+    font-weight: 500;
+    line-height: 42rpx;
+    width: 100%;
+    word-break: normal
+}
+
+.item_footer,.tag_awesome {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.item_footer {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    bottom: 0;
+    color: #999;
+    font-size: 26rpx;
+    font-weight: 400;
+    line-height: 37rpx;
+    position: absolute;
+    width: 100%
+}
+
+.tag_awesome {
+    position: relative;
+    top: 2rpx
+}
+
+.like_gif,.like_gif_bkg,.tag_awesome_bind {
+    height: 80rpx;
+    left: -5rpx;
+    position: absolute;
+    top: -20rpx;
+    width: 80rpx;
+    z-index: 98
+}
+
+.tag_awesome .awesome_icon,.tag_awesome .awesome_icon_on {
+    background-size: contain!important;
+    display: inline-block;
+    height: 36rpx;
+    position: relative;
+    top: 5rpx;
+    width: 36rpx
+}
+
+.tag_awesome .awesome_icon {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/topic_praise.png) 0 0 no-repeat
+}
+
+.tag_awesome .awesome_icon_on {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/topic_praise_on.png) 0 0 no-repeat
+}
+
+.tag_awesome .awesome_text {
+    color: #999;
+    font-size: 26rpx;
+    line-height: 44rpx;
+    margin-left: 8rpx
+}
+
+.tag_awesome .awesome_text_red {
+    color: #ff453a
+}
+
+.like_gif,.like_gif_bkg {
+    left: -26rpx;
+    top: -26rpx;
+    z-index: 100
+}
+
+.like_gif_bkg {
+    background: #fff;
+    height: 40rpx;
+    left: -10rpx;
+    top: -6rpx;
+    width: 40rpx;
+    z-index: 10
+}
+
+.like_gif1,.like_gif_bkg1 {
+    height: 80rpx;
+    position: absolute;
+    right: 18rpx;
+    top: -18rpx;
+    width: 80rpx;
+    z-index: 100
+}
+
+.like_gif_bkg1 {
+    background: #fff;
+    height: 40rpx;
+    right: 26rpx;
+    top: 8rpx;
+    width: 42rpx;
+    z-index: 10
+}
+
+.liulanV {
+    margin-left: 32rpx
+}
+
+.liulanText {
+    margin-left: 1rpx
+}
+
+.iconfont-liulanliang {
+    color: #333;
+    font-size: 26rpx
+}
+
+.zan_icon {
+    height: 36rpx;
+    margin-right: 8rpx;
+    position: relative;
+    top: 8rpx;
+    width: 36rpx
+}

@@ -1,0 +1,6 @@
+<block wx:if="{{$taroCompReady}}">
+    <view wx:if="{{anonymousState__temp}}"></view>
+    <view class="tab-container" wx:else>
+        <view bindtap="anonymousFunc0" class="{{item[$loopState__temp3]}}" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" hidden="{{!item[$original].visible}}" wx:for="{{loopArray1107}}" wx:for-index="i" wx:key="i">{{item[$original].name}}</view>
+    </view>
+</block>

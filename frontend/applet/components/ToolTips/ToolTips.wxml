@@ -1,0 +1,16 @@
+<view class="tooltips" wx:if="{{$taroCompReady}}">
+    <view bindtap="anonymousFunc0" class="tooltips-trigger">
+        <slot></slot>
+    </view>
+    <view class="msk" wx:if="{{show}}">
+        <view class="{{colorStyle=='black'?'tooltips-content':'tooltips-content tooltips-content_w'}}" style="{{anonymousState__temp}}">
+            <view class="title_box" wx:if="{{titleName||positionName}}">
+                <text class="title_name" wx:if="{{titleName}}">{{titleName}}</text>
+                <text class="position_name" wx:if="{{positionName}}">{{positionName}}</text>
+            </view>
+            <text class="content_css">{{content}}</text>
+            <view class="{{colorStyle=='black'?'arrow':'arrow_w'}}" style="{{anonymousState__temp2}}" wx:if="{{align=='top'}}"></view>
+            <view class="{{colorStyle=='black'?'arrow_top':'arrow_top_w'}}" style="{{anonymousState__temp3}}" wx:if="{{align!='top'}}"></view>
+        </view>
+    </view>
+</view>

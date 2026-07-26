@@ -1,0 +1,14 @@
+<view class="intercept" wx:if="{{$taroCompReady}}">
+    <view class="outer" style="{{'--line:'+rows}}">
+        <view class="{{anonymousState__temp}}">
+            <rich-text nodes="{{content}}" wx:if="{{props.useRichText}}"></rich-text>
+            <block wx:else>{{content}}</block>
+            <text catchtap="anonymousFunc0" class="{{anonymousState__temp2}}" wx:if="{{alwaysShowButton||buttonVisible}}">{{actionText}}</text>
+            <view class="shadow" wx:if="{{showShadow&&(alwaysShowButton||buttonVisible)&&!isExpand}}"></view>
+        </view>
+    </view>
+    <view class="{{anonymousState__temp3}}">
+        <rich-text nodes="{{content}}" wx:if="{{props.useRichText}}"></rich-text>
+        <block wx:else>{{content}}</block>
+    </view>
+</view>

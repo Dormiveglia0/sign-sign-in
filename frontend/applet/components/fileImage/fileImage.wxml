@@ -1,0 +1,1 @@
+<image mode="widthFix" src="{{src}}" style="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}"></image>

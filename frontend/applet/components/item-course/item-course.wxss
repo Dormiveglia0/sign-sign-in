@@ -1,0 +1,117 @@
+.courseList {
+    background-color: #fff;
+    border-radius: 16rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 20rpx 0;
+    padding: 16rpx
+}
+
+.courseList .title {
+    color: #333;
+    font-size: 36rpx;
+    font-weight: 600;
+    line-height: 50rpx;
+    margin: 0 auto;
+    width: 670rpx
+}
+
+.courseList .coverItem {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkBAMAAACCzIhnAAAAElBMVEVHcEzd3d3c3Nzb29vMy8vU09OM7aHFAAAAA3RSTlMAJq2Rz5ivAAABt0lEQVRYw+2YS07EMAyGyw3YcALEBXB9gjgHAMf3vwp+5DkMEh0JiUW86DROPtv543akHk9vcMk+n48XuGgfx+tV5P2Ay7aRjWxkIxvZyD9EkLjdnjQvWkeBFIqZ1Nxl0N9Gv0dQzC4hZJYrgjRZVnIZ1tm8IMsauh12xII1BDRCVqOiJoB6Jb/3IZCOqIgjqe+FrFjdkEcJByx7MdcdRH2F2gnlWwR9mhui5SYfn3XpNyQiRu6OxKoSOuMQzHxmbEjuiGqUS8SNn3NGumIY8RpCYuJAYQlHtqOOnCIKCK+Ipa57TLV44akHmmJTYV7r6dtP0ByT1IaiizwjhbGq5o7cVv1wLqjne7pkNaxOnR4gDfWyt1tDTo0JrOtbWK0xAvBQzxAYbZk8s83VrdgsSQRAbT7tOFmyIDuCVOvymRGgBveGSTePWBl1hSb9nZC8h8rUMLBm8Q7AgYSOoeKCuDKZa1CJxhp1WRaeXhfx8Fmx3rPeDxn1Ir3O8Sz1LK1rc+0giZ/UOhXvILIIETWIIXN5A5EM80sIpN8xtJnC+/9lIxvZyEY28pcIXyXwkY9dD3xSu/7h7gsj7xO5+/krugAAAABJRU5ErkJggg==);
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    border-radius: 12rpx;
+    height: 268rpx;
+    margin: 24rpx auto 0;
+    position: relative;
+    width: 670rpx
+}
+
+.coverItem .state {
+    background: -webkit-gradient(linear,left top,left bottom,from(#ff8126),to(#ff117e));
+    background: -webkit-linear-gradient(top,#ff8126,#ff117e);
+    background: -o-linear-gradient(top,#ff8126 0,#ff117e 100%);
+    background: linear-gradient(180deg,#ff8126,#ff117e);
+    border-radius: 19rpx 0 0 19rpx;
+    -webkit-box-shadow: 0 4rpx 8rpx 0 rgba(0,0,0,.16);
+    box-shadow: 0 4rpx 8rpx 0 rgba(0,0,0,.16);
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #fff;
+    font-size: 20rpx;
+    font-weight: 500;
+    height: 37rpx;
+    line-height: 37rpx;
+    padding: 0 7rpx 0 16rpx;
+    position: absolute;
+    right: 0;
+    top: 20rpx
+}
+
+.coverItem .info,.coverItem .state1 {
+    color: #fff;
+    position: absolute;
+    text-align: center
+}
+
+.coverItem .state1 {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/course_unstart_new.png) 0 0 no-repeat;
+    background-size: cover!important;
+    font-size: 20rpx;
+    font-weight: 500;
+    height: 38rpx;
+    line-height: 38rpx;
+    right: 0;
+    top: 20rpx;
+    width: 80rpx
+}
+
+.coverItem .info {
+    background: rgba(0,0,0,.6);
+    border-radius: 20rpx;
+    bottom: 12rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    font-size: 22rpx;
+    font-weight: 400;
+    height: 40rpx;
+    left: 12rpx;
+    line-height: 40rpx;
+    padding: 0 16rpx
+}
+
+.info .line {
+    background: hsla(0,0%,100%,.99);
+    border-radius: 1rpx;
+    display: inline-block;
+    height: 16rpx;
+    margin: 0 13rpx;
+    width: 2rpx
+}
+
+.courseList .introduce {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #666;
+    font-size: 26rpx;
+    line-height: 37rpx;
+    margin: 24rpx auto 0;
+    padding-left: 10rpx;
+    width: 670rpx
+}
+
+.max_line4 {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    display: -webkit-box;
+    overflow: hidden;
+    word-break: break-word
+}
+
+.single_text {
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}

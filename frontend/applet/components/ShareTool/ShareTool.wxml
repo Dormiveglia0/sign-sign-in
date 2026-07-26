@@ -1,0 +1,24 @@
+<view wx:if="{{$taroCompReady}}">
+    <view class="likeXYB" style="{{'top:'+(isDefaultTop?0:statusHeight-8)+'px;'}}" wx:if="{{tipFlag}}">
+        <view>点击“…”下拉分享至朋友圈</view>
+        <text catchtap="anonymousFunc0" class="icon icon-guanbi"></text>
+    </view>
+    <popup compid="{{$compid__2816}}">
+        <view class="share_box">
+            <view class="title">
+                <text class="name">分享到</text>
+                <text bindtap="anonymousFunc2" class="icon icon-guanbi"></text>
+            </view>
+            <view class="share_btns">
+                <button bindtap="anonymousFunc3" class="share_item" openType="share">
+                    <image src="https://xcxstatic.xybsyw.com/xcx/images/wechat_logo.png"></image>
+                    <view class="text">微信好友</view>
+                </button>
+                <button bindtap="anonymousFunc4" class="share_item mgl">
+                    <image src="https://xcxstatic.xybsyw.com/xcx/images/circleOfFriends_logo.png"></image>
+                    <view class="text">朋友圈</view>
+                </button>
+            </view>
+        </view>
+    </popup>
+</view>

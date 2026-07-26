@@ -1,0 +1,221 @@
+.dialog_warp {
+    background: -webkit-gradient(linear,left top,left bottom,color-stop(0,#b7d9ee),color-stop(10%,#b7d9ee),to(#f9fafc));
+    background: -webkit-linear-gradient(top,#b7d9ee,#b7d9ee 10%,#f9fafc);
+    background: -o-linear-gradient(top,#b7d9ee 0,#b7d9ee 10%,#f9fafc 100%);
+    background: linear-gradient(180deg,#b7d9ee 0,#b7d9ee 10%,#f9fafc);
+    border-radius: 20rpx;
+    max-height: 75vh;
+    overflow-y: auto;
+    padding: 0 0 40rpx;
+    position: relative
+}
+
+.dialog_warp .title {
+    background: #d7ecfa url(https://xcxstatic.xybsyw.com/xcx/images/PracticeQuestionnaire_bg.png) no-repeat;
+    background-size: 100% auto;
+    padding: 40rpx 0;
+    position: -webkit-sticky;
+    position: sticky;
+    text-align: center;
+    top: 0;
+    z-index: 100
+}
+
+.dialog_warp .title .name {
+    color: #343a66;
+    font-family: Helvetica;
+    font-size: 32rpx;
+    font-weight: 600;
+    line-height: 38rpx;
+    margin-bottom: 14rpx
+}
+
+.dialog_warp .title .school_name {
+    color: #4f5583;
+    font-size: 28rpx;
+    line-height: 40rpx
+}
+
+.dialog_warp .question_list {
+    padding: 0 24rpx
+}
+
+.dialog_warp .question_list .question {
+    background: #fff;
+    border-radius: 16rpx;
+    -webkit-box-shadow: 0 2rpx 12rpx 0 rgba(165,198,255,.3);
+    box-shadow: 0 2rpx 12rpx 0 rgba(165,198,255,.3);
+    margin-bottom: 10rpx;
+    padding: 40rpx 30rpx 20rpx;
+    position: relative
+}
+
+.dialog_warp .question_list .question .q_item {
+    border-bottom: 1rpx solid #e5e5e5;
+    margin-bottom: 20rpx
+}
+
+.dialog_warp .question_list .question .q_item:last-child {
+    border: 0!important;
+    margin-bottom: 0
+}
+
+.dialog_warp .question_list .question .q_item .q_title {
+    color: #333;
+    font-size: 28rpx;
+    line-height: 40rpx;
+    margin-bottom: 34rpx
+}
+
+.dialog_warp .question_list .question .q_item .q_title .multiple_tag {
+    background: #fff;
+    border: 1rpx solid #3d80fa;
+    border-radius: 4rpx;
+    color: #3d80fa;
+    display: inline-block;
+    font-size: 24rpx;
+    line-height: 36rpx;
+    margin-right: 10rpx;
+    text-align: center;
+    width: 64rpx
+}
+
+.dialog_warp .question_list .question .q_item .emoji_answer {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    margin-bottom: 40rpx;
+    padding-left: 9rpx
+}
+
+.dialog_warp .question_list .question .q_item .emoji_answer .item {
+    -ms-flex-align: center;
+    -ms-flex-pack: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #f5f7fa;
+    border-radius: 28rpx;
+    color: #a8a9b3;
+    cursor: pointer;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    font-size: 26rpx;
+    height: 130rpx;
+    -webkit-justify-content: center;
+    justify-content: center;
+    line-height: 37rpx;
+    margin-right: 16rpx;
+    position: relative;
+    width: 148rpx
+}
+
+.dialog_warp .question_list .question .q_item .emoji_answer .item .choosed_img {
+    display: none
+}
+
+.dialog_warp .question_list .question .q_item .emoji_answer .item .emoji_img {
+    margin-bottom: 20rpx;
+    width: 50rpx
+}
+
+.dialog_warp .question_list .question .q_item .multiple_answer {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-wrap: wrap;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap
+}
+
+.dialog_warp .question_list .question .q_item .multiple_answer .item {
+    background: #f5f7fa;
+    border-radius: 44rpx;
+    color: #a8a9b3;
+    cursor: pointer;
+    font-size: 26rpx;
+    height: 64rpx;
+    line-height: 64rpx;
+    margin-bottom: 24rpx;
+    margin-right: 20rpx;
+    padding: 0 28rpx
+}
+
+.dialog_warp .question_list .question .q_item .multiple_answer .active {
+    background: #e2ecff;
+    color: #3d80fa
+}
+
+.dialog_warp .question_list .question .q_item .multiple_answer .active::after,.dialog_warp .question_list .question .q_item .multiple_answer .active::before {
+    border-radius: 44rpx
+}
+
+.dialog_warp .question_list .question .q_item .single .item {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 0;
+    text-align: center;
+    width: 140rpx
+}
+
+.dialog_warp .question_list .question .q_item .active {
+    background: #e2ecff;
+    position: relative
+}
+
+.dialog_warp .question_list .question .q_item .active .choosed_img {
+    display: block!important;
+    height: 36rpx;
+    position: absolute;
+    right: -16rpx;
+    top: -8rpx;
+    width: 36rpx;
+    z-index: 3
+}
+
+.dialog_warp .question_list .question .q_item .active::before {
+    border: 2rpx solid #89aff5;
+    border-radius: 28rpx;
+    bottom: -1rpx;
+    content: "";
+    left: -1rpx;
+    position: absolute;
+    right: -1rpx;
+    top: -1rpx;
+    z-index: 1
+}
+
+.dialog_warp .question_list .question .q_item .active::after {
+    border: 4rpx solid #fff;
+    border-radius: 28rpx;
+    bottom: 0;
+    content: "";
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 2
+}
+
+.dialog_warp .btn_warp {
+    bottom: 0;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 140rpx;
+    padding: 47rpx 66rpx 0;
+    position: -webkit-sticky;
+    position: sticky
+}
+
+.dialog_warp .btn_warp .btn {
+    background: #ff453a;
+    border-radius: 16rpx;
+    color: #fff;
+    font-size: 32rpx;
+    height: 80rpx;
+    line-height: 80rpx;
+    text-align: center
+}

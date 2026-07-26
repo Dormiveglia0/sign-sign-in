@@ -1,0 +1,91 @@
+.actionradio_warp {
+    height: 610rpx;
+    width: 100%
+}
+
+.contentWarp,.title {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 100%
+}
+
+.title {
+    color: #333;
+    font-size: 34rpx;
+    font-weight: 500;
+    line-height: 92rpx;
+    padding: 4rpx 30rpx 0
+}
+
+.title .closeIcon {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/blogOptimize202103_10.png) 50% no-repeat;
+    background-size: 30rpx 30rpx;
+    float: right;
+    height: 30rpx;
+    left: 10rpx;
+    margin-top: 10rpx;
+    padding: 20rpx;
+    position: relative;
+    width: 30rpx
+}
+
+.contentWarp {
+    height: 500rpx;
+    overflow: hidden
+}
+
+.dataItem .firstItem {
+    color: #333;
+    font-size: 28rpx;
+    line-height: 40rpx;
+    margin-left: 32rpx;
+    margin-top: 40rpx
+}
+
+.dataItem:first-child .firstItem {
+    margin-top: 20rpx
+}
+
+.dataItem .secondItem {
+    border-bottom: 1rpx solid #eee;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row;
+    -webkit-flex-wrap: wrap;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    margin: 0 16rpx 0 32rpx;
+    padding-bottom: 40rpx
+}
+
+.dataItem:last-child .secondItem {
+    border-bottom: 0
+}
+
+.secondItem .item {
+    background: #f5f5f5;
+    border-radius: 32rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #666;
+    font-size: 26rpx;
+    height: 64rpx;
+    line-height: 64rpx;
+    margin: 24rpx 16rpx 0 0;
+    min-width: 158rpx;
+    padding: 0 40rpx;
+    text-align: center
+}
+
+.secondItem .current {
+    background: #fff;
+    border: 1rpx solid #ff453a;
+    color: #ff453a
+}
+
+.click_hover {
+    background: #fff
+}

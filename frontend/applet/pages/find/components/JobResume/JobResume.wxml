@@ -1,0 +1,11 @@
+<view class="main_box" wx:if="{{$taroCompReady}}">
+    <view class="banner_box">
+        <banner></banner>
+    </view>
+    <view class="resume_box">
+        <resume-template></resume-template>
+    </view>
+    <view class="more_box">
+        <more-guidance></more-guidance>
+    </view>
+</view>

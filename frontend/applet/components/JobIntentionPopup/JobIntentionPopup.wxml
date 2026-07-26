@@ -1,0 +1,23 @@
+<popup compid="{{$compid__2416}}" wx:if="{{$taroCompReady}}">
+    <view class="popup-container">
+        <view class="title">{{title}}</view>
+        <block wx:if="{{positions.length>0}}">
+            <view class="list-title">期望职位：</view>
+            <view class="list-container">
+                <view bindtap="anonymousFunc0" class="tag-item" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1222}}" wx:key="$loopState__temp2">{{item[$original].name}}<text class="icon icon-guanbi"></text>
+                </view>
+            </view>
+        </block>
+        <block wx:if="{{locations.length>0}}">
+            <view class="list-title">期望城市：</view>
+            <view class="list-container">
+                <view bindtap="anonymousFunc1" class="tag-item" data-e-tap-a-a="{{item[_$indexKey2]}}" data-e-tap-so="this" wx:for="{{loopArray1223}}" wx:key="$loopState__temp4">{{item[$original].name}}<text class="icon icon-guanbi"></text>
+                </view>
+            </view>
+        </block>
+        <view class="button-container">
+            <view bindtap="anonymousFunc2" class="button xyb_button_cancel">{{props.cancelText||'取消'}}</view>
+            <view bindtap="anonymousFunc3" class="button xyb_button_new">{{props.confirmText||'确认添加'}}</view>
+        </view>
+    </view>
+</popup>

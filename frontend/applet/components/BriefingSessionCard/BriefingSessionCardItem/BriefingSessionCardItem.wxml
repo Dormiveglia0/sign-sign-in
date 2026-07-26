@@ -1,0 +1,144 @@
+<view bindtap="funPrivatebdaez" class="card-wrap" data-id="{{item.id}}" data-index="{{index}}" wx:if="{{$taroCompReady}}">
+    <view bindtap="funPrivatebdafz" class="card-text" data-id="{{item.id}}">
+        <view class="xjh-tag">宣讲会</view>
+        <view class="card-status not-start" wx:if="{{item.status===1}}">
+            <view class="not-start-text">
+                <image class="not-start-clock" mode="aspectFill" src="https://xcxstatic.xybsyw.com/xcx/images/talk-clock.png"></image>开播：</view>
+            <view class="not-start-time">{{item.startDate}}</view>
+        </view>
+        <view class="card-status countdown-not-wifi" wx:if="{{item.status===-1&&item.preVideoUrl&&!hasWIFI}}">
+            <text>开播</text>
+            <view>
+                <count-down compid="{{$compid__2215}}"></count-down>
+            </view>
+        </view>
+        <view class="card-status countdown-has-wifi" wx:if="{{item.status===-1&&item.preVideoUrl&&hasWIFI}}">
+            <text>开播</text>
+            <view>
+                <count-down compid="{{$compid__2216}}"></count-down>
+            </view>
+        </view>
+        <view class="card-status live" wx:if="{{item.status===0}}">
+            <text class="live-icon"></text>直播中</view>
+    </view>
+    <view class="media-content-wrap">
+        <view class="media-content">
+            <block wx:if="{{item.status===1}}">
+                <image bindtap="funPrivatebdafz" data-id="{{item.id}}" mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}" wx:if="{{!item.preVideoUrl}}"></image>
+                <block wx:if="{{item.preVideoUrl}}">
+                    <image mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}" wx:if="{{!item.isShowVideo}}"></image>
+                    <video bindtap="funPrivatebdagz" controls="{{false}}" data-id="{{item.id}}" enableProgressGesture="{{false}}" id="{{'Double'+item.id}}" loop="{{true}}" muted="{{item.isMute}}" posterForCrawler="{{item.bigPicUrl}}" showCenterPlayBtn="{{false}}" src="{{item.preVideoUrl}}" wx:if="{{item.isShowVideo}}"></video>
+                </block>
+                <view catchtap="anonymousFunc0" class="play-button" wx:if="{{item.preVideoUrl&&!hasWIFI&&!isPlay}}">
+                    <van-icon customStyle="display:flex" name="play" size="29px"></van-icon>
+                </view>
+                <view class="wifi-auto-play" wx:if="{{item.preVideoUrl&&hasWIFI}}">
+                    <view class="wifi-auto-play-text">
+                        <van-icon name="info-o" size="15px" style="display:flex"></van-icon>
+                        <text>仅在WiFi环境下自动播放</text>
+                    </view>
+                    <view catchtap="anonymousFunc1" class="mute-button">
+                        <text class="{{'icon '+(item.isMute?'icon-mute':'icon-volume')}}"></text>
+                    </view>
+                </view>
+            </block>
+            <block wx:if="{{item.status===-1}}">
+                <block wx:if="{{!item.preVideoUrl}}">
+                    <image mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}"></image>
+                    <view bindtap="funPrivatebdafz" class="countdown-mask" data-id="{{item.id}}">
+                        <view class="countdown-title">
+                            <image class="countdown-title-clock" mode="aspectFill" src="https://xcxstatic.xybsyw.com/xcx/images/square-clock.png"></image>
+                            <text>开播倒计时</text>
+                        </view>
+                        <view class="countdown-container-wrap">
+                            <view class="countdown-container">
+                                <count-down compid="{{$compid__2217}}"></count-down>
+                            </view>
+                        </view>
+                    </view>
+                </block>
+                <block wx:if="{{item.preVideoUrl}}">
+                    <image mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}" wx:if="{{!item.isShowVideo}}"></image>
+                    <video bindtap="funPrivatebdagz" controls="{{false}}" data-id="{{item.id}}" enableProgressGesture="{{false}}" id="{{'Double'+item.id}}" loop="{{true}}" muted="{{item.isMute}}" posterForCrawler="{{item.bigPicUrl}}" showCenterPlayBtn="{{false}}" src="{{item.preVideoUrl}}" wx:if="{{item.isShowVideo}}"></video>
+                </block>
+                <view catchtap="anonymousFunc2" class="play-button" wx:if="{{item.preVideoUrl&&!hasWIFI&&!isPlay}}">
+                    <van-icon customStyle="display:flex" name="play" size="29px"></van-icon>
+                </view>
+                <view class="wifi-auto-play" wx:if="{{item.preVideoUrl&&hasWIFI}}">
+                    <view class="wifi-auto-play-text">
+                        <van-icon name="info-o" size="15px" style="display:flex"></van-icon>
+                        <text>仅在WiFi环境下自动播放</text>
+                    </view>
+                    <view catchtap="anonymousFunc3" class="mute-button">
+                        <text class="{{'icon '+(item.isMute?'icon-mute':'icon-volume')}}"></text>
+                    </view>
+                </view>
+            </block>
+            <block wx:if="{{item.status===0}}">
+                <block wx:if="{{!hasWIFI&&!item.browseFlag}}">
+                    <image bindtap="funPrivatebdafz" data-id="{{item.id}}" mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}"></image>
+                    <view bindtap="funPrivatebdafz" class="play-button" data-id="{{item.id}}" data-item="{{item}}">
+                        <van-icon customStyle="display:flex" name="play" size="29px"></van-icon>
+                    </view>
+                </block>
+                <block wx:if="{{!hasWIFI&&item.browseFlag}}">
+                    <image bindtap="funPrivatebdafz" data-id="{{item.id}}" mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}"></image>
+                    <view bindtap="funPrivatebdafz" class="continue-play" data-id="{{item.id}}" data-item="{{item}}">
+                        <van-icon customStyle="display:flex" name="play" size="26px"></van-icon>
+                        <text>继续观看</text>
+                    </view>
+                </block>
+                <block wx:if="{{hasWIFI}}">
+                    <image bindtap="funPrivatebdafz" data-id="{{item.id}}" mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}" wx:if="{{!item.preVideoUrl}}"></image>
+                    <block wx:if="{{item.preVideoUrl}}">
+                        <image mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}" wx:if="{{!item.isShowVideo}}"></image>
+                        <video bindtap="funPrivatebdagz" controls="{{false}}" data-id="{{item.id}}" enableProgressGesture="{{false}}" id="{{'Double'+item.id}}" loop="{{true}}" muted="{{item.isMute}}" posterForCrawler="{{item.bigPicUrl}}" showCenterPlayBtn="{{false}}" src="{{item.preVideoUrl}}" wx:if="{{item.isShowVideo}}"></video>
+                        <view class="wifi-auto-play">
+                            <view class="wifi-auto-play-text">
+                                <van-icon name="info-o" size="15px" style="display:flex"></van-icon>
+                                <text>仅在WiFi环境下自动播放</text>
+                            </view>
+                            <view catchtap="anonymousFunc4" class="mute-button">
+                                <text class="{{'icon '+(item.isMute?'icon-mute':'icon-volume')}}"></text>
+                            </view>
+                        </view>
+                    </block>
+                </block>
+            </block>
+            <block wx:if="{{item.status===2}}">
+                <block wx:if="{{item.browseFlag}}">
+                    <image bindtap="funPrivatebdafz" data-id="{{item.id}}" mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}"></image>
+                    <view bindtap="funPrivatebdafz" class="continue-play" data-id="{{item.id}}">
+                        <van-icon customStyle="display:flex" name="play" size="26px"></van-icon>
+                        <text>继续观看</text>
+                    </view>
+                </block>
+                <block wx:if="{{!item.browseFlag&&(!hasWIFI||!item.preVideoUrl)}}">
+                    <image bindtap="funPrivatebdafz" data-id="{{item.id}}" mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}"></image>
+                    <view bindtap="funPrivatebdafz" class="play-button" data-id="{{item.id}}">
+                        <van-icon customStyle="display:flex" name="play" size="29px"></van-icon>
+                    </view>
+                </block>
+                <block wx:if="{{!item.browseFlag&&hasWIFI&&item.preVideoUrl}}">
+                    <block wx:if="{{item.preVideoUrl}}">
+                        <image mode="aspectFill" src="{{item.bigPicUrl+'?x-oss-process=image/resize,m_fixed,w_600'}}" wx:if="{{!item.isShowVideo}}"></image>
+                        <video bindtap="funPrivatebdagz" controls="{{false}}" data-id="{{item.id}}" enableProgressGesture="{{false}}" id="{{'Double'+item.id}}" loop="{{true}}" muted="{{item.isMute}}" posterForCrawler="{{item.bigPicUrl}}" showCenterPlayBtn="{{false}}" src="{{item.preVideoUrl}}" wx:if="{{item.isShowVideo}}"></video>
+                    </block>
+                    <view class="wifi-auto-play">
+                        <view class="wifi-auto-play-text">
+                            <van-icon name="info-o" size="15px" style="display:flex"></van-icon>
+                            <text>仅在WiFi环境下自动播放</text>
+                        </view>
+                        <view catchtap="anonymousFunc5" class="mute-button">
+                            <text class="{{'icon '+(item.isMute?'icon-mute':'icon-volume')}}"></text>
+                        </view>
+                    </view>
+                </block>
+            </block>
+            <view class="tag-row">
+                <view class="tag-row-item cut_text" wx:if="{{item.professionNames.length>0}}">{{item.professionNames}}</view>
+                <view class="tag-row-item cut_text" wx:if="{{item.locationNames.length}}">{{item.locationNames}}</view>
+            </view>
+        </view>
+    </view>
+</view>

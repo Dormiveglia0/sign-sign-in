@@ -20,6 +20,7 @@ from app.config.common import (
     PACKET_LOG_FILE,
     SESSION_CACHE_FILE,
 )
+from app.apis.xybsyw import auto_login, is_session_expired_error
 from app.mitm.service import MitmService
 from app.sign_flow import SignFlow, TaskCancelled, mode_to_option
 from app.utils.code_channel import CodeChannel
@@ -169,7 +170,18 @@ class TaskManager:
         success = False
         result = None
         try:
-            result = target(SignFlow(stop_event=self.stop_event))
+            try:
+                result = target(SignFlow(stop_event=self.stop_event))
+            except Exception as initial_error:
+                if not is_session_expired_error(initial_error):
+                    raise
+                with self.lock:
+                    if self.state["id"] == task_id:
+                        self.state["message"] = "SESSION 已失效，正在静默续期"
+                logging.warning("🔄 SESSION 已失效，正在静默续期")
+                config = read_config(CONFIG_FILE)
+                auto_login(config["input"])
+                result = target(SignFlow(stop_event=self.stop_event))
             status = "success"
             message = "执行完毕"
             success = True
@@ -688,6 +700,11 @@ class Runtime:
             "pid": os.getpid(),
             "session": {
                 "valid": bool(session),
+                "renewalAvailable": bool(
+                    raw_session.get("encryptValue")
+                    and raw_session.get("openId")
+                    and raw_session.get("unionId")
+                ),
                 "suffix": (
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),

@@ -1,0 +1,26 @@
+<view class="question-box" wx:if="{{$taroCompReady}}">
+    <scroll-view bindtap="anonymousFunc2" bindtouchend="anonymousFunc1" bindtouchstart="anonymousFunc0" class="scrollview_box" enableFlex="{{true}}" scrollLeft="{{scrollLeft}}" scrollX="{{true}}">
+        <view bindtouchmove="anonymousFunc3" class="scroll-text">
+            <block wx:for="{{scrollList1}}" wx:for-item="text">
+                <view class="text-item" data-text="{{text}}">{{text.question}}</view>
+                <view class="emoji-text">{{emojiList1[index]}}</view>
+            </block>
+        </view>
+        <view bindtouchmove="anonymousFunc4" class="scroll-text">
+            <block wx:for="{{scrollList2}}" wx:for-item="text">
+                <view class="text-item" data-text="{{text}}">{{text.question}}</view>
+                <view class="emoji-text">{{emojiList2[index]}}</view>
+            </block>
+        </view>
+        <view bindtouchmove="anonymousFunc5" class="scroll-text">
+            <block wx:for="{{scrollList3}}" wx:for-item="text">
+                <view class="text-item" data-text="{{text}}">{{text.question}}</view>
+                <view class="emoji-text">{{emojiList3[index]}}</view>
+            </block>
+        </view>
+    </scroll-view>
+    <view bindtap="anonymousFunc6" class="jump-text">
+        <text>更多热门问题</text>
+        <text class="icon icon-fanhui-copy-copy"></text>
+    </view>
+</view>

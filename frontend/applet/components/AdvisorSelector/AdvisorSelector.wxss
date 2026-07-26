@@ -1,0 +1,179 @@
+.advisor-selector-container {
+    background: #f3f4f9;
+    border-radius: 28rpx 28rpx 0 0
+}
+
+.title {
+    color: #333;
+    font-size: 34rpx;
+    font-weight: 600;
+    line-height: 48rpx;
+    padding-bottom: 32rpx;
+    padding-top: 52rpx;
+    position: relative;
+    text-align: center
+}
+
+.title .num {
+    color: #f25451;
+    margin: 0 4rpx
+}
+
+.title .iconfont {
+    color: #0c0c0c;
+    font-size: 26rpx;
+    position: absolute;
+    right: 30rpx;
+    top: 30rpx
+}
+
+.search-input {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #fff;
+    border-radius: 36rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    height: 68rpx;
+    line-height: 68rpx;
+    margin: 0 40rpx 32rpx;
+    padding: 0 28rpx
+}
+
+.search-input .iconfont {
+    color: #a8a9b3;
+    font-size: 24rpx;
+    margin-right: 8rpx
+}
+
+.search-input .input-view {
+    -webkit-flex: 1;
+    -ms-flex: 1;
+    flex: 1
+}
+
+.scroll-view {
+    height: 50vh
+}
+
+.advisor-list {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 0 24rpx;
+    width: 100%
+}
+
+.selector-item {
+    -ms-flex-pack: justify;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background-color: #fff;
+    border: 1rpx solid transparent;
+    border-radius: 16rpx;
+    height: 104rpx;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    margin-bottom: 12rpx;
+    padding-left: 56rpx;
+    padding-right: 32rpx
+}
+
+.advisor-wrap,.selector-item {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.advisor-wrap .advisor-name {
+    color: #000;
+    font-size: 30rpx;
+    font-weight: 400;
+    line-height: 42rpx;
+    margin-right: 20rpx
+}
+
+.advisor-wrap .advisor-faculty {
+    color: #999;
+    display: inline-block;
+    font-size: 26rpx;
+    font-weight: 400;
+    line-height: 42rpx;
+    max-width: 15em;
+    vertical-align: text-top
+}
+
+.checkbox-disabled {
+    background-color: #efefef;
+    height: 36rpx;
+    width: 36rpx
+}
+
+.selector-item.checked {
+    background: #f0f7ff;
+    border: 1rpx solid #75a2ff
+}
+
+.disabled .advisor-name {
+    color: #999
+}
+
+wx-checkbox {
+    margin-right: 0
+}
+
+.teacher-operation-bar {
+    background-color: #fff;
+    -webkit-box-shadow: 0 -4rpx 16rpx 0 hsla(0,0%,7%,.1);
+    box-shadow: 0 -4rpx 16rpx 0 hsla(0,0%,7%,.1);
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 22rpx 30rpx 20rpx;
+    width: 100%
+}
+
+.checked-list {
+    -webkit-flex-wrap: wrap;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    margin-bottom: 42rpx
+}
+
+.checked-list .checked-item,.checked-list .checked-label {
+    color: #333;
+    font-size: 26rpx;
+    font-weight: 500;
+    line-height: 56rpx
+}
+
+.checked-list .checked-label .checked-num {
+    color: #f25451
+}
+
+.checked-list,.checked-list .checked-item {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.checked-list .checked-item {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    background: #f3f4f9;
+    border-radius: 28rpx;
+    height: 56rpx;
+    line-height: 37rpx;
+    margin-right: 13rpx;
+    padding: 0 20rpx
+}
+
+.checked-list .checked-item .iconfont {
+    color: #919299;
+    font-size: 20rpx;
+    margin-left: 12rpx
+}

@@ -1,0 +1,22 @@
+<block wx:if="{{$taroCompReady}}">
+    <view class="{{['modal_box',bannerList.length==0?'':'modal_box_b']}}"></view>
+    <view class="main-box">
+        <image bindtap="anonymousFunc0" class="start-postgraduate-img" src="https://xcxstatic.xybsyw.com/xcx/images/start-postgraduate-img.png"></image>
+        <view class="banner_box">
+            <banner></banner>
+        </view>
+        <view class="{{['title-box',bannerList.length==0?'':'title-box-b']}}">考研真题</view>
+        <view class="frame-box">
+            <view bindtap="anonymousFunc1" class="content-item" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1378}}">
+                <view class="content-left">
+                    <image class="content-item-img" src="{{item[$original].url}}"></image>
+                    <view class="content-middle">
+                        <text class="middle-title">{{item[$original].title}}</text>
+                        <text class="middle-tip">{{item[$original].tips}}</text>
+                    </view>
+                </view>
+                <text class="iconfont icon-fanhui-copy-copy"></text>
+            </view>
+        </view>
+    </view>
+</block>

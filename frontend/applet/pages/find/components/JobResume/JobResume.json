@@ -1,0 +1,11 @@
+{
+  "component": true,
+  "usingComponents": {
+    "banner": "Inc/Banner/Banner",
+    "resume-template": "Inc/ResumeTemplate/ResumeTemplate",
+    "more-guidance": "Inc/MoreGuidance/MoreGuidance",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  },
+  "navigationBarTitleText": "校友邦"
+}

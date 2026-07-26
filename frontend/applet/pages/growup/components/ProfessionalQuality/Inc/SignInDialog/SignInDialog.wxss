@@ -1,0 +1,200 @@
+.dialog-container-wrap {
+    background: #fff;
+    border-radius: 28rpx 28rpx 0 0;
+    height: 795rpx
+}
+
+.dialog-container-satisfaction-mark {
+    background: #fafafa;
+    height: 945rpx
+}
+
+.icon-guanbi {
+    color: #999;
+    font-size: 26rpx;
+    position: absolute;
+    right: 20rpx;
+    top: 20rpx
+}
+
+.dialog-content {
+    font-weight: 400
+}
+
+.dialog-content,.dialog-content_success,.dialog-title {
+    color: #333;
+    font-size: 30rpx;
+    line-height: 56rpx;
+    text-align: center
+}
+
+.dialog-content_success {
+    font-weight: 400;
+    padding-bottom: 68rpx
+}
+
+.dialog-title {
+    font-weight: 600
+}
+
+.button-container {
+    -ms-flex-pack: center;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: center;
+    justify-content: center;
+    margin-top: 30rpx;
+    padding-bottom: 165rpx;
+    position: relative
+}
+
+.button-container.button-container2 {
+    margin-top: 64rpx
+}
+
+.button-container .cancel-button,.button-container .confirm-button {
+    border-radius: 40rpx;
+    font-size: 32rpx;
+    height: 80rpx;
+    line-height: 80rpx;
+    text-align: center
+}
+
+.button-container .cancel-button {
+    border: 1rpx solid #ccc;
+    color: #666;
+    margin-right: 24rpx;
+    width: 192rpx
+}
+
+.button-container .confirm-button {
+    background: #ff453a -webkit-linear-gradient(295deg,#ff6a5c,#ff463c);
+    background: #ff453a -o-linear-gradient(295deg,#ff6a5c 0,#ff463c 100%);
+    background: #ff453a linear-gradient(155deg,#ff6a5c,#ff463c);
+    -webkit-box-shadow: 0 34rpx 30rpx -20rpx rgba(253,82,66,.45);
+    box-shadow: 0 34rpx 30rpx -20rpx rgba(253,82,66,.45);
+    color: #fff;
+    -webkit-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    margin-top: 0;
+    max-width: 360rpx
+}
+
+.none_warp {
+    clear: both;
+    height: 1rpx
+}
+
+.dialog-content-mode-mark .dialog-content-mode-mark_text .success-icon-mark,.success-icon {
+    background: url(https://xcxstatic.xybsyw.com/xcx/images/rate_success.png) no-repeat;
+    background-size: 100% 100%
+}
+
+.success-icon {
+    height: 150rpx;
+    margin: 102rpx auto 40rpx;
+    width: 150rpx
+}
+
+.dialog-container-fail .dialog-content {
+    padding: 220rpx 0 97rpx
+}
+
+.dialog-content-mode-mark .dialog-content-mode-mark_text {
+    -ms-flex-align: center;
+    -ms-flex-pack: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: center;
+    justify-content: center;
+    padding: 86rpx 0 62rpx
+}
+
+.dialog-content-mode-mark .dialog-content-mode-mark_text .success-icon-mark {
+    height: 48rpx;
+    margin-right: 24rpx;
+    width: 48rpx
+}
+
+.dialog-content-mode-mark .dialog-content-mode-mark_text .dialog-title-mark {
+    color: #333;
+    display: -webkit-inline-flex;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    font-size: 36rpx;
+    font-weight: 700;
+    line-height: 47rpx
+}
+
+.dialog-content-mode-mark .dialog-content-mode-mark_text .dialog-title-mark .dialog-title-time {
+    color: #999;
+    line-height: 47rpx;
+    margin-left: 24rpx
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox {
+    background: #fff;
+    border-radius: 16rpx;
+    height: 462rpx;
+    margin: 0 32rpx 34rpx
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_activityname {
+    color: #333;
+    font-size: 30rpx;
+    font-weight: 500;
+    line-height: 42rpx;
+    padding-top: 65rpx;
+    text-align: center
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_tip {
+    color: #666;
+    font-size: 28rpx;
+    line-height: 40rpx;
+    padding-bottom: 48rpx;
+    padding-top: 71rpx;
+    text-align: center
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_rate,.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_rate .rate_item {
+    -ms-flex-pack: center;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: center;
+    justify-content: center
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_rate .rate_item {
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    margin: 0 28rpx
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_rate .rate_item .rate_img {
+    height: 64rpx;
+    width: 64rpx
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_rate .rate_item .rate_text {
+    color: #999;
+    font-size: 20rpx;
+    line-height: 28rpx;
+    padding-top: 14rpx
+}
+
+.dialog-content-mode-mark .dialog-content-whitebox .dialog-content-mode-mark_rate .rate_item .rate_text_on {
+    color: #333
+}

@@ -1,0 +1,17 @@
+<view class="template_box" wx:if="{{$taroCompReady}}">
+    <view class="title">
+        <view class="title_text">简历模板<text class="user_num">100万+用户正在使用</text>
+        </view>
+        <view bindtap="anonymousFunc0" class="title_more" wx:if="{{templateList.length>=6}}">
+            <text>查看更多</text>
+            <view class="icon icon-arrowright"></view>
+        </view>
+    </view>
+    <view class="template_list">
+        <view class="nodataList" wx:if="{{templateList.length==0}}">
+            <image src="https://xcxstatic.xybsyw.com/static/nodata_2.png"></image>
+            <view class="no_text">暂无数据</view>
+        </view>
+        <resume-item compid="{{item[$compid__2794]}}" wx:for="{{loopArray1387}}"></resume-item>
+    </view>
+</view>

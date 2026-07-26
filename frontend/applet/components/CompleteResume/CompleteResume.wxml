@@ -1,0 +1,13 @@
+<block wx:if="{{$taroCompReady}}">
+    <view class="{{anonymousState__temp}}" style="{{anonymousState__temp2}}" wx:if="{{visible}}">
+        <view class="close-icon">
+            <text bindtap="anonymousFunc0" class="icon icon-guanbi"></text>
+        </view>
+        <image src="https://xcxstatic.xybsyw.com/xcx/images/jianli_success_img.png"></image>
+        <view class="text_context">
+            <view class="{{anonymousState__temp3}}">{{title.title}}</view>
+            <view class="text2">{{title.subTitle}}</view>
+        </view>
+        <view bindtap="anonymousFunc1" class="btn_box">{{title.buttonText}}</view>
+    </view>
+</block>

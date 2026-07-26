@@ -1,0 +1,15 @@
+<view class="accessory-wrap" wx:if="{{$taroCompReady}}">
+    <view class="accessory-title" wx:if="{{props.title}}">{{props.title}}：</view>
+    <view class="accessory-main-wrap">
+        <file-image compid="{{$compid__2767}}"></file-image>
+        <view class="accessory-main">
+            <view class="accessory-name">{{props.fileName}}</view>
+            <view class="accessory-time" wx:if="{{props.time}}">{{props.time}}</view>
+        </view>
+    </view>
+    <view class="accessory-button-wrap">
+        <view bindtap="anonymousFunc0" class="accessory-button" wx:if="{{props.canPreview}}">预览</view>
+        <view bindtap="anonymousFunc1" class="accessory-button" wx:if="{{props.canDownload}}">下载</view>
+        <view bindtap="anonymousFunc2" class="accessory-button" wx:if="{{props.canDelete}}">删除</view>
+    </view>
+</view>

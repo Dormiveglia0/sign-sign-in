@@ -1,0 +1,181 @@
+.bottom_bar,.bottom_bar .bar_item {
+    -ms-flex-line-pack: center;
+    -ms-flex-align: center;
+    -webkit-align-content: center;
+    align-content: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex
+}
+
+.bottom_bar {
+    -ms-flex-pack: justify;
+    background: #fff;
+    border-top: 1rpx solid #ddd;
+    bottom: 0;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 98rpx;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    left: 0;
+    position: fixed;
+    right: 0;
+    width: 100%;
+    z-index: 99
+}
+
+.bottom_on {
+    height: 146rpx;
+    padding-bottom: 48rpx
+}
+
+.tipLayout1 {
+    background: -webkit-linear-gradient(295deg,#ff6a5c,#ff463c);
+    background: -o-linear-gradient(295deg,#ff6a5c 0,#ff463c 100%);
+    background: linear-gradient(155deg,#ff6a5c,#ff463c);
+    border-radius: 180rpx;
+    height: 40rpx;
+    left: 139rpx;
+    margin-left: 34rpx;
+    margin-top: -84rpx;
+    padding: 12rpx 30rpx;
+    position: absolute;
+    top: 0
+}
+
+.txt1 {
+    color: #fff;
+    font-size: 28rpx;
+    font-weight: 700;
+    height: 40rpx;
+    line-height: 40rpx
+}
+
+.bottom_bar .bar_item {
+    -ms-flex-pack: center;
+    -webkit-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -webkit-justify-content: center;
+    justify-content: center;
+    position: relative
+}
+
+.bar_item .message_account,.bar_item .message_account_99 {
+    background-color: red;
+    border: 2rpx solid #fff;
+    border-radius: 200rpx;
+    color: #fff;
+    font-size: 24rpx;
+    font-weight: 600;
+    height: 36rpx;
+    line-height: 36rpx;
+    position: absolute;
+    right: 46rpx;
+    text-align: center;
+    top: -12rpx;
+    width: 36rpx
+}
+
+.bar_item .message_account_99 {
+    border-radius: 20rpx;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    right: 31rpx;
+    width: 56rpx
+}
+
+.bar_item .unreadTalkFlag {
+    position: absolute;
+    right: 20rpx;
+    top: -6rpx
+}
+
+.bar_item .message_growup {
+    background-color: #fd4848;
+    border-radius: 50%;
+    height: 16rpx;
+    position: absolute;
+    right: 40rpx;
+    top: -3rpx;
+    width: 16rpx
+}
+
+.image1 {
+    height: 48rpx;
+    width: 48rpx
+}
+
+.image_json_1 {
+    height: 98rpx;
+    position: absolute;
+    top: -13rpx;
+    width: 96rpx
+}
+
+.image2 {
+    height: 48rpx;
+    width: 48rpx
+}
+
+.image_json_2,.image_json_3 {
+    height: 98rpx;
+    position: absolute;
+    top: -13rpx;
+    width: 96rpx
+}
+
+.image4 {
+    height: 48rpx;
+    width: 48rpx
+}
+
+.image_json_4 {
+    height: 98rpx;
+    position: absolute;
+    top: -13rpx;
+    width: 96rpx
+}
+
+.image5 {
+    height: 48rpx;
+    width: 48rpx
+}
+
+.image_json_5 {
+    height: 98rpx;
+    position: absolute;
+    top: -13rpx;
+    width: 96rpx
+}
+
+.bottom_bar .bar_title {
+    color: #9f9f9f;
+    font-size: 20rpx;
+    font-weight: 500;
+    line-height: 28rpx;
+    margin-top: 8rpx
+}
+
+.bottom_bar .bar_title_active {
+    color: #ff453a;
+    font-weight: 600;
+    line-height: 28rpx
+}
+
+.jiantou {
+    bottom: -10rpx;
+    height: 13rpx;
+    left: 50%;
+    position: absolute;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+    width: 42rpx
+}

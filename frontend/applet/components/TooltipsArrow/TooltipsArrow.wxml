@@ -1,0 +1,6 @@
+<block wx:if="{{$taroCompReady}}">
+    <view bindtap="handleClose" bindtouchmove="handleClose" class="{{'tooltips-full '+(isWhiteColor?'white-background':'blackColor')}}" disableScroll="{{true}}" wx:if="{{isOpen}}">
+        <view bindtap="anonymousFunc0" class="tooltips-container" style="{{anonymousState__temp}}">
+            <view class="arrow" style="{{anonymousState__temp2}}" wx:if="{{needArrow}}"></view>{{text}}</view>
+    </view>
+</block>

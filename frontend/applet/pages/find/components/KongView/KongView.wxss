@@ -1,0 +1,82 @@
+.kong-view {
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    height: 177rpx
+}
+
+.kong-view.default {
+    -ms-flex-pack: distribute;
+    -webkit-justify-content: space-around;
+    justify-content: space-around;
+    padding: 0 24rpx
+}
+
+.kong-view.default .kong-item {
+    margin-right: 0
+}
+
+.kong-view.default .kong-item:first-child {
+    margin-left: 0
+}
+
+.kong-item {
+    -ms-flex-negative: 0;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
+    margin-bottom: 17rpx;
+    margin-right: 28rpx;
+    margin-top: 20rpx;
+    position: relative;
+    width: 104rpx
+}
+
+.kong-item:first-child {
+    margin-left: 40rpx
+}
+
+.kong-item .kong-image {
+    height: 90rpx;
+    width: 90rpx
+}
+
+.kong-item .kong-text {
+    color: #333;
+    font-size: 26rpx;
+    font-weight: 500;
+    line-height: 48rpx;
+    text-align: center;
+    white-space: nowrap
+}
+
+.kong-red-dot {
+    background: #ff211c;
+    border-radius: 50%;
+    height: 16rpx;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 16rpx
+}
+
+.kong-item-placeholder {
+    -ms-flex-negative: 0;
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
+    height: 100%;
+    width: 20rpx
+}

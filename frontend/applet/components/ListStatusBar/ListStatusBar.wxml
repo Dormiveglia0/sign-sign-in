@@ -1,0 +1,9 @@
+<view class="list-status-bar" wx:if="{{$taroCompReady}}">
+    <view class="loading-container" wx:if="{{loading}}">
+        <at-activity-indicator compid="{{$compid__2788}}"></at-activity-indicator>
+    </view>
+    <view class="{{anonymousState__temp}}" wx:if="{{!loading&&isComplete}}">
+        <view class="has-more-text">{{completeText}}</view>
+    </view>
+    <view class="bottom-safe-block"></view>
+</view>

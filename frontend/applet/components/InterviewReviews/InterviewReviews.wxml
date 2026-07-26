@@ -1,0 +1,30 @@
+<view class="{{anonymousState__temp}}" wx:if="{{$taroCompReady}}">
+    <view class="company-reviews-info">
+        <image binderror="anonymousFunc0" class="avatar" src="{{avatar}}"></image>
+        <view class="student-name cut_text" style="font-weight:bold;">{{data.personName}}</view>
+        <view class="auth-tag">实习已认证</view>
+    </view>
+    <view class="post-box">
+        <view class="post-name">面试岗位：</view>
+        <view class="post-value">{{data.postName}}</view>
+    </view>
+    <company-rate compid="{{$compid__2377}}"></company-rate>
+    <view class="{{['comments',data.type==0?'frame_box':'']}}" style="{{anonymousState__temp2}}" wx:if="{{data.evaluateInfo}}">
+        <view class="tag_box">
+            <block wx:if="{{data.tabList}}">
+                <view class="tag_index" wx:for="{{data.tabList}}" wx:key="index">{{item}}</view>
+            </block>
+        </view>
+        <rich-text nodes="{{textNode}}"></rich-text>
+    </view>
+    <view class="company-reviews-footer">
+        <view class="comments-time">{{data.createDate||''}}</view>
+        <view catchtap="anonymousFunc1" class="comments-like active" wx:if="{{active}}">{{' '}}<text class="icon icon-dianzan"></text>{{num}}{{' '}}</view>
+        <view catchtap="anonymousFunc2" class="comments-like" wx:else>
+            <text class="icon icon-ic_zhunque"></text>{{num===0?'有用':num}}</view>
+    </view>
+    <view class="company-reply" wx:if="{{replyComments}}">
+        <view class="field">企业回复：</view>
+        <view class="reply_content">{{replyComments}}</view>
+    </view>
+</view>

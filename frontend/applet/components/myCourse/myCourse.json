@@ -1,0 +1,10 @@
+{
+  "component": true,
+  "usingComponents": {
+    "itemcourse": "../item-course/item-course",
+    "at-activity-indicator": "../../npm/taro-ui/dist/weapp/components/activity-indicator/index",
+    "van-icon": "vant-weapp/dist/icon/index",
+    "van-search": "vant-weapp/dist/search/index"
+  },
+  "navigationBarTitleText": "我的课程"
+}

@@ -53,6 +53,7 @@ export interface SystemStatus {
   pid: number;
   session: {
     valid: boolean;
+    renewalAvailable: boolean;
     suffix: string;
     cachedAt: string | null;
     expiresAt: string | null;

@@ -1,0 +1,68 @@
+.container {
+    background-color: rgba(51,51,51,.8);
+    left: 0;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    z-index: 111111
+}
+
+.container,.page-page {
+    height: 100%;
+    width: 100%
+}
+
+.page-page {
+    position: relative
+}
+
+.animation-element,.gold,.gold_open {
+    height: 434rpx;
+    left: 50%;
+    margin-left: -216rpx;
+    margin-top: -217rpx;
+    position: absolute;
+    top: 50%;
+    width: 435rpx
+}
+
+.gold,.gold_open {
+    height: 261rpx;
+    margin-left: -200rpx;
+    margin-top: -130rpx;
+    width: 399rpx;
+    z-index: 1
+}
+
+.gold_open {
+    height: 420rpx;
+    left: 33%;
+    top: 40%;
+    width: 600rpx
+}
+
+.fengADD,.fengCont,.fengV {
+    color: #fb9d04;
+    font-weight: 550
+}
+
+.fengV {
+    font-size: 32rpx;
+    height: 44rpx;
+    left: 42%;
+    line-height: 44rpx;
+    margin-top: -22rpx;
+    position: absolute;
+    top: 68%;
+    width: 100%
+}
+
+.fengADD,.fengCont {
+    font-size: 51rpx;
+    line-height: 78rpx
+}
+
+.fengCont {
+    font-size: 57rpx;
+    font-weight: 600
+}

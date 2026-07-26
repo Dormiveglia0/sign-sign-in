@@ -1,0 +1,1 @@
+<view class="index" wx:if="{{$taroCompReady}}"></view>

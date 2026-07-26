@@ -1,0 +1,33 @@
+<popup compid="{{$compid__2705}}" wx:if="{{$taroCompReady}}">
+    <view class="{{mode==2&&(result.successStatus==9||result.successStatus==10||result.successStatus==12)?'dialog-container-wrap dialog-container-satisfaction-mark':'dialog-container-wrap'}}">
+        <view class="{{anonymousState__temp}}">
+            <view class="none_warp"></view>
+            <block wx:if="{{mode==1}}">
+                <view class="success-icon" wx:if="{{config.success}}"></view>
+                <view class="dialog-title" wx:if="{{config.success}}">{{config.title}}<view class="dialog-content_success">{{config.time}}</view>
+                </view>
+                <view class="dialog-content">{{config.content}}</view>
+            </block>
+            <view class="dialog-content-mode-mark" wx:if="{{mode==2}}">
+                <view class="dialog-content-mode-mark_text">
+                    <view class="success-icon-mark" wx:if="{{config.success}}"></view>
+                    <view class="dialog-title-mark" wx:if="{{config.success}}">{{config.title}}<view class="dialog-title-time">({{config.time}})</view>
+                    </view>
+                </view>
+                <view class="dialog-content-whitebox">
+                    <view class="dialog-content-mode-mark_activityname">{{result.activityName}}</view>
+                    <view class="dialog-content-mode-mark_tip">请完成活动满意度评分哦</view>
+                    <view class="dialog-content-mode-mark_rate">
+                        <view catchtap="anonymousFunc0" class="rate_item" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1327}}">
+                            <image class="rate_img" mode="aspectFit|aspectFill|widthFix" src="{{'https://xcxstatic.xybsyw.com/xcx/images/'+(markId>=item[$original].id?'rate_yes':'rate_no')+'.png'}}"></image>
+                            <text class="{{markId==item[$original].id?'rate_text rate_text_on':'rate_text'}}">{{item[$original].name}}</text>
+                        </view>
+                    </view>
+                </view>
+            </view>
+        </view>
+        <view class="{{mode==2?'button-container button-container2':'button-container'}}">
+            <view bindtap="anonymousFunc1" class="confirm-button">{{config.confirmText||'好的，知道了'}}</view>
+        </view>
+    </view>
+</popup>

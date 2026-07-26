@@ -1,0 +1,16 @@
+<block wx:if="{{$taroCompReady}}">
+    <view class="full-loading" wx:if="{{loading}}">
+        <image class="full-loading-img" mode="aspectFill" src="https://xcxstatic.xybsyw.com/xcx/images/full-scrrn-logo.png"></image>
+    </view>
+    <view class="{{'full-screen-ad'+(safeBottom>0?' full-screen-ad--safe-bottom':'')}}" wx:if="{{visible}}">
+        <image binderror="anonymousFunc1" bindload="anonymousFunc0" bindtap="anonymousFunc2" class="ad-img" mode="aspectFill" src="{{adInfo.workLogo}}"></image>
+        <view bindtap="anonymousFunc3" class="ad-mask"></view>
+        <view catchtap="anonymousFunc4" class="ad-skip-btn">跳过 {{count}}s</view>
+        <view class="ad-brand-bar">
+            <view class="ad-brand-content">
+                <image class="ad-brand-logo" mode="aspectFill" src="https://xcxstatic.xybsyw.com/xcx/images/full-scrrn-logo.png"></image>
+                <text class="ad-brand-name">校友邦-实习求职找工作</text>
+            </view>
+        </view>
+    </view>
+</block>

@@ -1,0 +1,31 @@
+<block wx:if="{{$taroCompReady}}">
+    <popup compid="{{$compid__2625}}">
+        <view class="popup-container">
+            <view class="sub-title">确认更换后原有实习项目中断，显示为更换后的项目</view>
+            <view class="search-container">
+                <van-search __fn_onChange="{{true}}" __fn_onClear="{{true}}" __fn_onSearch="{{true}}" bindchange="anonymousFunc1" bindclear="anonymousFunc3" bindsearch="anonymousFunc2" clearable="true" placeholder="请输入项目名称查询" value="{{searchValue}}" wx:if="{{visible}}"></van-search>
+            </view>
+            <scroll-view bindscrolltolower="anonymousFunc4" class="plan-container" scrollY="{{true}}">
+                <view class="empty-container" wx:if="{{isEmpty}}">
+                    <text>{{searchValue?'没有搜索到结果哦，换个词试试吧~':'当前您没有可以更换的项目'}}</text>
+                </view>
+                <view bindtap="anonymousFunc5" class="plan-item" data-e-tap-a-a="{{item[_$indexKey]}}" data-e-tap-so="this" wx:for="{{loopArray1301}}">
+                    <text class="{{item[$loopState__temp2]}}"></text>
+                    <view class="plan-name">{{item[$original].projectName}}{{item[$original].name?'('+item[$original].name+')':''}}</view>
+                    <view class="plan-desc">实习时间：{{item[$original].startDate}} ~ {{item[$original].endDate}}</view>
+                    <view class="plan-desc">实习单位：{{item[$original].enterpriseName}}</view>
+                    <block wx:if="{{item[$original].optionalAdviserCount>0}}">
+                        <view class="flex-row plan-desc">指导老师：{{item[$loopState__temp4]}}<text bindtap="anonymousFunc6" class="more-btn" data-e-tap-a-a="{{item[_$indexKey2]}}" data-e-tap-so="this">共{{item[$loopState__temp6]}}位{{'>'}}</text>
+                        </view>
+                        <view class="plan-desc" hidden="{{!item[$original].optionalCount}}" style="margin-left:54px">（自选{{item[$original].optionalCount}}位指导老师）</view>
+                    </block>
+                    <view class="plan-desc" hidden="{{item[$original].advisers&&!item[$original].advisers.length}}" wx:else>指导老师：{{item[$loopState__temp8]}}</view>
+                </view>
+            </scroll-view>
+            <view bindtap="anonymousFunc7" class="confirm-button xyb_button_new" wx:if="{{current>-1}}">已选中，确认更换</view>
+            <view class="bottom-safe-block"></view>
+        </view>
+    </popup>
+    <advisor-selector compid="{{$compid__2626}}"></advisor-selector>
+    <advisor-popup compid="{{$compid__2627}}"></advisor-popup>
+</block>

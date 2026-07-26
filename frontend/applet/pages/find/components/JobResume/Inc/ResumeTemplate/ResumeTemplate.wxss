@@ -1,0 +1,79 @@
+.template_box {
+    border-radius: 16rpx;
+    padding: 26rpx 24rpx 0
+}
+
+.template_box .title {
+    -ms-flex-pack: justify;
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    margin-bottom: 20rpx
+}
+
+.template_box .title .title_text {
+    color: #1f1f2c;
+    font-size: 30rpx;
+    font-weight: 500;
+    line-height: 42rpx
+}
+
+.template_box .title .user_num {
+    color: #3e7cc2;
+    display: inline-block;
+    font-size: 24rpx;
+    font-weight: 400;
+    margin-left: 20rpx
+}
+
+.template_box .title .title_more {
+    color: #999;
+    display: -webkit-inline-flex;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    font-size: 24rpx;
+    line-height: 33rpx
+}
+
+.template_box .title .title_more .icon {
+    display: block;
+    font-size: 32rpx
+}
+
+.template_box .title_tip {
+    color: #a8a9b3;
+    font-size: 24rpx;
+    line-height: 33rpx;
+    margin-top: 16rpx;
+    padding-bottom: 32rpx
+}
+
+.template_box .template_list {
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-wrap: wrap;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap
+}
+
+.nodataList {
+    font-size: 32rpx;
+    line-height: 48rpx;
+    text-align: center;
+    width: 100%
+}
+
+.nodataList wx-image {
+    width: 100%
+}
+
+.nodataList .no_text {
+    color: #999;
+    padding-bottom: 32rpx
+}
