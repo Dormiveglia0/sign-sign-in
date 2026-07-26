@@ -1,20 +1,53 @@
 """Minimal end-to-end check for a running local web service."""
 
+import json
 import os
+import tempfile
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import requests
 
+from app.mitm.embedded_runner import build_mitmdump_args
 from app.mitm.service import MitmService
+from app.utils import files as file_utils
+
+
+def check_session_cache_has_no_local_expiry():
+    original = file_utils.SESSION_CACHE_FILE
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
+            file_utils.save_session_cache("session", "encrypt", "open", "union")
+            cache = file_utils.load_session_cache()
+            cache.update({"timestamp": 1, "expire_seconds": 1})
+            Path(file_utils.SESSION_CACHE_FILE).write_text(
+                json.dumps(cache),
+                encoding="utf-8",
+            )
+            assert file_utils.get_valid_session_cache()["sessionId"] == "session"
+    finally:
+        file_utils.SESSION_CACHE_FILE = original
 
 
 def main():
+    check_session_cache_has_no_local_expiry()
     capture_command = MitmService(
         host="0.0.0.0",
         allowed_client_ip="203.0.113.7",
     )._build_launch_command()
     assert capture_command[-2:] == ["--allow-client", "203.0.113.7"]
+    mitmdump_args = build_mitmdump_args(
+        SimpleNamespace(
+            host="0.0.0.0",
+            port=13140,
+            addon="addon.py",
+            confdir="conf",
+            allow_client="203.0.113.7",
+        )
+    )
+    assert "--allow-hosts" in mitmdump_args
 
     base_url = os.environ.get("SIGN_WEB_TEST_URL", "http://127.0.0.1:8787")
     session = requests.Session()
@@ -65,6 +98,8 @@ def main():
             break
         time.sleep(0.25)
     assert capture["status"] == "waiting", capture
+    assert isinstance(capture["events"], list)
+    assert capture["diagnosis"]
     assert (
         session.get(f"{base_url}/api/capture/certificate", timeout=5).status_code
         == 200

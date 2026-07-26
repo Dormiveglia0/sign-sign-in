@@ -2,6 +2,9 @@ import argparse
 import os
 
 
+CAPTURE_HOST_PATTERN = r"(^|.+\.)(xybsyw\.com|jielong\.com):\d+$"
+
+
 def build_mitmdump_args(args):
     addon = os.path.abspath(args.addon)
     confdir = os.path.abspath(args.confdir)
@@ -14,6 +17,8 @@ def build_mitmdump_args(args):
         f"confdir={confdir}",
         "-s",
         addon,
+        "--allow-hosts",
+        CAPTURE_HOST_PATTERN,
         "--quiet",
     ]
     if args.allow_client:

@@ -14,7 +14,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from app.config.common import CONFIG_FILE, MITM_CONF_DIR, SESSION_CACHE_FILE
+from app.config.common import (
+    CONFIG_FILE,
+    MITM_CONF_DIR,
+    PACKET_LOG_FILE,
+    SESSION_CACHE_FILE,
+)
 from app.mitm.service import MitmService
 from app.sign_flow import SignFlow, TaskCancelled, mode_to_option
 from app.utils.code_channel import CodeChannel
@@ -429,6 +434,7 @@ class CaptureManager:
         self.thread: threading.Thread | None = None
         self.service: MitmService | None = None
         self.allowed_client_ip = ""
+        self.packet_log_offset = 0
         self.state = {
             "status": "idle",
             "message": "抓包服务未启动",
@@ -437,11 +443,72 @@ class CaptureManager:
             "startedAt": None,
             "expiresAt": None,
             "certReady": False,
+            "events": [],
+            "diagnosis": "尚未启动代理",
         }
+
+    @staticmethod
+    def _packet_log_size() -> int:
+        try:
+            return Path(PACKET_LOG_FILE).stat().st_size
+        except OSError:
+            return 0
+
+    def _recent_events(self) -> list[str]:
+        path = Path(PACKET_LOG_FILE)
+        try:
+            size = path.stat().st_size
+            offset = self.packet_log_offset if self.packet_log_offset <= size else 0
+            with path.open("rb") as handle:
+                handle.seek(offset)
+                lines = handle.read().decode("utf-8", errors="replace").splitlines()
+        except OSError:
+            return []
+
+        hidden = ("[QUERY]", "[FORM]", "[BODY]", "content-type=")
+        visible = (
+            "[MITM][CLIENT]",
+            "[MITM][CONNECT]",
+            "[MITM][HOST]",
+            "[MITM][TLS-FAILED]",
+            "[MITM][REQ]",
+            "[MITM][RES]",
+            "code 已写入",
+        )
+        events = [
+            line
+            for line in lines
+            if not any(marker in line for marker in hidden)
+            and any(marker in line for marker in visible)
+        ]
+        return events[-18:]
+
+    @staticmethod
+    def _diagnosis(status: str, events: list[str]) -> str:
+        tls_failures = [line for line in events if "[TLS-FAILED]" in line]
+        if any(
+            "xybsyw.com" in line or "jielong.com" in line
+            for line in tls_failures
+        ):
+            return "目标小程序已连接，但客户端拒绝抓包 CA；该设备无法远程解密"
+        if tls_failures:
+            return "设备已连接，但部分 HTTPS 客户端拒绝抓包 CA"
+        if any("code 已写入" in line for line in events):
+            return "已捕获 Code，正在刷新 SESSION"
+        if any("getOpenId.action" in line for line in events):
+            return "已看到校友邦登录请求，正在提取 Code"
+        if events:
+            return f"代理已收到设备流量，当前显示最近 {len(events)} 条活动"
+        if status in {"starting", "waiting", "refreshing"}:
+            return "代理已启动，尚未收到设备连接"
+        return "本次没有收到可显示的代理活动"
 
     def snapshot(self) -> dict:
         with self.lock:
             state = copy.deepcopy(self.state)
+        events = self._recent_events()
+        state["events"] = events
+        state["diagnosis"] = self._diagnosis(state["status"], events)
         state["certReady"] = Path(
             MITM_CONF_DIR,
             "mitmproxy-ca-cert.cer",
@@ -462,6 +529,7 @@ class CaptureManager:
                 raise RuntimeError("请先等待当前任务结束")
             self.stop_event = threading.Event()
             self.allowed_client_ip = allowed_client_ip
+            self.packet_log_offset = self._packet_log_size()
             self.state = {
                 "status": "starting",
                 "message": "正在启动临时抓包代理",
@@ -473,6 +541,8 @@ class CaptureManager:
                     + timedelta(seconds=self.TIMEOUT_SECONDS)
                 ).isoformat(timespec="seconds"),
                 "certReady": False,
+                "events": [],
+                "diagnosis": "代理正在启动",
             }
             self.thread = threading.Thread(
                 target=self._run,
@@ -608,11 +678,10 @@ class Runtime:
                     raw_session = json.load(handle)
             except (OSError, json.JSONDecodeError):
                 pass
-        expires_at = None
+        cached_at = None
         if raw_session.get("timestamp"):
-            expires_at = datetime.fromtimestamp(
+            cached_at = datetime.fromtimestamp(
                 int(raw_session["timestamp"])
-                + int(raw_session.get("expire_seconds", 86400))
             ).astimezone().isoformat(timespec="seconds")
         return {
             "time": iso_now(),
@@ -622,7 +691,8 @@ class Runtime:
                 "suffix": (
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),
-                "expiresAt": expires_at,
+                "cachedAt": cached_at,
+                "expiresAt": None,
             },
             "task": self.tasks.snapshot(),
             "scheduler": self.scheduler.snapshot(),

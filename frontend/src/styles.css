@@ -1127,6 +1127,56 @@ code {
   font-size: 10px;
 }
 
+.capture-diagnostics {
+  overflow: hidden;
+  border: 1px solid #dce4e3;
+  background: #fbfcfc;
+}
+
+.capture-diagnostics-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5ebea;
+}
+
+.capture-diagnostics-head strong {
+  color: #344348;
+  font-size: 12px;
+}
+
+.capture-diagnostics-head span {
+  color: #718084;
+  font-size: 10px;
+}
+
+.capture-diagnostics ol {
+  max-height: 170px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  background: #172327;
+}
+
+.capture-diagnostics li {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+  color: #c6d7d4;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.capture-diagnostics > p {
+  margin: 0;
+  padding: 13px 12px;
+  color: #748184;
+  font-size: 11px;
+}
+
 .capture-actions {
   display: flex;
   justify-content: space-between;

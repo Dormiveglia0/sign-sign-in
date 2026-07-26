@@ -277,7 +277,7 @@ def load_session_cache() -> dict:
 
 
 def save_session_cache(session_id: str, encrypt_value: str, open_id: str, union_id: str, trainee_id: str = None):
-    """保存会话缓存，默认过期时间为24小时"""
+    """保存会话缓存，由服务端失效响应决定何时清除。"""
     import time
     cache = {
         "sessionId": session_id,
@@ -286,26 +286,21 @@ def save_session_cache(session_id: str, encrypt_value: str, open_id: str, union_
         "unionId": union_id,
         "traineeId": trainee_id,
         "timestamp": int(time.time()),
-        "expire_seconds": 24 * 3600  # 24小时
     }
     ensure_dir(os.path.dirname(SESSION_CACHE_FILE))
     save_json_file(SESSION_CACHE_FILE, cache)
 
 
 def get_valid_session_cache() -> dict:
-    """获取有效的会话缓存，如果过期则返回None"""
-    import time
+    """读取会话缓存；服务端返回未登录时由请求层清除。"""
     cache = load_session_cache()
     if not cache:
         return None
-    
-    timestamp = cache.get("timestamp", 0)
-    expire_seconds = cache.get("expire_seconds", 24 * 3600)
-    
-    if time.time() - timestamp > expire_seconds:
-        # 缓存已过期
+
+    required = ("sessionId", "encryptValue", "openId", "unionId")
+    if not all(cache.get(key) for key in required):
         return None
-    
+
     return {
         "sessionId": cache.get("sessionId"),
         "encryptValue": cache.get("encryptValue"),

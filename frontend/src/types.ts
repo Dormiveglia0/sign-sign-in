@@ -27,6 +27,8 @@ export interface CaptureState {
   startedAt: string | null;
   expiresAt: string | null;
   certReady: boolean;
+  events: string[];
+  diagnosis: string;
 }
 
 export interface ScheduleTask {
@@ -52,6 +54,7 @@ export interface SystemStatus {
   session: {
     valid: boolean;
     suffix: string;
+    cachedAt: string | null;
     expiresAt: string | null;
   };
   task: TaskState;

@@ -29,6 +29,9 @@ PACKET_LOG_FILE = os.path.normpath(
 XYB_SOURCE = "xyb_code"
 JIELONG_SOURCE = "jielong_token"
 SEEN_HOSTS = set()
+SEEN_CONNECTS = set()
+SEEN_CLIENTS = set()
+SEEN_TLS_FAILURES = set()
 
 
 def append_packet_log(message: str):
@@ -163,9 +166,37 @@ class GetCode:
         except ValueError:
             client.error = "Invalid proxy client address."
             return
+        if peer.is_loopback:
+            return
         if peer != expected:
             append_packet_log(f"[MITM] 已拒绝非授权客户端: {peer}")
             client.error = "Proxy client address is not allowed."
+            return
+        if peer not in SEEN_CLIENTS:
+            SEEN_CLIENTS.add(peer)
+            append_packet_log(f"[MITM][CLIENT] 已连接: {peer}")
+
+    def http_connect(self, flow: http.HTTPFlow):
+        target = f"{flow.request.host}:{flow.request.port}"
+        if target not in SEEN_CONNECTS:
+            SEEN_CONNECTS.add(target)
+            append_packet_log(f"[MITM][CONNECT] {target}")
+
+    def tls_failed_client(self, data):
+        address = getattr(data.context.server, "address", None)
+        host = str(getattr(data.context.client, "sni", "") or "")
+        port = ""
+        if address:
+            host = host or str(address[0])
+            port = f":{address[1]}"
+        target = f"{host or 'unknown'}{port}"
+        error = compact_text(getattr(data.conn, "error", ""), 100)
+        event = (target, error)
+        if event not in SEEN_TLS_FAILURES:
+            SEEN_TLS_FAILURES.add(event)
+            append_packet_log(
+                f"[MITM][TLS-FAILED] {target} | 客户端拒绝代理证书 | {error or '-'}"
+            )
 
     def _capture_xyb_code(self, flow: http.HTTPFlow):
         code = flow.request.urlencoded_form.get("code")

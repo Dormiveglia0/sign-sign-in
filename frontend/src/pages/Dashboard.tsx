@@ -207,7 +207,7 @@ export default function Dashboard() {
         label: "校友邦会话",
         value: status?.session.valid ? "有效" : "待刷新",
         detail: status?.session.valid
-          ? `尾号 ${status.session.suffix} · ${formatDateTime(status.session.expiresAt)} 到期`
+          ? `尾号 ${status.session.suffix} · 服务端失效前持续复用`
           : "执行任务前需要获取",
         icon: KeyRound,
         tone: status?.session.valid ? "success" : "warning",
@@ -405,7 +405,7 @@ export default function Dashboard() {
         <Card className="session-card">
           <SectionHeading
             title="会话状态"
-            description="服务器缓存 24 小时，失效后需重新获取。"
+            description="不再按本地时间过期；仅在服务端明确返回未登录时清除。"
             extra={<ShieldCheck size={19} />}
           />
           <div className="session-orbit">
@@ -415,7 +415,7 @@ export default function Dashboard() {
             <strong>{status?.session.valid ? "SESSION 有效" : "SESSION 缺失"}</strong>
             <span>
               {status?.session.valid
-                ? `${formatDateTime(status.session.expiresAt)} 到期`
+                ? `${formatDateTime(status.session.cachedAt)} 缓存，服务端失效前持续使用`
                 : "当前无法执行签到与周记操作"}
             </span>
           </div>
@@ -512,7 +512,7 @@ export default function Dashboard() {
                     type="info"
                     showIcon
                     message="Code 只用于本次换取会话"
-                    description="服务器不会把 Code 写入配置文件；换取成功后仅保存校友邦会话缓存。"
+                    description="服务器不会保存 Code；换取成功后的 SESSION 不再按 24 小时强制过期，仅在校友邦明确返回未登录时清除。"
                   />
                   <label htmlFor="session-code">小程序 Code</label>
                   <Input.Password
@@ -542,15 +542,15 @@ export default function Dashboard() {
                   <Alert
                     type="warning"
                     showIcon
-                    message="手机与控制台须使用同一公网出口"
-                    description="代理仅允许点击启动按钮时的公网 IP。请让手机与当前控制台连接同一 Wi-Fi；主机填写服务器公网 IP，端口填写 13140。"
+                    message="Android 无 Root 通常无法解密微信"
+                    description="Android 7+ 应用默认不信任用户 CA。代理只解密校友邦/接龙域名，普通网页会直接转发；若下方出现 TLS-FAILED，说明该设备无法远程抓取，请用 Windows 微信或 Reqable 获取 Code 后在左侧填入。"
                   />
                   <ol className="capture-steps">
                     <li>
                       <span>1</span>
                       <div>
                         <strong>启动临时代理</strong>
-                        <p>仅向当前公网 IP 开放 13140，5 分钟后自动回收。</p>
+                        <p>仅向当前公网 IP 开放，并只解密目标业务域名。</p>
                       </div>
                     </li>
                     <li>
@@ -565,8 +565,8 @@ export default function Dashboard() {
                     <li>
                       <span>3</span>
                       <div>
-                        <strong>安装证书并打开小程序</strong>
-                        <p>先安装下方 CA 证书，再彻底关闭并重新进入校友邦。</p>
+                        <strong>观察活动后再判断兼容性</strong>
+                        <p>兼容设备安装 CA 后重启小程序；TLS-FAILED 表示证书被拒绝。</p>
                       </div>
                     </li>
                   </ol>
@@ -575,11 +575,29 @@ export default function Dashboard() {
                     <div>
                       <strong>{status?.capture.message}</strong>
                       <span>
-                        {status?.capture.expiresAt
-                          ? `${formatDateTime(status.capture.expiresAt)} 自动关闭`
-                          : "当前未占用代理端口"}
+                        {status?.capture.diagnosis || "当前未占用代理端口"}
                       </span>
+                      {status?.capture.expiresAt && (
+                        <span>
+                          {formatDateTime(status.capture.expiresAt)} 自动关闭
+                        </span>
+                      )}
                     </div>
+                  </div>
+                  <div className="capture-diagnostics" aria-live="polite">
+                    <div className="capture-diagnostics-head">
+                      <strong>实时代理活动</strong>
+                      <span>{status?.capture.events?.length || 0} 条</span>
+                    </div>
+                    {status?.capture.events?.length ? (
+                      <ol>
+                        {status.capture.events.map((event, index) => (
+                          <li key={`${index}-${event}`}>{event}</li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p>连接域名、目标请求和 TLS 失败会在这里实时出现。</p>
+                    )}
                   </div>
                   <div className="capture-actions">
                     <Button
