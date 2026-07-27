@@ -40,7 +40,7 @@ from app.utils.commands import (
     open_terminal,
 )
 from app.utils.files import validate_config, read_config
-from app.utils.pushplus import notify_pushplus
+from app.utils.gotify import get_gotify_config, notify_gotify
 from app.workers.monitor_thread import MonitorThread
 from app.workers.sign_task import SignTaskThread, GetCodeAndSessionThread
 from app.workers.update_worker import UpdateCheckWorker
@@ -1777,7 +1777,6 @@ class ModernWindow(QMainWindow):
             if not notifications_enabled:
                 return
             notifications = settings.get("notifications", [])
-            pushplus_token = ""
             use_tray = False
 
             if isinstance(notifications, list):
@@ -1787,13 +1786,7 @@ class ModernWindow(QMainWindow):
                     channel_type = str(channel.get("type", "") or "").strip().lower()
                     if channel_type == "tray":
                         use_tray = True
-                    elif channel_type == "pushplus" and not pushplus_token:
-                        pushplus_token = str(channel.get("token", "") or "").strip()
-
-            if not pushplus_token:
-                pushplus = settings.get("pushplus", {})
-                if isinstance(pushplus, dict):
-                    pushplus_token = str(pushplus.get("token", "") or "").strip()
+            gotify_url, gotify_token = get_gotify_config(settings)
         except Exception as exc:
             logging.warning(f"读取通知配置失败，已跳过推送: {exc}")
             return
@@ -1807,21 +1800,30 @@ class ModernWindow(QMainWindow):
         if use_tray and not notify_from_tray:
             self._show_tray_message(title, msg or title, success)
 
-        if pushplus_token:
+        if gotify_url and gotify_token:
             threading.Thread(
-                target=self._send_pushplus_in_thread,
-                args=([pushplus_token], title, content),
+                target=self._send_gotify_in_thread,
+                args=(gotify_url, gotify_token, title, content),
                 daemon=True,
             ).start()
 
     @staticmethod
-    def _send_pushplus_in_thread(tokens: list[str], title: str, content: str):
-        for token in tokens:
-            try:
-                notify_pushplus(title=title, content=content, token=token)
-                logging.info("PushPlus 推送成功")
-            except Exception as exc:
-                logging.warning(f"PushPlus 推送失败: {exc}")
+    def _send_gotify_in_thread(
+        server_url: str,
+        token: str,
+        title: str,
+        content: str,
+    ):
+        try:
+            notify_gotify(
+                title=title,
+                content=content,
+                server_url=server_url,
+                token=token,
+            )
+            logging.info("Gotify 推送成功")
+        except Exception as exc:
+            logging.warning(f"Gotify 推送失败: {exc}")
     def closeEvent(self, event):
         """关闭窗口时提示用户选择退出或最小化到托盘。"""
         if self._is_exiting:
@@ -1980,4 +1982,3 @@ class ModernWindow(QMainWindow):
         tray_btn.setDefault(True)
         dialog.exec()
         return result["choice"]
-

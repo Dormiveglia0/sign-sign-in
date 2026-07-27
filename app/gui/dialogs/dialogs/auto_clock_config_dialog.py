@@ -29,7 +29,8 @@ from app.gui.components.no_wheel_combo import NoWheelComboBox
 from app.gui.components.toast import ToastManager
 from app.utils.commands import open_path_or_url
 from app.utils.files import read_config, save_json_file
-from app.workers.pushplus_worker import PushplusWorker
+from app.utils.gotify import build_gotify_message_url
+from app.workers.gotify_worker import GotifyWorker
 
 
 PHOTO_MODES = {"photo_in", "photo_out"}
@@ -42,7 +43,7 @@ class NotificationChannelDialog(QDialog):
         self.result_data = None
 
         self.setWindowTitle("添加通知" if channel is None else "编辑通知")
-        self.setFixedSize(430, 220)
+        self.setFixedSize(460, 280)
         self.setModal(True)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         if parent is not None:
@@ -78,12 +79,20 @@ class NotificationChannelDialog(QDialog):
         grid.addWidget(type_label, 0, 0)
         grid.addWidget(self.type_combo, 0, 1)
 
-        self.value_label = QLabel("PushPlus Token")
-        self.value_label.setObjectName("FieldLabel")
-        self.value_edit = QLineEdit()
-        self.value_edit.setClearButtonEnabled(True)
-        grid.addWidget(self.value_label, 1, 0)
-        grid.addWidget(self.value_edit, 1, 1)
+        self.url_label = QLabel("Gotify 服务器")
+        self.url_label.setObjectName("FieldLabel")
+        self.url_edit = QLineEdit()
+        self.url_edit.setClearButtonEnabled(True)
+        grid.addWidget(self.url_label, 1, 0)
+        grid.addWidget(self.url_edit, 1, 1)
+
+        self.token_label = QLabel("应用 Token")
+        self.token_label.setObjectName("FieldLabel")
+        self.token_edit = QLineEdit()
+        self.token_edit.setEchoMode(QLineEdit.Password)
+        self.token_edit.setClearButtonEnabled(True)
+        grid.addWidget(self.token_label, 2, 0)
+        grid.addWidget(self.token_edit, 2, 1)
         layout.addLayout(grid)
 
         self.value_hint = QLabel()
@@ -113,34 +122,52 @@ class NotificationChannelDialog(QDialog):
             channel_type = str(channel.get("type", "") or "").strip().lower()
             idx = self.type_combo.findData(channel_type)
             self.type_combo.setCurrentIndex(idx if idx >= 0 else 0)
-            self.value_edit.setText(str(channel.get("token", "") or ""))
+            self.url_edit.setText(str(channel.get("url", "") or ""))
+            self.token_edit.setText(str(channel.get("token", "") or ""))
 
         self.type_combo.currentIndexChanged.connect(self._update_form)
         self._update_form()
 
     def _update_form(self):
         channel_type = str(self.type_combo.currentData() or "").strip().lower()
-        requires_token = channel_type == "pushplus"
-        self.value_label.setText("PushPlus Token" if requires_token else "参数")
-        self.value_edit.setEnabled(requires_token)
-        self.value_edit.setPlaceholderText(
-            "输入 PushPlus Token" if requires_token else "该通知方式无需额外参数"
+        requires_gotify = channel_type == "gotify"
+        self.url_edit.setEnabled(requires_gotify)
+        self.token_edit.setEnabled(requires_gotify)
+        self.url_edit.setPlaceholderText(
+            "https://push.example.com" if requires_gotify else "该通知方式无需参数"
+        )
+        self.token_edit.setPlaceholderText(
+            "输入 Gotify 应用 Token" if requires_gotify else "该通知方式无需参数"
         )
         self.value_hint.setText(
-            "PushPlus 会向微信推送打卡结果。"
-            if requires_token
+            "Gotify 会通过自建服务器推送打卡结果。"
+            if requires_gotify
             else "系统托盘会使用软件现有的托盘提醒能力。"
         )
-        if not requires_token:
-            self.value_edit.clear()
+        if not requires_gotify:
+            self.url_edit.clear()
+            self.token_edit.clear()
 
     def accept(self):
         channel_type = str(self.type_combo.currentData() or "").strip().lower()
-        token = self.value_edit.text().strip()
-        if channel_type == "pushplus" and not token:
-            QMessageBox.warning(self, "提示", "PushPlus 通知必须填写 Token")
+        url = self.url_edit.text().strip()
+        token = self.token_edit.text().strip()
+        if channel_type == "gotify" and (not url or not token):
+            QMessageBox.warning(
+                self,
+                "提示",
+                "Gotify 通知必须填写服务器地址和应用 Token",
+            )
             return
-        self.result_data = {"type": channel_type, "token": token}
+        if channel_type == "gotify":
+            try:
+                build_gotify_message_url(url)
+            except ValueError as exc:
+                QMessageBox.warning(self, "提示", str(exc))
+                return
+        self.result_data = {"type": channel_type}
+        if channel_type == "gotify":
+            self.result_data.update({"url": url, "token": token})
         super().accept()
 
 
@@ -293,7 +320,7 @@ class AutoClockConfigDialog(QDialog):
         ("拍照签退", "photo_out"),
     ]
     NOTIFICATION_OPTIONS = [
-        ("PushPlus", "pushplus"),
+        ("Gotify", "gotify"),
         ("系统托盘", "tray"),
     ]
 
@@ -302,7 +329,7 @@ class AutoClockConfigDialog(QDialog):
         self.config_path = config_path
         self.task_data = []
         self.notification_data = []
-        self.pushplus_worker = None
+        self.gotify_worker = None
 
         self.setWindowTitle("定时打卡配置 by thirteen")
         self.setFixedSize(900, 540)
@@ -958,19 +985,24 @@ class AutoClockConfigDialog(QDialog):
                 if not isinstance(channel, dict):
                     continue
                 channel_type = str(channel.get("type", "") or "").strip().lower()
+                url = str(channel.get("url", "") or "").strip()
                 token = str(channel.get("token", "") or "").strip()
                 if channel_type not in allowed_types or channel_type in seen:
                     continue
-                if channel_type == "pushplus" and not token:
+                if channel_type == "gotify" and (not url or not token):
                     continue
                 seen.add(channel_type)
-                channels.append({"type": channel_type, "token": token})
+                item = {"type": channel_type}
+                if channel_type == "gotify":
+                    item.update({"url": url, "token": token})
+                channels.append(item)
 
-        pushplus = settings.get("pushplus", {})
-        if isinstance(pushplus, dict):
-            legacy_token = str(pushplus.get("token", "") or "").strip()
-            if legacy_token and "pushplus" not in seen:
-                channels.append({"type": "pushplus", "token": legacy_token})
+        gotify = settings.get("gotify", {})
+        if isinstance(gotify, dict) and "gotify" not in seen:
+            url = str(gotify.get("url", "") or "").strip()
+            token = str(gotify.get("token", "") or "").strip()
+            if url and token:
+                channels.append({"type": "gotify", "url": url, "token": token})
 
         return channels
 
@@ -981,10 +1013,14 @@ class AutoClockConfigDialog(QDialog):
             self.notification_table.insertRow(row)
 
             channel_type = str(channel.get("type", "") or "").strip().lower()
+            url = str(channel.get("url", "") or "").strip()
             token = str(channel.get("token", "") or "").strip()
-            if channel_type == "pushplus":
-                text = f"{self._notification_label(channel_type)} · {self._mask_token(token)}"
-                tip = token
+            if channel_type == "gotify":
+                text = (
+                    f"{self._notification_label(channel_type)} · "
+                    f"{self._mask_token(token)}"
+                )
+                tip = url
             else:
                 text = "系统托盘 · 应用内提醒"
                 tip = "执行完成后显示系统托盘通知"
@@ -1090,15 +1126,21 @@ class AutoClockConfigDialog(QDialog):
         allowed_types = {value for _, value in self.NOTIFICATION_OPTIONS}
         for index, channel in enumerate(self.notification_data, start=1):
             channel_type = str(channel.get("type", "") or "").strip().lower()
+            url = str(channel.get("url", "") or "").strip()
             token = str(channel.get("token", "") or "").strip()
             if channel_type not in allowed_types:
                 raise RuntimeError(f"第 {index} 条通知方式无效")
             if channel_type in seen:
                 raise RuntimeError(f"通知方式 {channel_type} 只能配置一条")
-            if channel_type == "pushplus" and not token:
-                raise RuntimeError(f"第 {index} 条 PushPlus 通知未填写 Token")
+            if channel_type == "gotify" and (not url or not token):
+                raise RuntimeError(
+                    f"第 {index} 条 Gotify 通知未填写服务器地址或应用 Token"
+                )
             seen.add(channel_type)
-            channels.append({"type": channel_type, "token": token})
+            item = {"type": channel_type}
+            if channel_type == "gotify":
+                item.update({"url": url, "token": token})
+            channels.append(item)
         return channels
 
     def _load_current_config(self):
@@ -1261,6 +1303,7 @@ class AutoClockConfigDialog(QDialog):
 
         channel = self.notification_data[row]
         channel_type = str(channel.get("type", "") or "").strip().lower()
+        url = str(channel.get("url", "") or "").strip()
         token = str(channel.get("token", "") or "").strip()
 
         if channel_type == "tray":
@@ -1270,7 +1313,7 @@ class AutoClockConfigDialog(QDialog):
                 ToastManager.instance().show("这是一条系统托盘测试消息。", "success")
             return
 
-        if channel_type != "pushplus" or not token:
+        if channel_type != "gotify" or not url or not token:
             QMessageBox.warning(self, "提示", "当前通知方式暂不支持测试")
             return
 
@@ -1278,15 +1321,20 @@ class AutoClockConfigDialog(QDialog):
         content = f"这是一条测试推送，发送时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         self.btn_test_notify.setEnabled(False)
         self.btn_test_notify.setText("发送中...")
-        self.pushplus_worker = PushplusWorker(token=token, title=title, content=content)
-        self.pushplus_worker.result_signal.connect(self._on_test_push_result)
-        self.pushplus_worker.start()
+        self.gotify_worker = GotifyWorker(
+            server_url=url,
+            token=token,
+            title=title,
+            content=content,
+        )
+        self.gotify_worker.result_signal.connect(self._on_test_push_result)
+        self.gotify_worker.start()
 
     def _on_test_push_result(self, success: bool, msg: str):
         self.btn_test_notify.setEnabled(True)
         self.btn_test_notify.setText("测试所选")
         if success:
-            ToastManager.instance().show("PushPlus 测试推送成功", "success")
+            ToastManager.instance().show("Gotify 测试推送成功", "success")
         else:
             QMessageBox.critical(self, "推送失败", msg)
 
@@ -1345,16 +1393,19 @@ class AutoClockConfigDialog(QDialog):
 
             settings["notifications_enabled"] = self.notify_enabled_cb.isChecked()
             settings["notifications"] = notifications
-            settings["pushplus"] = {
-                "token": next(
-                    (
-                        channel["token"]
-                        for channel in notifications
-                        if channel.get("type") == "pushplus" and channel.get("token")
-                    ),
-                    "",
-                )
+            gotify = next(
+                (
+                    channel
+                    for channel in notifications
+                    if channel.get("type") == "gotify"
+                ),
+                {},
+            )
+            settings["gotify"] = {
+                "url": gotify.get("url", ""),
+                "token": gotify.get("token", ""),
             }
+            settings.pop("pushplus", None)
 
             save_json_file(self.config_path, self.current_data)
             ToastManager.instance().show("定时打卡配置已保存", "success")

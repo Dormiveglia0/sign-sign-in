@@ -15,6 +15,7 @@ from app.apis import xybsyw
 from app.mitm.embedded_runner import build_mitmdump_args
 from app.mitm.service import MitmService
 from app.utils import files as file_utils
+from app.utils.gotify import build_gotify_message_url, notify_gotify
 from webapp import runtime as runtime_module
 from webapp import security as web_security
 from webapp.runtime import ImageRotation, SessionKeeper, TaskManager
@@ -243,6 +244,37 @@ def check_chinese_watermark_font():
             Path(output).unlink(missing_ok=True)
 
 
+def check_gotify_notification():
+    response = SimpleNamespace(
+        text='{"id":1}',
+        raise_for_status=lambda: None,
+    )
+    with patch("app.utils.gotify.requests.post", return_value=response) as post:
+        result = notify_gotify(
+            title="签到成功",
+            content="定时任务已完成",
+            server_url="https://push.example.com/",
+            token="A-test-token",
+        )
+    assert result == '{"id":1}'
+    post.assert_called_once_with(
+        "https://push.example.com/message",
+        headers={"X-Gotify-Key": "A-test-token"},
+        json={
+            "title": "签到成功",
+            "message": "定时任务已完成",
+            "priority": 5,
+        },
+        timeout=15,
+    )
+    try:
+        build_gotify_message_url("file:///tmp/message")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Gotify URL should require HTTP(S)")
+
+
 def main():
     check_session_cache_has_no_local_expiry()
     check_consumed_code_message()
@@ -251,6 +283,7 @@ def main():
     check_random_image_rotation()
     check_session_keeper_status()
     check_chinese_watermark_font()
+    check_gotify_notification()
     capture_command = MitmService(
         host="0.0.0.0",
         allowed_client_ip="203.0.113.7",

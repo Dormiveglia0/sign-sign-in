@@ -31,7 +31,8 @@
             "random_minutes": 0,
             "tasks": []
         },
-        "pushplus": {
+        "gotify": {
+            "url": "",
             "token": ""
         },
         "jielong": {

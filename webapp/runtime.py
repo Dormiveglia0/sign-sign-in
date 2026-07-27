@@ -34,7 +34,7 @@ from app.utils.files import (
     load_session_cache,
     read_config,
 )
-from app.utils.pushplus import notify_pushplus
+from app.utils.gotify import get_gotify_config, notify_gotify
 
 TASK_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name("web_task_history.json")
 SCHEDULE_IMAGE_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name(
@@ -305,34 +305,23 @@ class TaskManager:
             settings = read_config(CONFIG_FILE).get("settings", {})
             if not settings.get("notifications_enabled"):
                 return
-            notifications = settings.get("notifications") or []
-            token = next(
-                (
-                    str(item.get("token") or "").strip()
-                    for item in notifications
-                    if isinstance(item, dict)
-                    and item.get("type") == "pushplus"
-                    and item.get("token")
-                ),
-                "",
-            )
-            if not token:
-                token = str((settings.get("pushplus") or {}).get("token") or "").strip()
-            if not token:
+            url, token = get_gotify_config(settings)
+            if not url or not token:
                 return
             result = "成功" if success else "失败"
-            notify_pushplus(
+            notify_gotify(
                 title=f"{record.get('action') or '任务'}{result}",
                 content=(
                     f"来源：{'定时任务' if record.get('source') == 'auto' else '手动'}\n"
                     f"时间：{record.get('finishedAt')}\n"
                     f"结果：{record.get('message')}"
                 ),
+                server_url=url,
                 token=token,
             )
-            logging.info("PushPlus 推送成功")
+            logging.info("Gotify 推送成功")
         except Exception as exc:
-            logging.warning("PushPlus 推送失败: %s", exc)
+            logging.warning("Gotify 推送失败: %s", exc)
 
     def cancel(self) -> dict:
         with self.lock:

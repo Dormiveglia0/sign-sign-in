@@ -46,7 +46,8 @@ export interface ScheduleState {
   tasks: ScheduleTask[];
   timezone: string;
   notificationsEnabled: boolean;
-  pushplusConfigured: boolean;
+  gotifyUrl: string;
+  gotifyConfigured: boolean;
   imageRotation: {
     used: number;
     total: number;
@@ -109,7 +110,7 @@ export interface AppConfig {
     amapKey: boolean;
     tencentKey: boolean;
     modelApiKey: boolean;
-    pushplusToken: boolean;
+    gotifyToken: boolean;
     jielongToken: boolean;
     initialPassword: boolean;
   };

@@ -52,7 +52,7 @@ export default function Schedules() {
   const [taskModal, setTaskModal] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [taskForm] = Form.useForm<TaskDraft>();
-  const [pushplusToken, setPushplusToken] = useState("");
+  const [gotifyToken, setGotifyToken] = useState("");
   const [clearToken, setClearToken] = useState(false);
 
   async function load() {
@@ -147,12 +147,13 @@ export default function Schedules() {
             randomImage: Boolean(randomImage),
           })),
           notificationsEnabled: state.notificationsEnabled,
-          pushplusToken,
-          clearPushplusToken: clearToken,
+          gotifyUrl: state.gotifyUrl,
+          gotifyToken,
+          clearGotifyToken: clearToken,
         },
       });
       setState(next);
-      setPushplusToken("");
+      setGotifyToken("");
       setClearToken(false);
       message.success("定时任务已保存并立即生效");
     } catch (error) {
@@ -166,7 +167,10 @@ export default function Schedules() {
     try {
       await api("/api/schedules/test-notification", {
         method: "POST",
-        json: { token: pushplusToken },
+        json: {
+          url: state?.gotifyUrl || "",
+          token: gotifyToken,
+        },
       });
       message.success("测试通知已发送");
     } catch (error) {
@@ -346,7 +350,7 @@ export default function Schedules() {
           <Card loading={loading}>
             <SectionHeading
               title="结果通知"
-              description="远程服务器使用 PushPlus 推送。"
+              description="通过自建 Gotify 服务推送任务结果。"
               extra={<BellRing size={18} />}
             />
             <div className="setting-row">
@@ -364,26 +368,42 @@ export default function Schedules() {
               />
             </div>
             <div className="stacked-field">
-              <label>PushPlus Token</label>
+              <label>Gotify 服务器地址</label>
+              <Input
+                value={state?.gotifyUrl || ""}
+                onChange={(event) =>
+                  setState((current) =>
+                    current
+                      ? { ...current, gotifyUrl: event.target.value }
+                      : current,
+                  )
+                }
+                placeholder="例如 https://push.example.com"
+                autoComplete="url"
+              />
+              <small>填写 Gotify 根地址；系统会自动调用 /message 接口。</small>
+            </div>
+            <div className="stacked-field">
+              <label>Gotify 应用 Token</label>
               <Input.Password
-                value={pushplusToken}
+                value={gotifyToken}
                 onChange={(event) => {
-                  setPushplusToken(event.target.value);
+                  setGotifyToken(event.target.value);
                   setClearToken(false);
                 }}
                 placeholder={
-                  state?.pushplusConfigured ? "已保存；留空表示不修改" : "填写 Token"
+                  state?.gotifyConfigured ? "已保存；留空表示不修改" : "填写应用 Token"
                 }
                 autoComplete="off"
               />
               <div className="secret-actions">
-                {state?.pushplusConfigured && (
+                {state?.gotifyConfigured && (
                   <Button
                     size="small"
                     danger={clearToken}
                     onClick={() => {
                       setClearToken((value) => !value);
-                      setPushplusToken("");
+                      setGotifyToken("");
                     }}
                   >
                     {clearToken ? "将清除（撤销）" : "清除已保存 Token"}

@@ -75,7 +75,11 @@ from app.utils.files import (
     validate_config,
 )
 from app.utils.model_client import call_chat_model
-from app.utils.pushplus import notify_pushplus
+from app.utils.gotify import (
+    build_gotify_message_url,
+    get_gotify_config,
+    notify_gotify,
+)
 from webapp.runtime import Runtime
 from webapp.security import (
     CSRF_COOKIE,
@@ -169,18 +173,12 @@ def _secret_state(config: dict) -> dict:
     model = config.get("model") or {}
     settings = config.get("settings") or {}
     jielong = settings.get("jielong") or {}
-    notifications = settings.get("notifications") or []
-    pushplus = any(
-        isinstance(item, dict)
-        and item.get("type") == "pushplus"
-        and item.get("token")
-        for item in notifications
-    ) or bool((settings.get("pushplus") or {}).get("token"))
+    _, gotify_token = get_gotify_config(settings)
     return {
         "amapKey": bool((input_config.get("mapApiKeys") or {}).get("amap")),
         "tencentKey": bool((input_config.get("mapApiKeys") or {}).get("tencent")),
         "modelApiKey": bool(model.get("apiKey")),
-        "pushplusToken": pushplus,
+        "gotifyToken": bool(gotify_token),
         "jielongToken": bool(jielong.get("authorization")),
         "initialPassword": INITIAL_PASSWORD_FILE.exists(),
     }
@@ -625,8 +623,9 @@ class ScheduleInput(BaseModel):
     timezone: str = Field(min_length=1, max_length=64)
     tasks: list[ScheduleTaskInput] = Field(max_length=30)
     notificationsEnabled: bool = False
-    pushplusToken: str = Field(default="", max_length=500)
-    clearPushplusToken: bool = False
+    gotifyUrl: str = Field(default="", max_length=1000)
+    gotifyToken: str = Field(default="", max_length=500)
+    clearGotifyToken: bool = False
 
 
 @protected.get("/schedules")
@@ -634,8 +633,10 @@ def get_schedules():
     config = read_config(CONFIG_FILE)
     snapshot = runtime.scheduler.snapshot()
     settings = config.get("settings") or {}
+    gotify_url, gotify_token = get_gotify_config(settings)
     snapshot["notificationsEnabled"] = bool(settings.get("notifications_enabled"))
-    snapshot["pushplusConfigured"] = _secret_state(config)["pushplusToken"]
+    snapshot["gotifyUrl"] = gotify_url
+    snapshot["gotifyConfigured"] = bool(gotify_url and gotify_token)
     for task in snapshot["tasks"]:
         task["image"] = Path(task.pop("image_path", "")).name
         task["randomImage"] = bool(task.pop("random_image", False))
@@ -686,37 +687,29 @@ def update_schedules(payload: ScheduleInput):
     notifications = [
         item
         for item in settings.get("notifications") or []
-        if isinstance(item, dict) and item.get("type") != "tray"
+        if isinstance(item, dict)
+        and item.get("type") not in {"tray", "pushplus", "gotify"}
     ]
-    token = payload.pushplusToken.strip()
-    existing = next(
-        (
-            item
-            for item in notifications
-            if item.get("type") == "pushplus"
-        ),
-        None,
-    )
-    if token:
-        if existing:
-            existing["token"] = token
-        else:
-            notifications.append({"type": "pushplus", "token": token})
-    elif payload.clearPushplusToken:
-        notifications = [
-            item for item in notifications if item.get("type") != "pushplus"
-        ]
-    settings["notifications"] = notifications
-    settings["pushplus"] = {
-        "token": next(
-            (
-                item.get("token", "")
-                for item in notifications
-                if item.get("type") == "pushplus"
-            ),
-            "",
+    _, saved_token = get_gotify_config(settings)
+    url = payload.gotifyUrl.strip().rstrip("/")
+    token = payload.gotifyToken.strip() or saved_token
+    if payload.clearGotifyToken:
+        token = ""
+    if url:
+        try:
+            build_gotify_message_url(url)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if payload.notificationsEnabled and not (url and token):
+        raise HTTPException(
+            status_code=422,
+            detail="启用结果通知前请填写 Gotify 服务器地址和应用 Token",
         )
-    }
+    if url and token:
+        notifications.append({"type": "gotify", "url": url, "token": token})
+    settings["notifications"] = notifications
+    settings["gotify"] = {"url": url, "token": token}
+    settings.pop("pushplus", None)
     _atomic_save_config(config)
     runtime.scheduler.reload()
     logging.info("定时任务配置已更新")
@@ -724,22 +717,26 @@ def update_schedules(payload: ScheduleInput):
 
 
 class NotificationTestInput(BaseModel):
+    url: str = Field(default="", max_length=1000)
     token: str = Field(default="", max_length=500)
 
 
 @protected.post("/schedules/test-notification")
 async def test_notification(payload: NotificationTestInput):
-    token = payload.token.strip()
-    if not token:
-        config = read_config(CONFIG_FILE)
-        settings = config.get("settings") or {}
-        token = str((settings.get("pushplus") or {}).get("token") or "").strip()
-    if not token:
-        raise HTTPException(status_code=422, detail="请先填写 PushPlus Token")
+    config = read_config(CONFIG_FILE)
+    saved_url, saved_token = get_gotify_config(config.get("settings") or {})
+    url = payload.url.strip() or saved_url
+    token = payload.token.strip() or saved_token
+    if not url or not token:
+        raise HTTPException(
+            status_code=422,
+            detail="请先填写 Gotify 服务器地址和应用 Token",
+        )
     await _blocking(
-        notify_pushplus,
+        notify_gotify,
         "SignSignIn 通知测试",
         f"Linux Web 服务通知正常\n时间：{datetime.now().astimezone().isoformat(timespec='seconds')}",
+        url,
         token,
     )
     return {"ok": True}
