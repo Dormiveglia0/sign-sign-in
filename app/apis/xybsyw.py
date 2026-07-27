@@ -3,11 +3,18 @@ import os
 import tempfile
 import threading
 import time
+from functools import lru_cache
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
-from app.config.common import XYB_VERSION, XYB_REFERER, AMAP_WEB_KEY, XYB_N_HEADER
+from app.config.common import (
+    AMAP_WEB_KEY,
+    BASE_DIR,
+    XYB_N_HEADER,
+    XYB_REFERER,
+    XYB_VERSION,
+)
 from app.utils.common import get_timestamp
 from app.utils.files import (
     check_img,
@@ -550,22 +557,32 @@ def watermark_info(args, config, traineeId):
     return _require_data(response, "获取拍照打卡水印信息失败")
 
 
+@lru_cache(maxsize=4)
 def _load_watermark_font(size):
     candidates = [
+        os.environ.get("SIGN_WATERMARK_FONT", ""),
+        os.path.join(
+            BASE_DIR,
+            "resources",
+            "fonts",
+            "WenQuanYiZenHei.ttc",
+        ),
         r"C:\Windows\Fonts\msyh.ttc",
         r"C:\Windows\Fonts\simhei.ttf",
-        r"C:\Windows\Fonts\arial.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
-        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     ]
     for path in candidates:
-        if os.path.exists(path):
+        if path and os.path.exists(path):
             try:
                 return ImageFont.truetype(path, size)
             except OSError:
                 pass
-    return ImageFont.load_default()
+    raise RuntimeError(
+        "缺少支持中文的水印字体：请保留 resources/fonts/"
+        "WenQuanYiZenHei.ttc，或设置 SIGN_WATERMARK_FONT"
+    )
 
 
 def render_watermarked_photo(image_path, watermark, address):

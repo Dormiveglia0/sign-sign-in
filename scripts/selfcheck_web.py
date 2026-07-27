@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import requests
+from PIL import Image
 
 from app.apis import xybsyw
 from app.mitm.embedded_runner import build_mitmdump_args
@@ -223,6 +224,25 @@ def check_session_keeper_status():
     assert state["lastError"] == "temporary failure"
 
 
+def check_chinese_watermark_font():
+    font = xybsyw._load_watermark_font(28)
+    assert Path(font.path).name == "WenQuanYiZenHei.ttc"
+    with tempfile.TemporaryDirectory() as directory:
+        source = Path(directory) / "source.jpg"
+        Image.new("RGB", (1200, 500), "#4b6575").save(source)
+        output = xybsyw.render_watermarked_photo(
+            str(source),
+            {"time": "08:30", "today": "星期一", "info": "拍照签到"},
+            "北京市海淀区中关村",
+        )
+        try:
+            with Image.open(output) as image:
+                assert image.size == (960, 400)
+                assert image.getbbox()
+        finally:
+            Path(output).unlink(missing_ok=True)
+
+
 def main():
     check_session_cache_has_no_local_expiry()
     check_consumed_code_message()
@@ -230,6 +250,7 @@ def main():
     check_task_retries_after_silent_renewal()
     check_random_image_rotation()
     check_session_keeper_status()
+    check_chinese_watermark_font()
     capture_command = MitmService(
         host="0.0.0.0",
         allowed_client_ip="203.0.113.7",
