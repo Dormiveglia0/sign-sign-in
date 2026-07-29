@@ -18,7 +18,7 @@ from app.utils import files as file_utils
 from app.utils.gotify import build_gotify_message_url, notify_gotify
 from webapp import runtime as runtime_module
 from webapp import security as web_security
-from webapp.runtime import ImageRotation, SessionKeeper, TaskManager
+from webapp.runtime import ImageRotation, TaskManager
 
 
 def check_session_cache_has_no_local_expiry():
@@ -36,6 +36,38 @@ def check_session_cache_has_no_local_expiry():
             assert file_utils.get_valid_session_cache()["sessionId"] == "session"
     finally:
         file_utils.SESSION_CACHE_FILE = original
+
+
+def check_valid_session_is_not_proactively_renewed():
+    original = file_utils.SESSION_CACHE_FILE
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
+            file_utils.save_session_cache("session", "encrypt", "open", "union")
+            cache = file_utils.load_session_cache()
+            cache["timestamp"] = 1
+            Path(file_utils.SESSION_CACHE_FILE).write_text(
+                json.dumps(cache),
+                encoding="utf-8",
+            )
+            with patch.object(xybsyw, "auto_login") as renew:
+                assert xybsyw.login({}, use_cache=True)["sessionId"] == "session"
+            renew.assert_not_called()
+    finally:
+        file_utils.SESSION_CACHE_FILE = original
+
+
+def check_device_platform_consistency():
+    device = {
+        "brand": "OnePlus",
+        "model": "PHP110",
+        "system": "Android 15",
+        "platform": "ios",
+    }
+    assert "平台矛盾" in file_utils.validate_user_agent_matches_device(
+        device,
+        file_utils.build_user_agent(device),
+    )
 
 
 def check_consumed_code_message():
@@ -99,7 +131,7 @@ def check_silent_session_renewal():
                     xybsyw,
                     "_build_security_context",
                     return_value={"params": {}, "url_token": "token"},
-                ),
+                ) as build_security,
                 patch.object(xybsyw, "get_device_code", return_value="device"),
                 patch.object(
                     xybsyw.requests,
@@ -115,6 +147,11 @@ def check_silent_session_renewal():
             assert request["data"]["encryptValue"] == "old-encrypt"
             assert request["cookies"]["JSESSIONID"] == "old-session"
             assert request["headers"]["devicecode"] == "device"
+            build_security.assert_called_once_with(
+                {"encryptValue": "old-encrypt"},
+                config,
+                args={"sessionId": "old-session"},
+            )
     finally:
         file_utils.SESSION_CACHE_FILE = original
 
@@ -180,49 +217,41 @@ def check_random_image_rotation():
             assert rotation.snapshot() == {"used": 1, "total": 3, "remaining": 2}
 
 
-def check_session_keeper_status():
-    manager = TaskManager()
-    keeper = SessionKeeper(manager)
-    now = int(time.time())
-    cache = {
-        "sessionId": "session",
-        "encryptValue": "encrypt",
-        "openId": "open",
-        "unionId": "union",
-        "timestamp": now,
-        "valid": True,
-    }
-    with (
-        patch.object(runtime_module, "load_session_cache", return_value=cache),
-        patch.object(runtime_module, "read_config", return_value={"input": {}}),
-        patch.object(runtime_module, "auto_login", return_value=cache),
-    ):
-        state = keeper.renew()
-    assert state["status"] == "active"
-    assert state["credentialAvailable"] is True
-    assert state["lastSuccessAt"]
-    assert state["nextAttemptAt"]
+def check_stable_security_context():
+    original = xybsyw.SECURITY_FINGERPRINT_FILE
+    response = SimpleNamespace(
+        status_code=200,
+        text='{"code":"200","data":"1120-token"}',
+        json=lambda: {"code": "200", "data": "1120-token"},
+    )
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            xybsyw.SECURITY_FINGERPRINT_FILE = (
+                Path(directory) / "xyb_security_device_fp"
+            )
+            first = xybsyw._security_fingerprint({})
+            second = xybsyw._security_fingerprint({})
+            assert first == second
+            assert xybsyw.SECURITY_FINGERPRINT_FILE.read_text() == first
 
-    retrying = SessionKeeper(manager)
-    with (
-        patch.object(runtime_module, "load_session_cache", return_value=cache),
-        patch.object(runtime_module, "read_config", return_value={"input": {}}),
-        patch.object(
-            runtime_module,
-            "auto_login",
-            side_effect=RuntimeError("temporary failure"),
-        ),
-    ):
-        try:
-            retrying.renew()
-        except RuntimeError:
-            pass
-        else:
-            raise AssertionError("Failed renewal should be retried")
-        state = retrying.snapshot()
-    assert state["status"] == "retrying"
-    assert state["nextAttemptAt"]
-    assert state["lastError"] == "temporary failure"
+            xybsyw._security_token_cache.clear()
+            with patch.object(
+                xybsyw.requests,
+                "post",
+                return_value=response,
+            ) as post:
+                assert xybsyw._fetch_security_token(
+                    {"userAgent": "test"},
+                    first,
+                ) == "1120-token"
+                assert xybsyw._fetch_security_token(
+                    {"userAgent": "test"},
+                    first,
+                ) == "1120-token"
+            post.assert_called_once()
+    finally:
+        xybsyw.SECURITY_FINGERPRINT_FILE = original
+        xybsyw._security_token_cache.clear()
 
 
 def check_chinese_watermark_font():
@@ -277,11 +306,13 @@ def check_gotify_notification():
 
 def main():
     check_session_cache_has_no_local_expiry()
+    check_valid_session_is_not_proactively_renewed()
+    check_device_platform_consistency()
     check_consumed_code_message()
     check_silent_session_renewal()
     check_task_retries_after_silent_renewal()
     check_random_image_rotation()
-    check_session_keeper_status()
+    check_stable_security_context()
     check_chinese_watermark_font()
     check_gotify_notification()
     capture_command = MitmService(

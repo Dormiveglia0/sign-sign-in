@@ -21,7 +21,6 @@ from app.config.common import (
     SESSION_CACHE_FILE,
 )
 from app.apis.xybsyw import (
-    AUTO_RENEW_SECONDS,
     auto_login,
     is_session_expired_error,
 )
@@ -522,176 +521,6 @@ class Scheduler:
             break
 
 
-class SessionKeeper:
-    CHECK_SECONDS = 60
-    RETRY_SECONDS = 5 * 60
-
-    def __init__(self, task_manager: TaskManager):
-        self.task_manager = task_manager
-        self.stop_event = threading.Event()
-        self.renew_lock = threading.Lock()
-        self.lock = threading.RLock()
-        self.thread = threading.Thread(
-            target=self._loop,
-            name="session-keeper",
-            daemon=True,
-        )
-        self.state = {
-            "status": "starting",
-            "lastAttemptAt": None,
-            "lastSuccessAt": None,
-            "nextAttemptAt": None,
-            "lastError": "",
-        }
-        self.retry_at = 0.0
-
-    @staticmethod
-    def _cache_details() -> tuple[dict, bool, int]:
-        cache = load_session_cache()
-        available = bool(
-            cache.get("encryptValue")
-            and cache.get("openId")
-            and cache.get("unionId")
-        )
-        try:
-            timestamp = int(cache.get("timestamp") or 0)
-        except (TypeError, ValueError):
-            timestamp = 0
-        return cache, available, timestamp
-
-    @staticmethod
-    def _iso_from_timestamp(timestamp: int) -> str | None:
-        if not timestamp:
-            return None
-        return (
-            datetime.fromtimestamp(timestamp)
-            .astimezone()
-            .isoformat(timespec="seconds")
-        )
-
-    def start(self) -> None:
-        self.thread.start()
-
-    def stop(self) -> None:
-        self.stop_event.set()
-        if self.thread.is_alive():
-            self.thread.join(timeout=2)
-
-    def renew(self) -> dict:
-        if self.task_manager.snapshot()["status"] in {
-            "queued",
-            "running",
-            "stopping",
-        }:
-            raise RuntimeError("当前任务执行中，完成后再验证自动续期")
-        with self.renew_lock:
-            attempted_at = iso_now()
-            with self.lock:
-                self.state.update(
-                    {
-                        "status": "renewing",
-                        "lastAttemptAt": attempted_at,
-                        "lastError": "",
-                    }
-                )
-            try:
-                config = read_config(CONFIG_FILE)
-                session = auto_login(config["input"])
-            except Exception as exc:
-                with self.lock:
-                    self.retry_at = time.time() + self.RETRY_SECONDS
-                    self.state.update(
-                        {
-                            "status": "retrying",
-                            "nextAttemptAt": self._iso_from_timestamp(
-                                int(self.retry_at)
-                            ),
-                            "lastError": str(exc),
-                        }
-                    )
-                logging.warning("校友邦自动续期失败，5 分钟后重试: %s", exc)
-                raise
-
-            succeeded_at = iso_now()
-            with self.lock:
-                self.retry_at = 0
-                self.state.update(
-                    {
-                        "status": "active",
-                        "lastSuccessAt": succeeded_at,
-                        "nextAttemptAt": self._iso_from_timestamp(
-                            int(time.time() + AUTO_RENEW_SECONDS)
-                        ),
-                        "lastError": "",
-                    }
-                )
-            logging.info(
-                "✅ 校友邦自动续期守护验证成功，SESSION 尾号 %s",
-                str(session.get("sessionId") or "")[-4:],
-            )
-            return self.snapshot()
-
-    def _tick(self) -> None:
-        cache, available, timestamp = self._cache_details()
-        if not available:
-            with self.lock:
-                self.state.update(
-                    {
-                        "status": "not_initialized",
-                        "lastSuccessAt": None,
-                        "nextAttemptAt": None,
-                        "lastError": "",
-                    }
-                )
-            return
-
-        now = time.time()
-        if self.task_manager.snapshot()["status"] in {
-            "queued",
-            "running",
-            "stopping",
-        }:
-            return
-        if cache.get("valid") is not False and now - timestamp < AUTO_RENEW_SECONDS:
-            with self.lock:
-                self.retry_at = 0
-                self.state.update(
-                    {
-                        "status": "active",
-                        "lastSuccessAt": self._iso_from_timestamp(timestamp),
-                        "nextAttemptAt": self._iso_from_timestamp(
-                            timestamp + AUTO_RENEW_SECONDS
-                        ),
-                        "lastError": "",
-                    }
-                )
-            return
-        if not self.retry_at or now >= self.retry_at:
-            self.renew()
-
-    def _loop(self) -> None:
-        while not self.stop_event.is_set():
-            try:
-                self._tick()
-            except Exception:
-                pass
-            if self.stop_event.wait(self.CHECK_SECONDS):
-                break
-
-    def snapshot(self) -> dict:
-        _, available, timestamp = self._cache_details()
-        with self.lock:
-            state = copy.deepcopy(self.state)
-        if available and timestamp and not state["lastSuccessAt"]:
-            state["lastSuccessAt"] = self._iso_from_timestamp(timestamp)
-        return {
-            "enabled": True,
-            "credentialAvailable": available,
-            "intervalMinutes": AUTO_RENEW_SECONDS // 60,
-            **state,
-        }
-
-
 class CaptureManager:
     TIMEOUT_SECONDS = 5 * 60
 
@@ -914,7 +743,6 @@ class Runtime:
         self.image_rotation = ImageRotation()
         self.tasks = TaskManager(self.image_rotation)
         self.scheduler = Scheduler(self.tasks)
-        self.session_keeper = SessionKeeper(self.tasks)
         self.capture = CaptureManager(self.tasks)
 
     def start(self) -> None:
@@ -922,7 +750,6 @@ class Runtime:
         root_logger.setLevel(logging.INFO)
         if self.logs not in root_logger.handlers:
             root_logger.addHandler(self.logs)
-        self.session_keeper.start()
         self.scheduler.start()
         logging.info("SignSignIn Linux 服务已启动")
 
@@ -937,7 +764,6 @@ class Runtime:
         except Exception:
             pass
         self.scheduler.stop()
-        self.session_keeper.stop()
         logging.info("SignSignIn Linux 服务已停止")
         logging.getLogger().removeHandler(self.logs)
 
@@ -949,21 +775,33 @@ class Runtime:
             cached_at = datetime.fromtimestamp(
                 int(raw_session["timestamp"])
             ).astimezone().isoformat(timespec="seconds")
+        renewal_available = bool(
+            raw_session.get("encryptValue")
+            and raw_session.get("openId")
+            and raw_session.get("unionId")
+        )
         return {
             "time": iso_now(),
             "pid": os.getpid(),
             "session": {
                 "valid": bool(session),
-                "renewalAvailable": bool(
-                    raw_session.get("encryptValue")
-                    and raw_session.get("openId")
-                    and raw_session.get("unionId")
-                ),
+                "renewalAvailable": renewal_available,
                 "suffix": (
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),
                 "cachedAt": cached_at,
-                "autoRenew": self.session_keeper.snapshot(),
+                "autoRenew": {
+                    "enabled": True,
+                    "credentialAvailable": renewal_available,
+                    "intervalMinutes": 0,
+                    "status": (
+                        "active" if renewal_available else "not_initialized"
+                    ),
+                    "lastAttemptAt": None,
+                    "lastSuccessAt": cached_at,
+                    "nextAttemptAt": None,
+                    "lastError": "",
+                },
             },
             "task": self.tasks.snapshot(),
             "scheduler": self.scheduler.snapshot(),

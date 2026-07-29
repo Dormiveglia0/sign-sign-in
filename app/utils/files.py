@@ -59,6 +59,18 @@ def validate_user_agent_matches_device(device: dict, ua: str):
     system = str(device.get("system", "")).strip()
     model = str(device.get("model", "")).strip()
     platform = str(device.get("platform", "")).strip().lower()
+    system_lower = system.lower()
+
+    if "android" in system_lower and platform != "android":
+        return "设备系统与平台矛盾：Android 设备的平台必须是 android。"
+    if (
+        any(
+            marker in system_lower
+            for marker in ("ios", "iphone os", "ipad os")
+        )
+        and platform != "ios"
+    ):
+        return "设备系统与平台矛盾：iOS 设备的平台必须是 ios。"
 
     if system and f"; {system};" not in ua:
         return f"设备系统与UA不一致：UA中缺少“{system}”。请在【配置】点击“生成UA”自动修复。"

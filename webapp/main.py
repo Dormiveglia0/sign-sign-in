@@ -397,14 +397,6 @@ def refresh_session(payload: SessionInput):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@protected.post("/session/auto-renew")
-def auto_renew_session():
-    try:
-        return runtime.session_keeper.renew()
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
 @protected.delete("/session")
 def delete_session():
     clear_session_cache()

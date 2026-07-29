@@ -4,6 +4,7 @@ import tempfile
 import threading
 import time
 from functools import lru_cache
+from pathlib import Path
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
@@ -11,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 from app.config.common import (
     AMAP_WEB_KEY,
     BASE_DIR,
+    SESSION_CACHE_FILE,
     XYB_N_HEADER,
     XYB_REFERER,
     XYB_VERSION,
@@ -33,8 +35,13 @@ from app.utils.params import (
 )
 
 TENCENT_MAP_KEY = "GOZBZ-E4L67-6WLXT-PSLBH-2WEZZ-LOFLE"
-AUTO_RENEW_SECONDS = 45 * 60
+SECURITY_FINGERPRINT_FILE = Path(SESSION_CACHE_FILE).with_name(
+    "xyb_security_device_fp"
+)
 _auto_login_lock = threading.Lock()
+_security_fingerprint_lock = threading.Lock()
+_security_token_lock = threading.Lock()
+_security_token_cache = {}
 
 
 class SessionExpired(RuntimeError):
@@ -139,9 +146,32 @@ def _require_success(response, context):
 
 
 def _security_fingerprint(config):
-    if not config.get("securityFingerprint"):
-        config["securityFingerprint"] = create_security_fingerprint()
-    return config["securityFingerprint"]
+    fingerprint = str(config.get("securityFingerprint") or "").strip().lower()
+    if len(fingerprint) == 32 and all(
+        char in "0123456789abcdef" for char in fingerprint
+    ):
+        return fingerprint
+
+    with _security_fingerprint_lock:
+        try:
+            fingerprint = SECURITY_FINGERPRINT_FILE.read_text(
+                encoding="utf-8"
+            ).strip().lower()
+        except OSError:
+            fingerprint = ""
+        if not (
+            len(fingerprint) == 32
+            and all(char in "0123456789abcdef" for char in fingerprint)
+        ):
+            fingerprint = create_security_fingerprint()
+            SECURITY_FINGERPRINT_FILE.parent.mkdir(parents=True, exist_ok=True)
+            temporary = SECURITY_FINGERPRINT_FILE.with_suffix(".tmp")
+            temporary.write_text(fingerprint, encoding="utf-8")
+            os.chmod(temporary, 0o600)
+            os.replace(temporary, SECURITY_FINGERPRINT_FILE)
+
+    config["securityFingerprint"] = fingerprint
+    return fingerprint
 
 
 def _base_xyb_headers(config):
@@ -155,16 +185,47 @@ def _base_xyb_headers(config):
 
 
 def _fetch_security_token(config, fingerprint, args=None, timeout=5):
-    url = "https://xcx.xybsyw.com/common/GetToken.action"
-    headers = _base_xyb_headers(config)
-    cookies = {"JSESSIONID": args["sessionId"]} if args and args.get("sessionId") else None
-    logging.debug(f"准备请求校友邦风控Token: url:{url}, headers:{headers}, data:{{'fp': '***'}}, cookies:{cookies}")
-    response = requests.post(url, headers=headers, cookies=cookies, data={"fp": fingerprint}, timeout=timeout)
-    logging.debug(f"收到风控Token响应: {response} {response.text}")
-    data = _require_data(response, "获取校友邦风控Token失败")
-    if not data:
-        raise RuntimeError("获取校友邦风控Token失败: data为空")
-    return str(data)
+    with _security_token_lock:
+        cached = _security_token_cache.get(fingerprint)
+        if cached and time.monotonic() + 40 < cached["expiresAt"]:
+            return cached["value"]
+
+        url = "https://xcx.xybsyw.com/common/GetToken.action"
+        headers = _base_xyb_headers(config)
+        cookies = (
+            {"JSESSIONID": args["sessionId"]}
+            if args and args.get("sessionId")
+            else None
+        )
+        logging.debug(
+            "准备请求校友邦风控Token: url:%s, headers:%s, "
+            "data:{'fp': '***'}, cookies:%s",
+            url,
+            headers,
+            cookies,
+        )
+        response = requests.post(
+            url,
+            headers=headers,
+            cookies=cookies,
+            data={"fp": fingerprint},
+            timeout=timeout,
+        )
+        logging.debug(f"收到风控Token响应: {response} {response.text}")
+        data = _require_data(response, "获取校友邦风控Token失败")
+        if not data:
+            raise RuntimeError("获取校友邦风控Token失败: data为空")
+        token = str(data)
+        try:
+            expires_at = time.monotonic() + int(token[1:4])
+        except (TypeError, ValueError):
+            expires_at = 0
+        if expires_at:
+            _security_token_cache[fingerprint] = {
+                "value": token,
+                "expiresAt": expires_at,
+            }
+        return token
 
 
 def _build_security_context(data, config, args=None):
@@ -221,7 +282,11 @@ def auto_login(config, stale_session_id=None):
 
         url = "https://xcx.xybsyw.com/login/AutoLogin.action"
         data = {"encryptValue": encrypt_value}
-        security = _build_security_context(data, config)
+        security = _build_security_context(
+            data,
+            config,
+            args={"sessionId": cache.get("sessionId")},
+        )
         headers = {
             **_base_xyb_headers(config),
             "encryptvalue": encrypt_value,
@@ -473,12 +538,6 @@ def login(config, use_cache=True):
     if use_cache:
         cached = get_valid_session_cache()
         if cached:
-            timestamp = int(load_session_cache().get("timestamp") or 0)
-            if time.time() - timestamp >= AUTO_RENEW_SECONDS:
-                try:
-                    return auto_login(config, cached["sessionId"])
-                except Exception as exc:
-                    logging.warning("SESSION 预续期失败，先尝试当前会话: %s", exc)
             logging.info('✅ 使用缓存的JSESSIONID')
             return {
                 'openId': cached['openId'],

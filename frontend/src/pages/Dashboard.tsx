@@ -170,19 +170,6 @@ export default function Dashboard() {
     }
   }
 
-  async function verifyAutoRenewal() {
-    setBusy(true);
-    try {
-      await api("/api/session/auto-renew", { method: "POST" });
-      message.success("自动续期验证成功");
-      await refreshStatus();
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : "验证失败");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function startCapture() {
     setBusy(true);
     try {
@@ -226,28 +213,15 @@ export default function Dashboard() {
         tone: statusError ? "danger" : "success",
       },
       {
-        label: "校友邦自动续期",
-        value:
-          status?.session.autoRenew.status === "renewing"
-            ? "正在续期"
-            : status?.session.autoRenew.status === "retrying"
-              ? "自动重试中"
-              : status?.session.renewalAvailable
-                ? "运行正常"
-                : "未初始化",
-        detail:
-          status?.session.autoRenew.status === "retrying"
-            ? `下次 ${formatDateTime(status.session.autoRenew.nextAttemptAt)} 重试`
-            : status?.session.autoRenew.lastSuccessAt
-              ? `上次成功 ${formatDateTime(status.session.autoRenew.lastSuccessAt)}`
-              : "首次使用需要一个有效 Code",
+        label: "校友邦凭证",
+        value: status?.session.renewalAvailable
+          ? "按需续期已就绪"
+          : "未初始化",
+        detail: status?.session.cachedAt
+          ? `更新于 ${formatDateTime(status.session.cachedAt)}`
+          : "首次使用需要一个有效 Code",
         icon: KeyRound,
-        tone:
-          status?.session.autoRenew.status === "retrying"
-            ? "danger"
-            : status?.session.renewalAvailable
-              ? "success"
-              : "warning",
+        tone: status?.session.renewalAvailable ? "success" : "warning",
       },
       {
         label: "定时调度",
@@ -473,7 +447,7 @@ export default function Dashboard() {
         <Card className="session-card">
           <SectionHeading
             title="校友邦自动续期"
-            description="由 Linux 后台守护运行，与管理后台登录状态互不影响。"
+            description="仅在校友邦明确判定 SESSION 失效时自动换新并重试，不做定时轮询。"
             extra={<ShieldCheck size={19} />}
           />
           <div className="session-orbit">
@@ -487,31 +461,25 @@ export default function Dashboard() {
               <KeyRound size={28} />
             </div>
             <strong>
-              {status?.session.autoRenew.status === "renewing"
-                ? "正在自动续期"
-                : status?.session.autoRenew.status === "retrying"
-                  ? "续期失败，等待重试"
-                  : status?.session.renewalAvailable
-                    ? "自动续期守护运行中"
-                    : "尚未初始化"}
+              {status?.session.renewalAvailable
+                ? "按需自动续期已就绪"
+                : "尚未初始化"}
             </strong>
             <span>
               {status?.session.renewalAvailable
-                ? `每 ${status.session.autoRenew.intervalMinutes} 分钟主动换新；接口返回未登录时也会立即续期并重试`
+                ? "服务器平时不会主动换 SESSION；失效时会自动续期并重试当前任务"
                 : "需要先用一个有效 Code 初始化，之后无需日常手动操作"}
             </span>
             <div className="session-detail-grid">
               <div>
-                <span>上次成功</span>
+                <span>凭证更新时间</span>
                 <strong>
-                  {formatDateTime(status?.session.autoRenew.lastSuccessAt)}
+                  {formatDateTime(status?.session.cachedAt)}
                 </strong>
               </div>
               <div>
-                <span>下次检查</span>
-                <strong>
-                  {formatDateTime(status?.session.autoRenew.nextAttemptAt)}
-                </strong>
+                <span>续期策略</span>
+                <strong>服务端失效时触发</strong>
               </div>
               <div>
                 <span>当前 SESSION</span>
@@ -525,27 +493,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          {status?.session.autoRenew.lastError && (
-            <Alert
-              type="warning"
-              showIcon
-              message="最近一次自动续期失败"
-              description={status.session.autoRenew.lastError}
-              className="session-renew-error"
-            />
-          )}
           <div className="session-card-actions">
-            <Button
-              block
-              type="primary"
-              icon={<RefreshCw size={15} />}
-              loading={busy}
-              disabled={!status?.session.renewalAvailable || activeTask}
-              onClick={() => void verifyAutoRenewal()}
-            >
-              立即验证自动续期
-            </Button>
-            <Button block type="text" onClick={() => setSessionOpen(true)}>
+            <Button block onClick={() => setSessionOpen(true)}>
               初始化或恢复凭证
             </Button>
           </div>
