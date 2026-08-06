@@ -923,12 +923,18 @@ class Runtime:
             and raw_session.get("openId")
             and raw_session.get("unionId")
         )
+        auto_login_available = bool(raw_session.get("encryptValue"))
+        wechat_recovery_available = bool(
+            raw_session.get("openId") and raw_session.get("unionId")
+        )
         return {
             "time": iso_now(),
             "pid": os.getpid(),
             "session": {
                 "valid": bool(session),
                 "renewalAvailable": renewal_available,
+                "autoLoginAvailable": auto_login_available,
+                "wechatRecoveryAvailable": wechat_recovery_available,
                 "suffix": (
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),

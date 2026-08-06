@@ -61,6 +61,8 @@ export interface SystemStatus {
   session: {
     valid: boolean;
     renewalAvailable: boolean;
+    autoLoginAvailable: boolean;
+    wechatRecoveryAvailable: boolean;
     suffix: string;
     cachedAt: string | null;
     autoRenew: {

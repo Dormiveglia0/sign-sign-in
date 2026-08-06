@@ -677,7 +677,7 @@ code {
 .dashboard-grid {
   display: grid;
   align-items: start;
-  grid-template-columns: minmax(0, 1fr) 310px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 20px;
 }
 
@@ -877,83 +877,220 @@ code {
   flex-direction: column;
 }
 
-.session-orbit {
-  display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: 58px minmax(0, 1fr);
-  align-items: center;
-  gap: 2px 14px;
-  padding: 14px 0 18px;
-  text-align: left;
-}
-
-.session-ring {
-  display: grid;
-  width: 54px;
-  height: 54px;
-  margin: 0;
-  place-items: center;
-  grid-row: 1 / span 2;
-  border: 1px solid #ded7c9;
-  border-radius: 50%;
-  background: #faf6ee;
-  color: #ad762d;
-  box-shadow:
-    0 0 0 5px #fff,
-    0 0 0 6px #e8e5dd;
-}
-
-.session-ring.valid {
-  border-color: #c9dfda;
-  background: #edf6f3;
-  color: #147569;
-  box-shadow:
-    0 0 0 5px #fff,
-    0 0 0 6px #dce9e6;
-}
-
-.session-orbit strong {
-  font-size: 15px;
-}
-
-.session-orbit span {
-  margin-top: 5px;
-  color: #7c878c;
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.session-detail-grid {
-  width: 100%;
-  margin-top: 12px;
-  overflow: hidden;
-  grid-column: 1 / -1;
-  border: 1px solid #e3e8e6;
-  border-radius: 8px;
-  background: #f8faf9;
-}
-
-.session-detail-grid > div {
+.credential-guard {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 11px;
-  border-bottom: 1px solid #e8ecea;
-  gap: 12px;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 17px 18px;
+  border: 1px solid #d9e2df;
+  border-left: 4px solid #b98139;
+  background: #faf8f3;
 }
 
-.session-detail-grid > div:last-child {
-  border-bottom: 0;
+.credential-guard.healthy {
+  border-color: #cfe0dc;
+  border-left-color: #168272;
+  background: #f1f7f5;
 }
 
-.session-detail-grid span {
+.credential-guard.danger {
+  border-color: #ead1cf;
+  border-left-color: #c24d48;
+  background: #fbf3f2;
+}
+
+.credential-guard-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.credential-guard-copy > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #65767b;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+}
+
+.credential-guard-copy > strong {
+  margin-top: 7px;
+  color: #1d2b30;
+  font-size: 16px;
+}
+
+.credential-guard-copy > small {
+  margin-top: 3px;
+  color: #78858a;
+  font-size: 11px;
+}
+
+.credential-score {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  color: #9b6826;
+}
+
+.credential-guard.healthy .credential-score {
+  color: #147669;
+}
+
+.credential-guard.danger .credential-score {
+  color: #b84440;
+}
+
+.credential-score strong {
+  font-size: 34px;
+  font-weight: 720;
+  letter-spacing: -0.08em;
+  line-height: 1;
+}
+
+.credential-score span {
+  margin-left: 5px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.credential-chain {
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.credential-chain li {
+  position: relative;
+  display: grid;
+  min-height: 72px;
+  align-items: start;
+  gap: 12px;
+  padding: 0 0 17px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+}
+
+.credential-chain li:last-child {
+  min-height: 55px;
+  padding-bottom: 0;
+}
+
+.credential-chain li:not(:last-child)::after {
+  position: absolute;
+  top: 34px;
+  bottom: 0;
+  left: 16px;
+  width: 1px;
+  background: #dce3e1;
+  content: "";
+}
+
+.credential-step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d9dfdd;
+  border-radius: 50%;
+  background: #fff;
+  color: #8a9497;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.credential-chain li.active .credential-step,
+.credential-chain li.ready .credential-step {
+  border-color: #acd1c9;
+  background: #eaf5f2;
+  color: #117568;
+}
+
+.credential-chain li.standby .credential-step {
+  border-color: #d9c49f;
+  background: #faf5eb;
+  color: #9e6b27;
+}
+
+.credential-chain li > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding-top: 1px;
+}
+
+.credential-chain li > div strong {
+  color: #2a373c;
+  font-size: 12px;
+}
+
+.credential-chain li > div small {
+  margin-top: 4px;
+  color: #7e8a8e;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.credential-stage-state {
+  margin-top: 5px;
+  padding: 3px 7px;
+  border: 1px solid #dce2e0;
+  border-radius: 999px;
+  background: #f7f8f8;
+  color: #7d878a;
+  font-size: 9px;
+  font-weight: 650;
   white-space: nowrap;
 }
 
-.session-detail-grid strong {
+.credential-chain li.active .credential-stage-state,
+.credential-chain li.ready .credential-stage-state {
+  border-color: #c5ded8;
+  background: #edf7f4;
+  color: #147467;
+}
+
+.credential-chain li.standby .credential-stage-state {
+  border-color: #e3d1b5;
+  background: #fbf6ed;
+  color: #946323;
+}
+
+.credential-maintenance {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 0;
+  border-top: 1px solid #e4e9e7;
+  border-bottom: 1px solid #e4e9e7;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.credential-maintenance > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.credential-maintenance > div:first-child {
+  padding-right: 12px;
+  border-right: 1px solid #e4e9e7;
+}
+
+.credential-maintenance span {
+  color: #8a9497;
+  font-size: 9px;
+}
+
+.credential-maintenance strong {
   overflow: hidden;
-  font-size: 11px;
+  margin-top: 4px;
+  color: #334045;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -965,6 +1102,7 @@ code {
 .session-card-actions {
   display: grid;
   gap: 4px;
+  margin-top: 16px;
 }
 
 .dashboard-lower-grid {

@@ -95,6 +95,48 @@ export default function Dashboard() {
     status?.task.status || "",
   );
   const photoMode = mode.startsWith("photo_");
+  const credentialReadyCount = [
+    status?.session.valid,
+    status?.session.autoLoginAvailable,
+    status?.session.wechatRecoveryAvailable,
+  ].filter(Boolean).length;
+  const credentialStages = [
+    {
+      step: "01",
+      title: "当前 SESSION",
+      detail: status?.session.valid
+        ? `正在使用 · 尾号 ${status.session.suffix}`
+        : status?.session.renewalAvailable
+          ? "失效时自动进入恢复链"
+          : "等待首次初始化",
+      state: status?.session.valid
+        ? "当前使用"
+        : status?.session.renewalAvailable
+          ? "按需恢复"
+          : "未就绪",
+      tone: status?.session.valid
+        ? "active"
+        : status?.session.renewalAvailable
+          ? "standby"
+          : "missing",
+    },
+    {
+      step: "02",
+      title: "AutoLogin 静默换新",
+      detail: `每 ${Math.round(
+        (status?.session.autoRenew.intervalMinutes || 1200) / 60,
+      )} 小时提前轮换 encryptValue`,
+      state: status?.session.autoLoginAvailable ? "已备妥" : "未就绪",
+      tone: status?.session.autoLoginAvailable ? "ready" : "missing",
+    },
+    {
+      step: "03",
+      title: "微信绑定自动恢复",
+      detail: "第二层失效时，使用已绑定身份重新签发凭证",
+      state: status?.session.wechatRecoveryAvailable ? "已备妥" : "未就绪",
+      tone: status?.session.wechatRecoveryAvailable ? "ready" : "missing",
+    },
+  ];
 
   async function loadSupportData() {
     const results = await Promise.allSettled([
@@ -220,12 +262,14 @@ export default function Dashboard() {
             : status?.session.autoRenew.status === "retrying"
               ? "维护异常"
               : status?.session.renewalAvailable
-                ? "长期维护中"
+                ? "三层守护中"
                 : "未初始化",
         detail:
           status?.session.autoRenew.nextAttemptAt
             ? `下次 ${formatDateTime(status.session.autoRenew.nextAttemptAt)}`
-            : "首次使用需要一个有效 Code",
+            : status?.session.renewalAvailable
+              ? "AutoLogin + 微信绑定恢复已就绪"
+              : "恢复链等待首次激活",
         icon: KeyRound,
         tone:
           status?.session.autoRenew.status === "retrying"
@@ -457,59 +501,69 @@ export default function Dashboard() {
 
         <Card className="session-card">
           <SectionHeading
-            title="校友邦自动续期"
-            description="低频提前轮换凭证；encryptValue 失效时自动尝试微信绑定快速重登。"
+            title="登录凭证守护"
+            description="完整恢复链持续可见；正常情况下无需每日重新获取 Code。"
             extra={<ShieldCheck size={19} />}
           />
-          <div className="session-orbit">
-            <div
-              className={
-                status?.session.renewalAvailable
-                  ? "session-ring valid"
-                  : "session-ring"
-              }
-            >
-              <KeyRound size={28} />
-            </div>
-            <strong>
-              {status?.session.autoRenew.status === "renewing"
-                ? "正在维护登录凭证"
-                : status?.session.autoRenew.status === "retrying"
-                  ? "自动恢复将在稍后重试"
-                  : status?.session.renewalAvailable
-                    ? "长期自动维护已启用"
-                    : "尚未初始化"}
-            </strong>
-            <span>
-              {status?.session.renewalAvailable
-                ? `下次维护 ${formatDateTime(status.session.autoRenew.nextAttemptAt)}`
-                : "需要先用一个有效 Code 初始化，之后无需日常手动操作"}
-            </span>
-            <div className="session-detail-grid">
-              <div>
-                <span>上次维护成功</span>
-                <strong>
-                  {formatDateTime(status?.session.autoRenew.lastSuccessAt)}
-                </strong>
-              </div>
-              <div>
-                <span>维护策略</span>
-                <strong>
-                  {Math.round(
-                    (status?.session.autoRenew.intervalMinutes || 1200) / 60,
-                  )} 小时低频轮换
-                </strong>
-              </div>
-              <div>
-                <span>当前 SESSION</span>
-                <strong>
-                  {status?.session.valid
-                    ? `有效 · 尾号 ${status.session.suffix}`
+          <div
+            className={`credential-guard ${
+              status?.session.autoRenew.status === "retrying"
+                ? "danger"
+                : status?.session.renewalAvailable
+                  ? "healthy"
+                  : "waiting"
+            }`}
+          >
+            <div className="credential-guard-copy">
+              <span>
+                <ShieldCheck size={14} /> CREDENTIAL GUARD
+              </span>
+              <strong>
+                {status?.session.autoRenew.status === "renewing"
+                  ? "正在维护凭证"
+                  : status?.session.autoRenew.status === "retrying"
+                    ? "自动恢复等待重试"
                     : status?.session.renewalAvailable
-                      ? "等待自动换新"
-                      : "不可用"}
-                </strong>
-              </div>
+                      ? "自动守护正在运行"
+                      : "等待首次初始化"}
+              </strong>
+              <small>
+                {credentialReadyCount}/3 层可用
+              </small>
+            </div>
+            <div className="credential-score" aria-label={`${credentialReadyCount} 层可用`}>
+              <strong>{credentialReadyCount}</strong>
+              <span>/ 3</span>
+            </div>
+          </div>
+
+          <ol className="credential-chain" aria-label="校友邦凭证自动恢复链">
+            {credentialStages.map((stage) => (
+              <li key={stage.step} className={stage.tone}>
+                <span className="credential-step" aria-hidden="true">
+                  {stage.step}
+                </span>
+                <div>
+                  <strong>{stage.title}</strong>
+                  <small>{stage.detail}</small>
+                </div>
+                <span className="credential-stage-state">{stage.state}</span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="credential-maintenance">
+            <div>
+              <span>上次成功</span>
+              <strong>
+                {formatDateTime(status?.session.autoRenew.lastSuccessAt)}
+              </strong>
+            </div>
+            <div>
+              <span>下次后台动作</span>
+              <strong>
+                {formatDateTime(status?.session.autoRenew.nextAttemptAt)}
+              </strong>
             </div>
           </div>
           {status?.session.autoRenew.lastError && (
@@ -522,7 +576,9 @@ export default function Dashboard() {
           )}
           <div className="session-card-actions">
             <Button block onClick={() => setSessionOpen(true)}>
-              初始化或恢复凭证
+              {status?.session.renewalAvailable
+                ? "管理或重新初始化"
+                : "首次初始化凭证"}
             </Button>
           </div>
         </Card>
