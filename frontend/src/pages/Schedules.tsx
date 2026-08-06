@@ -202,7 +202,7 @@ export default function Schedules() {
         type="info"
         showIcon
         message="调度由 Linux 后端执行"
-        description="服务器系统时间可以是 UTC；这里的时区单独决定触发时间。校友邦 SESSION 失效时会先自动续期并重试，不会在无人值守时开放抓包端口。"
+        description="服务器系统时间可以是 UTC；这里的时区单独决定触发时间。校友邦凭证由服务端低频维护，失效时会自动恢复并重试任务。"
       />
 
       <div className="schedule-layout">

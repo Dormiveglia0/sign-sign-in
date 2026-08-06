@@ -39,6 +39,8 @@ TASK_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name("web_task_history.json")
 SCHEDULE_IMAGE_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name(
     "scheduled_image_history.json"
 )
+CREDENTIAL_RENEW_SECONDS = 20 * 60 * 60
+CREDENTIAL_RETRY_SECONDS = 6 * 60 * 60
 
 
 def iso_now() -> str:
@@ -521,6 +523,144 @@ class Scheduler:
             break
 
 
+class SessionKeeper:
+    """在 encryptValue 失效窗口前低频轮换登录凭证。"""
+
+    def __init__(self, task_manager: TaskManager):
+        self.task_manager = task_manager
+        self.stop_event = threading.Event()
+        self.lock = threading.RLock()
+        self.retry_at = 0
+        self.state = {
+            "status": "starting",
+            "lastAttemptAt": None,
+            "lastSuccessAt": None,
+            "nextAttemptAt": None,
+            "lastError": "",
+        }
+        self.thread = threading.Thread(
+            target=self._loop,
+            name="session-keeper",
+            daemon=True,
+        )
+
+    @staticmethod
+    def _iso(timestamp: int) -> str | None:
+        if not timestamp:
+            return None
+        return datetime.fromtimestamp(timestamp).astimezone().isoformat(
+            timespec="seconds"
+        )
+
+    @staticmethod
+    def _cache_details() -> tuple[dict, bool, int]:
+        cache = load_session_cache()
+        available = bool(
+            cache.get("encryptValue")
+            and cache.get("openId")
+            and cache.get("unionId")
+        )
+        try:
+            timestamp = int(cache.get("timestamp") or 0)
+        except (TypeError, ValueError):
+            timestamp = 0
+        return cache, available, timestamp
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        if self.thread.is_alive():
+            self.thread.join(timeout=2)
+
+    def _tick(self) -> None:
+        cache, available, timestamp = self._cache_details()
+        if not available:
+            with self.lock:
+                self.state.update(
+                    status="not_initialized",
+                    lastSuccessAt=None,
+                    nextAttemptAt=None,
+                    lastError="",
+                )
+            return
+
+        now = int(time.time())
+        if self.task_manager.snapshot()["status"] in {
+            "queued",
+            "running",
+            "stopping",
+        }:
+            return
+        if cache.get("valid") is not False and now < timestamp + CREDENTIAL_RENEW_SECONDS:
+            self.retry_at = 0
+            with self.lock:
+                self.state.update(
+                    status="active",
+                    lastSuccessAt=self._iso(timestamp),
+                    nextAttemptAt=self._iso(timestamp + CREDENTIAL_RENEW_SECONDS),
+                    lastError="",
+                )
+            return
+        if self.retry_at and now < self.retry_at:
+            return
+
+        attempted_at = iso_now()
+        with self.lock:
+            self.state.update(
+                status="renewing",
+                lastAttemptAt=attempted_at,
+                lastError="",
+            )
+        try:
+            config = read_config(CONFIG_FILE)
+            session = auto_login(config["input"], cache.get("sessionId"))
+        except Exception as exc:
+            self.retry_at = now + CREDENTIAL_RETRY_SECONDS
+            with self.lock:
+                self.state.update(
+                    status="retrying",
+                    nextAttemptAt=self._iso(self.retry_at),
+                    lastError=str(exc),
+                )
+            logging.warning("校友邦凭证维护失败，6 小时后重试: %s", exc)
+            return
+
+        self.retry_at = 0
+        succeeded_at = int(time.time())
+        with self.lock:
+            self.state.update(
+                status="active",
+                lastSuccessAt=self._iso(succeeded_at),
+                nextAttemptAt=self._iso(succeeded_at + CREDENTIAL_RENEW_SECONDS),
+                lastError="",
+            )
+        logging.info(
+            "✅ 校友邦凭证维护成功，SESSION 尾号 %s",
+            str(session.get("sessionId") or "")[-4:],
+        )
+
+    def _loop(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                self._tick()
+            except Exception:
+                logging.exception("校友邦凭证维护检查失败")
+            if self.stop_event.wait(60):
+                break
+
+    def snapshot(self) -> dict:
+        _, available, _ = self._cache_details()
+        with self.lock:
+            return {
+                "enabled": True,
+                "credentialAvailable": available,
+                "intervalMinutes": CREDENTIAL_RENEW_SECONDS // 60,
+                **copy.deepcopy(self.state),
+            }
+
+
 class CaptureManager:
     TIMEOUT_SECONDS = 5 * 60
 
@@ -743,6 +883,7 @@ class Runtime:
         self.image_rotation = ImageRotation()
         self.tasks = TaskManager(self.image_rotation)
         self.scheduler = Scheduler(self.tasks)
+        self.session_keeper = SessionKeeper(self.tasks)
         self.capture = CaptureManager(self.tasks)
 
     def start(self) -> None:
@@ -751,6 +892,7 @@ class Runtime:
         if self.logs not in root_logger.handlers:
             root_logger.addHandler(self.logs)
         self.scheduler.start()
+        self.session_keeper.start()
         logging.info("SignSignIn Linux 服务已启动")
 
     def stop(self) -> None:
@@ -763,6 +905,7 @@ class Runtime:
                 self.capture.stop()
         except Exception:
             pass
+        self.session_keeper.stop()
         self.scheduler.stop()
         logging.info("SignSignIn Linux 服务已停止")
         logging.getLogger().removeHandler(self.logs)
@@ -790,18 +933,7 @@ class Runtime:
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),
                 "cachedAt": cached_at,
-                "autoRenew": {
-                    "enabled": True,
-                    "credentialAvailable": renewal_available,
-                    "intervalMinutes": 0,
-                    "status": (
-                        "active" if renewal_available else "not_initialized"
-                    ),
-                    "lastAttemptAt": None,
-                    "lastSuccessAt": cached_at,
-                    "nextAttemptAt": None,
-                    "lastError": "",
-                },
+                "autoRenew": self.session_keeper.snapshot(),
             },
             "task": self.tasks.snapshot(),
             "scheduler": self.scheduler.snapshot(),

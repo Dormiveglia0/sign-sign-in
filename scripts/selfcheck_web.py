@@ -18,7 +18,7 @@ from app.utils import files as file_utils
 from app.utils.gotify import build_gotify_message_url, notify_gotify
 from webapp import runtime as runtime_module
 from webapp import security as web_security
-from webapp.runtime import ImageRotation, TaskManager
+from webapp.runtime import ImageRotation, SessionKeeper, TaskManager
 
 
 def check_session_cache_has_no_local_expiry():
@@ -254,6 +254,106 @@ def check_stable_security_context():
         xybsyw._security_token_cache.clear()
 
 
+def check_wechat_bound_login_fallback():
+    original = file_utils.SESSION_CACHE_FILE
+    config = {
+        "userAgent": "test",
+        "device": {
+            "brand": "OnePlus",
+            "model": "PHP110",
+            "system": "Android 15",
+            "platform": "android",
+        },
+    }
+
+    def response(payload):
+        return SimpleNamespace(
+            status_code=200,
+            text=json.dumps(payload),
+            json=lambda: payload,
+        )
+
+    responses = [
+        response({"code": "202", "data": None, "msg": "操作失败"}),
+        response(
+            {
+                "code": "200",
+                "data": {"bind": True, "sessionId": "bind-session"},
+            }
+        ),
+        response(
+            {
+                "code": "200",
+                "data": {
+                    "sessionId": "new-session",
+                    "encryptValue": "new-encrypt",
+                },
+            }
+        ),
+    ]
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
+            file_utils.save_session_cache(
+                "old-session",
+                "old-encrypt",
+                "open",
+                "union",
+            )
+            with (
+                patch.object(
+                    xybsyw,
+                    "_build_security_context",
+                    return_value={"params": {}, "url_token": "token"},
+                ),
+                patch.object(xybsyw, "get_device_code", return_value="device"),
+                patch.object(
+                    xybsyw.requests,
+                    "post",
+                    side_effect=responses,
+                ) as post,
+            ):
+                renewed = xybsyw.auto_login(config)
+
+            assert renewed["sessionId"] == "new-session"
+            assert file_utils.load_session_cache()["encryptValue"] == "new-encrypt"
+            calls = post.call_args_list
+            assert calls[1].args[0].endswith("login!checkWxBind.action")
+            assert calls[2].args[0].endswith("login!wx.action")
+            assert calls[2].kwargs["cookies"] == {"JSESSIONID": "bind-session"}
+    finally:
+        file_utils.SESSION_CACHE_FILE = original
+
+
+def check_session_keeper_renews_old_credentials():
+    original = file_utils.SESSION_CACHE_FILE
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
+            file_utils.save_session_cache(
+                "old-session",
+                "old-encrypt",
+                "open",
+                "union",
+            )
+            cache = file_utils.load_session_cache()
+            cache["timestamp"] = 1
+            Path(file_utils.SESSION_CACHE_FILE).write_text(
+                json.dumps(cache),
+                encoding="utf-8",
+            )
+            with patch(
+                "webapp.runtime.auto_login",
+                return_value={"sessionId": "new-session"},
+            ) as renew:
+                keeper = SessionKeeper(TaskManager())
+                keeper._tick()
+            renew.assert_called_once()
+            assert keeper.snapshot()["status"] == "active"
+    finally:
+        file_utils.SESSION_CACHE_FILE = original
+
+
 def check_chinese_watermark_font():
     font = xybsyw._load_watermark_font(28)
     assert Path(font.path).name == "WenQuanYiZenHei.ttc"
@@ -310,6 +410,8 @@ def main():
     check_device_platform_consistency()
     check_consumed_code_message()
     check_silent_session_renewal()
+    check_wechat_bound_login_fallback()
+    check_session_keeper_renews_old_credentials()
     check_task_retries_after_silent_renewal()
     check_random_image_rotation()
     check_stable_security_context()

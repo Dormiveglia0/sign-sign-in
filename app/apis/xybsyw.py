@@ -262,6 +262,60 @@ def _form_post(url, data, config, args, include_device_code=False, timeout=5):
     return response
 
 
+def _wechat_bound_login(config, cache):
+    """用小程序已绑定的 openId/unionId 重新签发登录凭证。"""
+    identity = {
+        "openId": str(cache.get("openId") or "").strip(),
+        "unionId": str(cache.get("unionId") or "").strip(),
+    }
+    bind_data = _require_data(
+        _form_post(
+            "https://xcx.xybsyw.com/login/login!checkWxBind.action",
+            identity,
+            config=config,
+            args=cache,
+            include_device_code=True,
+            timeout=10,
+        ),
+        "微信绑定检查失败",
+    )
+    if (
+        not isinstance(bind_data, dict)
+        or not bind_data.get("bind")
+        or not bind_data.get("sessionId")
+    ):
+        raise RuntimeError("微信绑定已失效，需要重新获取一次 Code")
+
+    login_args = {**cache, "sessionId": bind_data["sessionId"]}
+    renewed = _require_data(
+        _form_post(
+            "https://xcx.xybsyw.com/login/login!wx.action",
+            identity,
+            config=config,
+            args=login_args,
+            include_device_code=True,
+            timeout=10,
+        ),
+        "微信绑定重登失败",
+    )
+    if (
+        not isinstance(renewed, dict)
+        or not renewed.get("sessionId")
+        or not renewed.get("encryptValue")
+    ):
+        raise RuntimeError("微信绑定重登失败: 响应缺少登录凭证")
+
+    save_session_cache(
+        session_id=renewed["sessionId"],
+        encrypt_value=renewed["encryptValue"],
+        open_id=identity["openId"],
+        union_id=identity["unionId"],
+        trainee_id=cache.get("traineeId"),
+    )
+    logging.info("✅ 微信绑定快速重登成功")
+    return get_valid_session_cache()
+
+
 def auto_login(config, stale_session_id=None):
     """复刻小程序 AutoLogin.action，用 encryptValue 静默换新 SESSION。"""
     with _auto_login_lock:
@@ -314,14 +368,25 @@ def auto_login(config, stale_session_id=None):
         renewed = payload.get("data") if isinstance(payload, dict) else None
         if (
             response.status_code != 200
+            or not isinstance(payload, dict)
             or not _is_success_code(payload.get("code"))
             or not isinstance(renewed, dict)
             or not renewed.get("sessionId")
             or not renewed.get("encryptValue")
         ):
-            raise RuntimeError(
-                f"静默续期失败: {_response_message(payload)}"
+            auto_login_error = _response_message(payload)
+            logging.warning(
+                "encryptValue 续期失败，尝试微信绑定快速重登: %s",
+                auto_login_error,
             )
+            try:
+                return _wechat_bound_login(config, cache)
+            except Exception as fallback_error:
+                raise RuntimeError(
+                    "凭证自动恢复失败: "
+                    f"AutoLogin={auto_login_error}; "
+                    f"微信绑定重登={fallback_error}"
+                ) from fallback_error
 
         save_session_cache(
             session_id=renewed["sessionId"],

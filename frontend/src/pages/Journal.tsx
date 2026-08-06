@@ -259,7 +259,7 @@ export default function Journal() {
           type="warning"
           showIcon
           message="需要可用的校友邦登录凭证"
-          description="请先回到运行总览初始化校友邦凭证。凭证存在时，SESSION 失效后会自动续期。若已配置自有模型，草稿生成仍可使用。"
+          description="请先回到运行总览初始化校友邦凭证。初始化后服务端会低频维护，并在失效时自动恢复。若已配置自有模型，草稿生成仍可使用。"
         />
       )}
 

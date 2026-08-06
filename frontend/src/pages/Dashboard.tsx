@@ -214,14 +214,25 @@ export default function Dashboard() {
       },
       {
         label: "校友邦凭证",
-        value: status?.session.renewalAvailable
-          ? "按需续期已就绪"
-          : "未初始化",
-        detail: status?.session.cachedAt
-          ? `更新于 ${formatDateTime(status.session.cachedAt)}`
-          : "首次使用需要一个有效 Code",
+        value:
+          status?.session.autoRenew.status === "renewing"
+            ? "正在维护"
+            : status?.session.autoRenew.status === "retrying"
+              ? "维护异常"
+              : status?.session.renewalAvailable
+                ? "长期维护中"
+                : "未初始化",
+        detail:
+          status?.session.autoRenew.nextAttemptAt
+            ? `下次 ${formatDateTime(status.session.autoRenew.nextAttemptAt)}`
+            : "首次使用需要一个有效 Code",
         icon: KeyRound,
-        tone: status?.session.renewalAvailable ? "success" : "warning",
+        tone:
+          status?.session.autoRenew.status === "retrying"
+            ? "danger"
+            : status?.session.renewalAvailable
+              ? "success"
+              : "warning",
       },
       {
         label: "定时调度",
@@ -447,7 +458,7 @@ export default function Dashboard() {
         <Card className="session-card">
           <SectionHeading
             title="校友邦自动续期"
-            description="仅在校友邦明确判定 SESSION 失效时自动换新并重试，不做定时轮询。"
+            description="低频提前轮换凭证；encryptValue 失效时自动尝试微信绑定快速重登。"
             extra={<ShieldCheck size={19} />}
           />
           <div className="session-orbit">
@@ -461,25 +472,33 @@ export default function Dashboard() {
               <KeyRound size={28} />
             </div>
             <strong>
-              {status?.session.renewalAvailable
-                ? "按需自动续期已就绪"
-                : "尚未初始化"}
+              {status?.session.autoRenew.status === "renewing"
+                ? "正在维护登录凭证"
+                : status?.session.autoRenew.status === "retrying"
+                  ? "自动恢复将在稍后重试"
+                  : status?.session.renewalAvailable
+                    ? "长期自动维护已启用"
+                    : "尚未初始化"}
             </strong>
             <span>
               {status?.session.renewalAvailable
-                ? "服务器平时不会主动换 SESSION；失效时会自动续期并重试当前任务"
+                ? `下次维护 ${formatDateTime(status.session.autoRenew.nextAttemptAt)}`
                 : "需要先用一个有效 Code 初始化，之后无需日常手动操作"}
             </span>
             <div className="session-detail-grid">
               <div>
-                <span>凭证更新时间</span>
+                <span>上次维护成功</span>
                 <strong>
-                  {formatDateTime(status?.session.cachedAt)}
+                  {formatDateTime(status?.session.autoRenew.lastSuccessAt)}
                 </strong>
               </div>
               <div>
-                <span>续期策略</span>
-                <strong>服务端失效时触发</strong>
+                <span>维护策略</span>
+                <strong>
+                  {Math.round(
+                    (status?.session.autoRenew.intervalMinutes || 1200) / 60,
+                  )} 小时低频轮换
+                </strong>
               </div>
               <div>
                 <span>当前 SESSION</span>
@@ -493,6 +512,14 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          {status?.session.autoRenew.lastError && (
+            <Alert
+              type="warning"
+              showIcon
+              message="最近一次凭证维护失败"
+              description={status.session.autoRenew.lastError}
+            />
+          )}
           <div className="session-card-actions">
             <Button block onClick={() => setSessionOpen(true)}>
               初始化或恢复凭证
