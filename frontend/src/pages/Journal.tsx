@@ -95,9 +95,7 @@ function normalizeBlogs(raw: unknown): Array<Record<string, unknown>> {
 export default function Journal() {
   const { message, modal } = App.useApp();
   const { status } = useWorkspace();
-  const credentialReady = Boolean(
-    status?.session.valid || status?.session.renewalAvailable,
-  );
+  const credentialReady = Boolean(status?.session.usable);
   const [form] = Form.useForm<{
     prompt: string;
     content: string;

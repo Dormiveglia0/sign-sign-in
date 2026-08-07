@@ -60,6 +60,8 @@ export interface SystemStatus {
   pid: number;
   session: {
     valid: boolean;
+    usable: boolean;
+    reauthRequired: boolean;
     renewalAvailable: boolean;
     autoLoginAvailable: boolean;
     wechatRecoveryAvailable: boolean;
@@ -69,7 +71,13 @@ export interface SystemStatus {
       enabled: boolean;
       credentialAvailable: boolean;
       intervalMinutes: number;
-      status: "starting" | "active" | "renewing" | "retrying" | "not_initialized";
+      status:
+        | "starting"
+        | "active"
+        | "renewing"
+        | "retrying"
+        | "reauth_required"
+        | "not_initialized";
       lastAttemptAt: string | null;
       lastSuccessAt: string | null;
       nextAttemptAt: string | null;

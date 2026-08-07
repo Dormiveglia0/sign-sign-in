@@ -24,6 +24,7 @@ from app.utils.files import (
     get_valid_session_cache,
     invalidate_session_cache,
     load_session_cache,
+    mark_session_reauth_required,
     save_session_cache,
 )
 from app.utils.params import (
@@ -46,6 +47,18 @@ _security_token_cache = {}
 
 class SessionExpired(RuntimeError):
     pass
+
+
+class CredentialRecoveryError(RuntimeError):
+    """登录凭证恢复失败，并标明是否必须重新获取小程序 Code。"""
+
+    def __init__(self, message, *, reauth_required=False):
+        super().__init__(message)
+        self.reauth_required = bool(reauth_required)
+
+
+class _CredentialRecoveryRejected(RuntimeError):
+    """恢复接口已明确返回业务拒绝。"""
 
 
 def is_session_expired_error(error):
@@ -143,6 +156,51 @@ def _require_success(response, context):
     if response.status_code != 200 or not _is_success_code(res.get("code")):
         raise RuntimeError(f"{context}: {_response_message(res)}")
     return res
+
+
+def _require_recovery_data(response, context):
+    """读取恢复接口；业务拒绝与临时解析错误必须区分。"""
+    try:
+        res = response.json()
+    except Exception as exc:
+        raise RuntimeError(f"{context}: 响应解析失败 {exc}") from exc
+    try:
+        _assert_session(res)
+    except SessionExpired as exc:
+        raise _CredentialRecoveryRejected(f"{context}: 登录状态已失效") from exc
+    if (
+        response.status_code != 200
+        or not _is_success_code(res.get("code"))
+        or "data" not in res
+    ):
+        raise _CredentialRecoveryRejected(f"{context}: {_response_message(res)}")
+    return res.get("data")
+
+
+def _recovery_error_requires_reauth(error):
+    current = error
+    messages = []
+    while current is not None:
+        if isinstance(current, requests.RequestException):
+            return False
+        if isinstance(current, _CredentialRecoveryRejected):
+            return True
+        messages.append(str(current))
+        current = current.__cause__ or current.__context__
+    text = " ".join(messages)
+    return any(
+        marker in text
+        for marker in (
+            "操作失败",
+            "系统已升级",
+            "重新打开小程序",
+            "绑定已失效",
+            "重新获取一次 Code",
+            "登录状态已失效",
+            "JSESSIONID已失效",
+            "响应缺少登录凭证",
+        )
+    )
 
 
 def _security_fingerprint(config):
@@ -268,7 +326,7 @@ def _wechat_bound_login(config, cache):
         "openId": str(cache.get("openId") or "").strip(),
         "unionId": str(cache.get("unionId") or "").strip(),
     }
-    bind_data = _require_data(
+    bind_data = _require_recovery_data(
         _form_post(
             "https://xcx.xybsyw.com/login/login!checkWxBind.action",
             identity,
@@ -284,10 +342,10 @@ def _wechat_bound_login(config, cache):
         or not bind_data.get("bind")
         or not bind_data.get("sessionId")
     ):
-        raise RuntimeError("微信绑定已失效，需要重新获取一次 Code")
+        raise _CredentialRecoveryRejected("微信绑定已失效，需要重新获取一次 Code")
 
     login_args = {**cache, "sessionId": bind_data["sessionId"]}
-    renewed = _require_data(
+    renewed = _require_recovery_data(
         _form_post(
             "https://xcx.xybsyw.com/login/login!wx.action",
             identity,
@@ -303,7 +361,7 @@ def _wechat_bound_login(config, cache):
         or not renewed.get("sessionId")
         or not renewed.get("encryptValue")
     ):
-        raise RuntimeError("微信绑定重登失败: 响应缺少登录凭证")
+        raise _CredentialRecoveryRejected("微信绑定重登失败: 响应缺少登录凭证")
 
     save_session_cache(
         session_id=renewed["sessionId"],
@@ -320,6 +378,14 @@ def auto_login(config, stale_session_id=None):
     """复刻小程序 AutoLogin.action，用 encryptValue 静默换新 SESSION。"""
     with _auto_login_lock:
         cache = load_session_cache()
+        if cache.get("recoveryRequired"):
+            raise CredentialRecoveryError(
+                str(
+                    cache.get("recoveryError")
+                    or "校友邦自动恢复已被服务端拒绝，需要重新获取小程序 Code"
+                ),
+                reauth_required=True,
+            )
         if (
             stale_session_id
             and cache.get("sessionId")
@@ -382,11 +448,16 @@ def auto_login(config, stale_session_id=None):
             try:
                 return _wechat_bound_login(config, cache)
             except Exception as fallback_error:
-                raise RuntimeError(
+                reauth_required = _recovery_error_requires_reauth(fallback_error)
+                recovery_error = CredentialRecoveryError(
                     "凭证自动恢复失败: "
                     f"AutoLogin={auto_login_error}; "
-                    f"微信绑定重登={fallback_error}"
-                ) from fallback_error
+                    f"微信绑定重登={fallback_error}",
+                    reauth_required=reauth_required,
+                )
+                if reauth_required:
+                    mark_session_reauth_required(str(recovery_error))
+                raise recovery_error from fallback_error
 
         save_session_cache(
             session_id=renewed["sessionId"],
@@ -445,19 +516,19 @@ def _regeo_tencent(userAgent, location, key=None):
         "get_poi": "1",
     }
     try:
-        logging.debug(f"馃洨锔?鍑嗗鍙戣捣璇锋眰銆倁rl:{url}, headers:{headers}, params:{params}")
+        logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, params:{params}")
         response = requests.get(url, headers=headers, params=params, timeout=5)
-        logging.debug(f"馃摗 鏀跺埌鍝嶅簲:{response} {response.text}")
+        logging.debug(f"📡 收到响应:{response} {response.text}")
         res = response.json()
         if response.status_code == 200 and res.get("status") == 0 and res.get("result"):
             regeocode = _normalize_tencent_regeo(res["result"])
             if not regeocode["formatted_address"]:
                 regeocode["formatted_address"] = f"{location['longitude']},{location['latitude']}"
-            logging.info(f"馃搷 瑙ｆ瀽浣嶇疆: {regeocode['formatted_address']}")
+            logging.info(f"📍 解析位置: {regeocode['formatted_address']}")
             return regeocode
-        raise RuntimeError(f"浣嶇疆瑙ｆ瀽澶辫触: {res}")
+        raise RuntimeError(f"位置解析失败: {res}")
     except Exception as e:
-        logging.error(f"鑵捐鍦板浘鎺ュ彛璇锋眰澶辫触: {e}")
+        logging.error(f"腾讯地图接口请求失败: {e}")
         raise e
 
 
