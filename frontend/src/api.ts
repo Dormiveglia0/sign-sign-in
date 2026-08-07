@@ -7,6 +7,52 @@ export class ApiError extends Error {
   }
 }
 
+const fieldLabels: Record<string, string> = {
+  location: "位置",
+  longitude: "经度",
+  latitude: "纬度",
+  locationJitterMeters: "位置抖动半径",
+  mapProvider: "地图服务",
+  mapApiKeys: "地图 Key",
+  device: "设备指纹",
+  userAgent: "User-Agent",
+  model: "周记模型",
+  clearSecrets: "敏感配置操作",
+};
+
+function formatValidationItem(item: unknown) {
+  if (!item || typeof item !== "object") return String(item || "");
+  const value = item as { loc?: unknown; msg?: unknown; message?: unknown };
+  const location = Array.isArray(value.loc)
+    ? value.loc
+        .filter((part) => part !== "body")
+        .map((part) => fieldLabels[String(part)] || String(part))
+        .join(" → ")
+    : "";
+  const rawMessage = value.msg ?? value.message ?? "参数校验失败";
+  const message =
+    rawMessage === "Field required" ? "缺少必填字段" : String(rawMessage);
+  return location ? `${location}：${message}` : message;
+}
+
+function formatApiDetail(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail.map(formatValidationItem).filter(Boolean);
+    return messages.join("；") || "请求参数校验失败";
+  }
+  if (detail && typeof detail === "object") {
+    const formatted = formatValidationItem(detail);
+    if (formatted && formatted !== "[object Object]") return formatted;
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      return "请求失败";
+    }
+  }
+  return String(detail || "请求失败");
+}
+
 function cookie(name: string) {
   return document.cookie
     .split("; ")
@@ -44,7 +90,7 @@ export async function api<T>(
     }
     const message =
       typeof body === "object" && body && "detail" in body
-        ? String(body.detail)
+        ? formatApiDetail(body.detail)
         : String(body || `请求失败 (${response.status})`);
     throw new ApiError(response.status, message);
   }

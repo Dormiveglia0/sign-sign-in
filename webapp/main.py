@@ -353,13 +353,14 @@ class TaskInput(BaseModel):
 @protected.post("/tasks")
 def start_task(payload: TaskInput):
     status = runtime.status()
-    if not (
-        status["session"]["valid"]
-        or status["session"]["renewalAvailable"]
-    ):
+    if not status["session"]["usable"]:
         raise HTTPException(
             status_code=409,
-            detail="校友邦登录凭证不可用，请先完成一次初始化",
+            detail=(
+                "校友邦自动恢复已被服务端拒绝，请用新的小程序 Code 重新初始化"
+                if status["session"]["reauthRequired"]
+                else "校友邦登录凭证当前不可执行任务，请等待维护完成"
+            ),
         )
     image_path = ""
     try:
@@ -400,6 +401,7 @@ def refresh_session(payload: SessionInput):
 @protected.delete("/session")
 def delete_session():
     clear_session_cache()
+    runtime.session_keeper.notify_credentials_changed()
     logging.info("已清除校友邦登录凭证")
     return {"ok": True}
 

@@ -72,10 +72,29 @@ export default function SettingsPage() {
   async function save() {
     setSaving(true);
     try {
-      const values = await form.validateFields();
+      await form.validateFields();
+      const values = form.getFieldsValue(true) as ConfigForm;
+      const {
+        location,
+        locationJitterMeters,
+        mapProvider,
+        mapApiKeys,
+        device,
+        userAgent,
+        model,
+      } = values;
       const result = await api<AppConfig>("/api/config", {
         method: "PUT",
-        json: { ...values, clearSecrets },
+        json: {
+          location,
+          locationJitterMeters,
+          mapProvider,
+          mapApiKeys,
+          device,
+          userAgent,
+          model,
+          clearSecrets,
+        },
       });
       setConfig(result);
       form.setFieldsValue(result);
@@ -191,6 +210,7 @@ export default function SettingsPage() {
           items={[
             {
               key: "location",
+              forceRender: true,
               label: (
                 <span className="tab-label">
                   <MapPinned size={16} /> 位置与地图
@@ -285,6 +305,7 @@ export default function SettingsPage() {
             },
             {
               key: "device",
+              forceRender: true,
               label: (
                 <span className="tab-label">
                   <Smartphone size={16} /> 设备指纹
@@ -355,6 +376,7 @@ export default function SettingsPage() {
             },
             {
               key: "model",
+              forceRender: true,
               label: (
                 <span className="tab-label">
                   <Bot size={16} /> 周记模型
@@ -407,6 +429,7 @@ export default function SettingsPage() {
             },
             {
               key: "security",
+              forceRender: true,
               label: (
                 <span className="tab-label">
                   <ShieldCheck size={16} /> 访问安全

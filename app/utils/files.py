@@ -308,6 +308,29 @@ def save_session_cache(session_id: str, encrypt_value: str, open_id: str, union_
         pass
 
 
+def mark_session_reauth_required(error: str):
+    """记录恢复链已被服务端拒绝，等待新的小程序 Code。"""
+    import time
+
+    cache = load_session_cache()
+    if not cache:
+        cache = {}
+    cache.update(
+        {
+            "valid": False,
+            "recoveryRequired": True,
+            "recoveryError": str(error or "校友邦登录凭证已失效"),
+            "recoveryUpdatedAt": int(time.time()),
+        }
+    )
+    ensure_dir(os.path.dirname(SESSION_CACHE_FILE))
+    save_json_file(SESSION_CACHE_FILE, cache)
+    try:
+        os.chmod(SESSION_CACHE_FILE, 0o600)
+    except OSError:
+        pass
+
+
 def get_valid_session_cache() -> dict:
     """读取会话缓存；服务端返回未登录时由请求层清除。"""
     cache = load_session_cache()

@@ -21,6 +21,7 @@ from app.config.common import (
     SESSION_CACHE_FILE,
 )
 from app.apis.xybsyw import (
+    CredentialRecoveryError,
     auto_login,
     is_session_expired_error,
 )
@@ -31,6 +32,7 @@ from app.utils.files import (
     get_valid_session_cache,
     list_images,
     load_session_cache,
+    mark_session_reauth_required,
     read_config,
 )
 from app.utils.gotify import get_gotify_config, notify_gotify
@@ -39,8 +41,8 @@ TASK_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name("web_task_history.json")
 SCHEDULE_IMAGE_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name(
     "scheduled_image_history.json"
 )
-CREDENTIAL_RENEW_SECONDS = 20 * 60 * 60
-CREDENTIAL_RETRY_SECONDS = 6 * 60 * 60
+CREDENTIAL_RENEW_SECONDS = 45 * 60
+CREDENTIAL_RETRY_SECONDS = 10 * 60
 
 
 def iso_now() -> str:
@@ -82,23 +84,66 @@ class MemoryLogHandler(logging.Handler):
             self.entries.clear()
 
 
-def _load_history() -> deque[dict]:
-    try:
-        with TASK_HISTORY_FILE.open("r", encoding="utf-8") as handle:
-            values = json.load(handle)
-        if isinstance(values, list):
-            return deque(values[-50:], maxlen=50)
-    except (OSError, json.JSONDecodeError):
-        pass
-    return deque(maxlen=50)
+SENSITIVE_TASK_RESULT_KEYS = {
+    "sessionid",
+    "encryptvalue",
+    "openid",
+    "unionid",
+}
+
+
+def _redact_task_value(value):
+    if isinstance(value, dict):
+        return {
+            key: _redact_task_value(item)
+            for key, item in value.items()
+            if str(key).lower() not in SENSITIVE_TASK_RESULT_KEYS
+        }
+    if isinstance(value, list):
+        return [_redact_task_value(item) for item in value]
+    return value
+
+
+def _sanitize_task_record(record: dict) -> dict:
+    if not isinstance(record, dict):
+        return {}
+    clean = _redact_task_value(copy.deepcopy(record))
+    if clean.get("mode") == "session" and "result" in clean:
+        clean["result"] = {
+            "credentialsUpdated": clean.get("status") == "success",
+        }
+    return clean
 
 
 def _save_history(history: deque[dict]) -> None:
     TASK_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     temporary = TASK_HISTORY_FILE.with_suffix(".tmp")
     with temporary.open("w", encoding="utf-8") as handle:
-        json.dump(list(history), handle, ensure_ascii=False, indent=2)
+        json.dump(
+            [_sanitize_task_record(item) for item in history],
+            handle,
+            ensure_ascii=False,
+            indent=2,
+        )
+    os.chmod(temporary, 0o600)
     os.replace(temporary, TASK_HISTORY_FILE)
+
+
+def _load_history() -> deque[dict]:
+    try:
+        with TASK_HISTORY_FILE.open("r", encoding="utf-8") as handle:
+            values = json.load(handle)
+        if isinstance(values, list):
+            original = values[-50:]
+            sanitized = [_sanitize_task_record(item) for item in original]
+            history = deque(sanitized, maxlen=50)
+            if sanitized != original:
+                _save_history(history)
+                logging.warning("已从任务历史中移除登录凭证字段")
+            return history
+    except (OSError, json.JSONDecodeError):
+        pass
+    return deque(maxlen=50)
 
 
 class ImageRotation:
@@ -172,6 +217,8 @@ class TaskManager:
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None
         self.image_rotation = image_rotation or ImageRotation()
+        self.credential_guard = None
+        self.credentials_changed_callback = None
         self.history = _load_history()
         self.state = {
             "id": "",
@@ -190,7 +237,15 @@ class TaskManager:
 
     def history_snapshot(self) -> list[dict]:
         with self.lock:
-            return list(reversed(copy.deepcopy(self.history)))
+            return list(
+                reversed(
+                    [_sanitize_task_record(item) for item in self.history]
+                )
+            )
+
+    def configure_credentials(self, *, guard, changed_callback) -> None:
+        self.credential_guard = guard
+        self.credentials_changed_callback = changed_callback
 
     def _start(self, *, mode: str, action: str, source: str, target) -> dict:
         with self.lock:
@@ -227,6 +282,10 @@ class TaskManager:
         with self.lock:
             if self.state["status"] in {"queued", "running", "stopping"}:
                 raise RuntimeError("已有任务正在执行")
+            if self.credential_guard is not None:
+                allowed, reason = self.credential_guard()
+                if not allowed:
+                    raise RuntimeError(reason)
             if mode.startswith("photo_") and random_image:
                 image_path = self.image_rotation.choose(remember=source == "auto")
                 logging.info(
@@ -291,13 +350,25 @@ class TaskManager:
             self.state["message"] = message
             self.state["finishedAt"] = iso_now()
             if result:
-                self.state["result"] = result
-            record = copy.deepcopy(self.state)
+                if self.state.get("mode") == "session":
+                    self.state["result"] = {"credentialsUpdated": success}
+                else:
+                    self.state["result"] = _redact_task_value(result)
+            record = _sanitize_task_record(self.state)
             self.history.append(record)
             try:
                 _save_history(self.history)
             except OSError as exc:
                 logging.warning("保存任务历史失败: %s", exc)
+        if (
+            success
+            and record.get("mode") == "session"
+            and self.credentials_changed_callback is not None
+        ):
+            try:
+                self.credentials_changed_callback()
+            except Exception:
+                logging.exception("登录凭证刷新后更新守护状态失败")
         self._notify_result(record, success)
 
     @staticmethod
@@ -524,7 +595,7 @@ class Scheduler:
 
 
 class SessionKeeper:
-    """在 encryptValue 失效窗口前低频轮换登录凭证。"""
+    """在 SESSION 有效期间主动轮换，并保留失效后的恢复链。"""
 
     def __init__(self, task_manager: TaskManager):
         self.task_manager = task_manager
@@ -553,7 +624,7 @@ class SessionKeeper:
         )
 
     @staticmethod
-    def _cache_details() -> tuple[dict, bool, int]:
+    def _cache_details() -> tuple[dict, bool, int, bool]:
         cache = load_session_cache()
         available = bool(
             cache.get("encryptValue")
@@ -564,7 +635,7 @@ class SessionKeeper:
             timestamp = int(cache.get("timestamp") or 0)
         except (TypeError, ValueError):
             timestamp = 0
-        return cache, available, timestamp
+        return cache, available, timestamp, bool(cache.get("recoveryRequired"))
 
     def start(self) -> None:
         self.thread.start()
@@ -574,8 +645,57 @@ class SessionKeeper:
         if self.thread.is_alive():
             self.thread.join(timeout=2)
 
+    def notify_credentials_changed(self) -> None:
+        self.retry_at = 0
+        self._tick()
+
+    def can_run_tasks(self) -> tuple[bool, str]:
+        cache, available, timestamp, reauth_required = self._cache_details()
+        if reauth_required:
+            return (
+                False,
+                "校友邦自动恢复已被服务端拒绝，请用新的小程序 Code 重新初始化",
+            )
+        if not available or not get_valid_session_cache():
+            return False, "校友邦登录凭证不可用，请先完成一次初始化"
+
+        now = int(time.time())
+        with self.lock:
+            status = self.state.get("status")
+        if status == "renewing":
+            return False, "校友邦登录凭证正在维护，请稍后再执行"
+        if status == "retrying":
+            return False, "校友邦登录凭证维护失败，正在等待重试"
+        if timestamp <= 0 or now >= timestamp + CREDENTIAL_RENEW_SECONDS:
+            return False, "校友邦登录凭证已到轮换时间，等待后台维护完成"
+        return True, ""
+
+    def _set_retry(self, now: int, error: Exception) -> None:
+        self.retry_at = now + CREDENTIAL_RETRY_SECONDS
+        with self.lock:
+            self.state.update(
+                status="retrying",
+                nextAttemptAt=self._iso(self.retry_at),
+                lastError=str(error),
+            )
+        logging.warning("校友邦凭证维护失败，10 分钟后重试: %s", error)
+
+    def _set_reauth_required(self, error: str) -> None:
+        self.retry_at = 0
+        with self.lock:
+            self.state.update(
+                status="reauth_required",
+                nextAttemptAt=None,
+                lastError=str(error),
+            )
+
     def _tick(self) -> None:
-        cache, available, timestamp = self._cache_details()
+        cache, available, timestamp, reauth_required = self._cache_details()
+        if reauth_required:
+            self._set_reauth_required(
+                str(cache.get("recoveryError") or "需要重新初始化校友邦登录凭证")
+            )
+            return
         if not available:
             with self.lock:
                 self.state.update(
@@ -616,15 +736,19 @@ class SessionKeeper:
         try:
             config = read_config(CONFIG_FILE)
             session = auto_login(config["input"], cache.get("sessionId"))
-        except Exception as exc:
-            self.retry_at = now + CREDENTIAL_RETRY_SECONDS
-            with self.lock:
-                self.state.update(
-                    status="retrying",
-                    nextAttemptAt=self._iso(self.retry_at),
-                    lastError=str(exc),
+        except CredentialRecoveryError as exc:
+            if exc.reauth_required:
+                mark_session_reauth_required(str(exc))
+                self._set_reauth_required(str(exc))
+                logging.error(
+                    "校友邦自动恢复已被服务端拒绝，需使用新的小程序 Code 重新初始化: %s",
+                    exc,
                 )
-            logging.warning("校友邦凭证维护失败，6 小时后重试: %s", exc)
+            else:
+                self._set_retry(now, exc)
+            return
+        except Exception as exc:
+            self._set_retry(now, exc)
             return
 
         self.retry_at = 0
@@ -651,14 +775,25 @@ class SessionKeeper:
                 break
 
     def snapshot(self) -> dict:
-        _, available, _ = self._cache_details()
+        cache, available, _, reauth_required = self._cache_details()
         with self.lock:
-            return {
+            snapshot = {
                 "enabled": True,
-                "credentialAvailable": available,
+                "credentialAvailable": available and not reauth_required,
                 "intervalMinutes": CREDENTIAL_RENEW_SECONDS // 60,
                 **copy.deepcopy(self.state),
             }
+        if reauth_required:
+            snapshot.update(
+                status="reauth_required",
+                credentialAvailable=False,
+                nextAttemptAt=None,
+                lastError=str(
+                    cache.get("recoveryError")
+                    or "需要重新初始化校友邦登录凭证"
+                ),
+            )
+        return snapshot
 
 
 class CaptureManager:
@@ -884,6 +1019,10 @@ class Runtime:
         self.tasks = TaskManager(self.image_rotation)
         self.scheduler = Scheduler(self.tasks)
         self.session_keeper = SessionKeeper(self.tasks)
+        self.tasks.configure_credentials(
+            guard=self.session_keeper.can_run_tasks,
+            changed_callback=self.session_keeper.notify_credentials_changed,
+        )
         self.capture = CaptureManager(self.tasks)
 
     def start(self) -> None:
@@ -891,8 +1030,8 @@ class Runtime:
         root_logger.setLevel(logging.INFO)
         if self.logs not in root_logger.handlers:
             root_logger.addHandler(self.logs)
-        self.scheduler.start()
         self.session_keeper.start()
+        self.scheduler.start()
         logging.info("SignSignIn Linux 服务已启动")
 
     def stop(self) -> None:
@@ -913,18 +1052,23 @@ class Runtime:
     def status(self) -> dict:
         session = get_valid_session_cache()
         raw_session = load_session_cache()
+        reauth_required = bool(raw_session.get("recoveryRequired"))
+        auto_renew = self.session_keeper.snapshot()
+        usable, _ = self.session_keeper.can_run_tasks()
         cached_at = None
         if raw_session.get("timestamp"):
             cached_at = datetime.fromtimestamp(
                 int(raw_session["timestamp"])
             ).astimezone().isoformat(timespec="seconds")
-        renewal_available = bool(
+        renewal_available = not reauth_required and bool(
             raw_session.get("encryptValue")
             and raw_session.get("openId")
             and raw_session.get("unionId")
         )
-        auto_login_available = bool(raw_session.get("encryptValue"))
-        wechat_recovery_available = bool(
+        auto_login_available = not reauth_required and bool(
+            raw_session.get("encryptValue")
+        )
+        wechat_recovery_available = not reauth_required and bool(
             raw_session.get("openId") and raw_session.get("unionId")
         )
         return {
@@ -932,6 +1076,8 @@ class Runtime:
             "pid": os.getpid(),
             "session": {
                 "valid": bool(session),
+                "usable": usable,
+                "reauthRequired": reauth_required,
                 "renewalAvailable": renewal_available,
                 "autoLoginAvailable": auto_login_available,
                 "wechatRecoveryAvailable": wechat_recovery_available,
@@ -939,7 +1085,7 @@ class Runtime:
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),
                 "cachedAt": cached_at,
-                "autoRenew": self.session_keeper.snapshot(),
+                "autoRenew": auto_renew,
             },
             "task": self.tasks.snapshot(),
             "scheduler": self.scheduler.snapshot(),

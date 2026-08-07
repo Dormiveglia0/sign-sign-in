@@ -78,6 +78,11 @@ function taskStateTag(status?: string) {
   return <StateTag state="neutral">待命</StateTag>;
 }
 
+function formatRenewInterval(minutes: number) {
+  if (minutes < 60 || minutes % 60 !== 0) return `${minutes} 分钟`;
+  return `${minutes / 60} 小时`;
+}
+
 export default function Dashboard() {
   const { message } = App.useApp();
   const { status, statusError, refreshStatus } = useWorkspace();
@@ -95,26 +100,33 @@ export default function Dashboard() {
     status?.task.status || "",
   );
   const photoMode = mode.startsWith("photo_");
-  const credentialReadyCount = [
-    status?.session.valid,
-    status?.session.autoLoginAvailable,
-    status?.session.wechatRecoveryAvailable,
-  ].filter(Boolean).length;
+  const reauthRequired = Boolean(status?.session.reauthRequired);
+  const credentialReadyCount = reauthRequired
+    ? 0
+    : [
+        status?.session.usable,
+        status?.session.autoLoginAvailable,
+        status?.session.wechatRecoveryAvailable,
+      ].filter(Boolean).length;
   const credentialStages = [
     {
       step: "01",
       title: "当前 SESSION",
-      detail: status?.session.valid
+      detail: reauthRequired
+        ? "服务端已拒绝恢复，需要新的小程序 Code"
+        : status?.session.usable
         ? `正在使用 · 尾号 ${status.session.suffix}`
         : status?.session.renewalAvailable
-          ? "失效时自动进入恢复链"
+          ? "后台维护完成后恢复执行"
           : "等待首次初始化",
-      state: status?.session.valid
+      state: reauthRequired
+        ? "需重置"
+        : status?.session.usable
         ? "当前使用"
         : status?.session.renewalAvailable
-          ? "按需恢复"
+          ? "维护中"
           : "未就绪",
-      tone: status?.session.valid
+      tone: status?.session.usable
         ? "active"
         : status?.session.renewalAvailable
           ? "standby"
@@ -123,17 +135,25 @@ export default function Dashboard() {
     {
       step: "02",
       title: "AutoLogin 静默换新",
-      detail: `每 ${Math.round(
-        (status?.session.autoRenew.intervalMinutes || 1200) / 60,
-      )} 小时提前轮换 encryptValue`,
-      state: status?.session.autoLoginAvailable ? "已备妥" : "未就绪",
+      detail: `每 ${formatRenewInterval(
+        status?.session.autoRenew.intervalMinutes || 1200,
+      )}提前轮换 encryptValue`,
+      state: reauthRequired
+        ? "已失效"
+        : status?.session.autoLoginAvailable
+          ? "已备妥"
+          : "未就绪",
       tone: status?.session.autoLoginAvailable ? "ready" : "missing",
     },
     {
       step: "03",
       title: "微信绑定自动恢复",
       detail: "第二层失效时，使用已绑定身份重新签发凭证",
-      state: status?.session.wechatRecoveryAvailable ? "已备妥" : "未就绪",
+      state: reauthRequired
+        ? "已失效"
+        : status?.session.wechatRecoveryAvailable
+          ? "已备妥"
+          : "未就绪",
       tone: status?.session.wechatRecoveryAvailable ? "ready" : "missing",
     },
   ];
@@ -257,7 +277,9 @@ export default function Dashboard() {
       {
         label: "校友邦凭证",
         value:
-          status?.session.autoRenew.status === "renewing"
+          status?.session.reauthRequired
+            ? "需要重新初始化"
+            : status?.session.autoRenew.status === "renewing"
             ? "正在维护"
             : status?.session.autoRenew.status === "retrying"
               ? "维护异常"
@@ -265,13 +287,16 @@ export default function Dashboard() {
                 ? "三层守护中"
                 : "未初始化",
         detail:
-          status?.session.autoRenew.nextAttemptAt
+          status?.session.reauthRequired
+            ? "恢复链已被服务端拒绝，请提交新的 Code"
+            : status?.session.autoRenew.nextAttemptAt
             ? `下次 ${formatDateTime(status.session.autoRenew.nextAttemptAt)}`
             : status?.session.renewalAvailable
               ? "AutoLogin + 微信绑定恢复已就绪"
               : "恢复链等待首次激活",
         icon: KeyRound,
         tone:
+          status?.session.reauthRequired ||
           status?.session.autoRenew.status === "retrying"
             ? "danger"
             : status?.session.renewalAvailable
@@ -432,15 +457,15 @@ export default function Dashboard() {
               <span>校友邦凭证</span>
               <strong
                 className={
-                  status?.session.valid || status?.session.renewalAvailable
-                    ? "good"
-                    : "warn"
+                  status?.session.usable ? "good" : "warn"
                 }
               >
-                {status?.session.valid
+                {status?.session.usable
                   ? "已就绪"
-                  : status?.session.renewalAvailable
-                    ? "执行前自动续期"
+                  : status?.session.reauthRequired
+                    ? "需要重新初始化"
+                    : status?.session.renewalAvailable
+                      ? "等待凭证维护"
                     : "未初始化"}
               </strong>
             </div>
@@ -473,9 +498,7 @@ export default function Dashboard() {
                 type="primary"
                 icon={<Play size={16} />}
                 loading={busy}
-                disabled={
-                  !(status?.session.valid || status?.session.renewalAvailable)
-                }
+                disabled={!status?.session.usable}
                 onClick={startTask}
               >
                 开始执行
@@ -502,11 +525,12 @@ export default function Dashboard() {
         <Card className="session-card">
           <SectionHeading
             title="登录凭证守护"
-            description="完整恢复链持续可见；正常情况下无需每日重新获取 Code。"
+            description="优先自动恢复；服务端拒绝恢复时会明确要求重新初始化。"
             extra={<ShieldCheck size={19} />}
           />
           <div
             className={`credential-guard ${
+              status?.session.reauthRequired ||
               status?.session.autoRenew.status === "retrying"
                 ? "danger"
                 : status?.session.renewalAvailable
@@ -519,7 +543,9 @@ export default function Dashboard() {
                 <ShieldCheck size={14} /> CREDENTIAL GUARD
               </span>
               <strong>
-                {status?.session.autoRenew.status === "renewing"
+                {status?.session.reauthRequired
+                  ? "需要新的小程序 Code"
+                  : status?.session.autoRenew.status === "renewing"
                   ? "正在维护凭证"
                   : status?.session.autoRenew.status === "retrying"
                     ? "自动恢复等待重试"
@@ -568,15 +594,21 @@ export default function Dashboard() {
           </div>
           {status?.session.autoRenew.lastError && (
             <Alert
-              type="warning"
+              type={status.session.reauthRequired ? "error" : "warning"}
               showIcon
-              message="最近一次凭证维护失败"
+              message={
+                status.session.reauthRequired
+                  ? "自动恢复已停止"
+                  : "最近一次凭证维护失败"
+              }
               description={status.session.autoRenew.lastError}
             />
           )}
           <div className="session-card-actions">
             <Button block onClick={() => setSessionOpen(true)}>
-              {status?.session.renewalAvailable
+              {status?.session.reauthRequired
+                ? "使用新 Code 重新初始化"
+                : status?.session.renewalAvailable
                 ? "管理或重新初始化"
                 : "首次初始化凭证"}
             </Button>
@@ -661,15 +693,25 @@ export default function Dashboard() {
         }
       >
         <Alert
-          type={status?.session.renewalAvailable ? "success" : "info"}
+          type={
+            status?.session.reauthRequired
+              ? "error"
+              : status?.session.renewalAvailable
+                ? "success"
+                : "info"
+          }
           showIcon
           message={
-            status?.session.renewalAvailable
+            status?.session.reauthRequired
+              ? "需要一个新的小程序 Code"
+              : status?.session.renewalAvailable
               ? "后续无需再手动更新"
               : "首次初始化需要一个有效 Code"
           }
           description={
-            status?.session.renewalAvailable
+            status?.session.reauthRequired
+              ? "AutoLogin 与微信绑定恢复均已被服务端拒绝。提交新的 wx.login Code 后，自动守护会重新启用。"
+              : status?.session.renewalAvailable
               ? "服务器已保存小程序登录凭证，会按源码中的 AutoLogin 流程自动换取新 SESSION。下面的方式只在你主动退出、解绑或凭证被服务端撤销后才需要。"
               : "首次成功登录后会保存 AutoLogin 凭证，后续 SESSION 失效将由服务器静默续期。"
           }
