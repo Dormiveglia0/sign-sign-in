@@ -69,6 +69,12 @@ const modes = [
   },
 ] as const;
 
+interface AccountCaptchaChallenge {
+  challengeId: string;
+  image: string;
+  expiresAt: number;
+}
+
 function taskStateTag(status?: string) {
   if (status === "success") return <StateTag state="success">成功</StateTag>;
   if (status === "failed") return <StateTag state="danger">失败</StateTag>;
@@ -88,13 +94,24 @@ export default function Dashboard() {
   const [history, setHistory] = useState<TaskState[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [sessionOpen, setSessionOpen] = useState(false);
+  const [sessionTab, setSessionTab] = useState("manual");
   const [code, setCode] = useState("");
+  const [accountUsername, setAccountUsername] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+  const [accountPicCode, setAccountPicCode] = useState("");
+  const [accountChallenge, setAccountChallenge] =
+    useState<AccountCaptchaChallenge | null>(null);
+  const [accountBusy, setAccountBusy] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const activeTask = ["queued", "running", "stopping"].includes(
     status?.task.status || "",
   );
   const photoMode = mode.startsWith("photo_");
+  const sessionReady = Boolean(status?.session.valid);
+  const sessionNeedsReauth =
+    status?.session.autoRenew.status === "reauth_required";
+  const sessionKeeper = status?.session.autoRenew;
 
   async function loadSupportData() {
     const results = await Promise.allSettled([
@@ -170,6 +187,75 @@ export default function Dashboard() {
     }
   }
 
+  async function loadAccountCaptcha(showSuccess = false) {
+    setAccountBusy(true);
+    try {
+      const challenge = await api<AccountCaptchaChallenge>(
+        "/api/session/account/captcha",
+        { method: "POST" },
+      );
+      setAccountChallenge(challenge);
+      setAccountPicCode("");
+      if (showSuccess) message.success("图形验证码已刷新");
+      return true;
+    } catch (error) {
+      setAccountChallenge(null);
+      message.error(
+        error instanceof Error ? error.message : "获取图形验证码失败",
+      );
+      return false;
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
+  async function recoverWithAccount() {
+    if (!accountChallenge) {
+      message.warning("请先获取图形验证码");
+      return;
+    }
+    setAccountBusy(true);
+    try {
+      await api("/api/session/account/login", {
+        method: "POST",
+        json: {
+          challengeId: accountChallenge.challengeId,
+          username: accountUsername.trim(),
+          password: accountPassword,
+          picCode: accountPicCode.trim(),
+        },
+      });
+      setAccountPassword("");
+      setAccountPicCode("");
+      setAccountChallenge(null);
+      setSessionOpen(false);
+      message.success("账号密码验证成功，校友邦 SESSION 已恢复");
+      await refreshStatus();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "账号登录失败");
+      setAccountChallenge(null);
+      setAccountPicCode("");
+      await loadAccountCaptcha();
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
+  function openSessionManager() {
+    const nextTab = sessionNeedsReauth ? "account" : "manual";
+    setSessionTab(nextTab);
+    setSessionOpen(true);
+    if (nextTab === "account" && !accountChallenge) {
+      void loadAccountCaptcha();
+    }
+  }
+
+  function closeSessionManager() {
+    setSessionOpen(false);
+    setAccountPassword("");
+    setAccountPicCode("");
+  }
+
   async function startCapture() {
     setBusy(true);
     try {
@@ -214,14 +300,27 @@ export default function Dashboard() {
       },
       {
         label: "校友邦凭证",
-        value: status?.session.renewalAvailable
-          ? "按需续期已就绪"
-          : "未初始化",
-        detail: status?.session.cachedAt
-          ? `更新于 ${formatDateTime(status.session.cachedAt)}`
-          : "首次使用需要一个有效 Code",
+        value: sessionReady
+          ? sessionKeeper?.status === "renewing"
+            ? "正在主动续期"
+            : sessionKeeper?.status === "retrying"
+              ? "保活重试中"
+              : "主动保活中"
+          : sessionNeedsReauth
+            ? "需要重新初始化"
+            : "未初始化",
+        detail:
+          sessionReady && sessionKeeper?.nextAttemptAt
+            ? `下次保活 ${formatDateTime(sessionKeeper.nextAttemptAt)}`
+            : status?.session.cachedAt
+              ? `更新于 ${formatDateTime(status.session.cachedAt)}`
+              : "可用账号密码或有效 Code 初始化",
         icon: KeyRound,
-        tone: status?.session.renewalAvailable ? "success" : "warning",
+        tone: sessionReady
+          ? sessionKeeper?.status === "retrying"
+            ? "warning"
+            : "success"
+          : "warning",
       },
       {
         label: "定时调度",
@@ -376,16 +475,12 @@ export default function Dashboard() {
             <div>
               <span>校友邦凭证</span>
               <strong
-                className={
-                  status?.session.valid || status?.session.renewalAvailable
-                    ? "good"
-                    : "warn"
-                }
+                className={sessionReady ? "good" : "warn"}
               >
-                {status?.session.valid
+                {sessionReady
                   ? "已就绪"
-                  : status?.session.renewalAvailable
-                    ? "执行前自动续期"
+                  : sessionNeedsReauth
+                    ? "需要重新初始化"
                     : "未初始化"}
               </strong>
             </div>
@@ -398,7 +493,7 @@ export default function Dashboard() {
           <div className="run-actions">
             <Button
               icon={<KeyRound size={16} />}
-              onClick={() => setSessionOpen(true)}
+              onClick={openSessionManager}
               disabled={activeTask}
             >
               管理校友邦凭证
@@ -418,9 +513,7 @@ export default function Dashboard() {
                 type="primary"
                 icon={<Play size={16} />}
                 loading={busy}
-                disabled={
-                  !(status?.session.valid || status?.session.renewalAvailable)
-                }
+                disabled={!sessionReady}
                 onClick={startTask}
               >
                 开始执行
@@ -446,29 +539,37 @@ export default function Dashboard() {
 
         <Card className="session-card">
           <SectionHeading
-            title="校友邦自动续期"
-            description="仅在校友邦明确判定 SESSION 失效时自动换新并重试，不做定时轮询。"
+            title="校友邦会话保活"
+            description={`在 SESSION 仍有效时每 ${sessionKeeper?.intervalMinutes || 45} 分钟主动换新；失效后不会伪装成可恢复状态。`}
             extra={<ShieldCheck size={19} />}
           />
           <div className="session-orbit">
             <div
               className={
-                status?.session.renewalAvailable
-                  ? "session-ring valid"
-                  : "session-ring"
+                sessionReady ? "session-ring valid" : "session-ring"
               }
             >
               <KeyRound size={28} />
             </div>
             <strong>
-              {status?.session.renewalAvailable
-                ? "按需自动续期已就绪"
-                : "尚未初始化"}
+              {sessionReady
+                ? sessionKeeper?.status === "renewing"
+                  ? "正在主动换新 SESSION"
+                  : sessionKeeper?.status === "retrying"
+                    ? "主动保活正在重试"
+                    : "主动保活运行中"
+                : sessionNeedsReauth
+                  ? "SESSION 已失效"
+                  : "尚未初始化"}
             </strong>
             <span>
-              {status?.session.renewalAvailable
-                ? "服务器平时不会主动换 SESSION；失效时会自动续期并重试当前任务"
-                : "需要先用一个有效 Code 初始化，之后无需日常手动操作"}
+              {sessionReady
+                ? sessionKeeper?.nextAttemptAt
+                  ? `预计 ${formatDateTime(sessionKeeper.nextAttemptAt)} 再次保活`
+                  : "保活调度正在同步"
+                : sessionNeedsReauth
+                  ? "可用账号密码和图形验证码恢复，或提交新的小程序 Code"
+                  : "需要先用账号密码或有效 Code 初始化"}
             </span>
             <div className="session-detail-grid">
               <div>
@@ -479,22 +580,37 @@ export default function Dashboard() {
               </div>
               <div>
                 <span>续期策略</span>
-                <strong>服务端失效时触发</strong>
+                <strong>
+                  每 {sessionKeeper?.intervalMinutes || 45} 分钟主动换新
+                </strong>
               </div>
               <div>
                 <span>当前 SESSION</span>
                 <strong>
-                  {status?.session.valid
-                    ? `有效 · 尾号 ${status.session.suffix}`
-                    : status?.session.renewalAvailable
-                      ? "等待自动换新"
+                  {sessionReady
+                    ? `有效 · 尾号 ${status?.session.suffix || "—"}`
+                    : sessionNeedsReauth
+                      ? "已失效 · 可人工恢复"
                       : "不可用"}
                 </strong>
               </div>
             </div>
           </div>
+          {sessionKeeper?.lastError && (
+            <Alert
+              type={sessionNeedsReauth ? "error" : "warning"}
+              showIcon
+              message={
+                sessionNeedsReauth
+                  ? "需要人工恢复登录"
+                  : "最近一次主动保活失败"
+              }
+              description={sessionKeeper.lastError}
+              style={{ marginTop: 16 }}
+            />
+          )}
           <div className="session-card-actions">
-            <Button block onClick={() => setSessionOpen(true)}>
+            <Button block onClick={openSessionManager}>
               初始化或恢复凭证
             </Button>
           </div>
@@ -567,7 +683,7 @@ export default function Dashboard() {
 
       <Modal
         open={sessionOpen}
-        onCancel={() => setSessionOpen(false)}
+        onCancel={closeSessionManager}
         footer={null}
         width={700}
         title={
@@ -578,22 +694,129 @@ export default function Dashboard() {
         }
       >
         <Alert
-          type={status?.session.renewalAvailable ? "success" : "info"}
+          type={sessionReady ? "success" : sessionNeedsReauth ? "error" : "info"}
           showIcon
           message={
-            status?.session.renewalAvailable
-              ? "后续无需再手动更新"
-              : "首次初始化需要一个有效 Code"
+            sessionReady
+              ? "SESSION 主动保活已启用"
+              : sessionNeedsReauth
+                ? "SESSION 已失效，可使用账号密码恢复"
+                : "首次初始化可使用账号密码或有效 Code"
           }
           description={
-            status?.session.renewalAvailable
-              ? "服务器已保存小程序登录凭证，会按源码中的 AutoLogin 流程自动换取新 SESSION。下面的方式只在你主动退出、解绑或凭证被服务端撤销后才需要。"
-              : "首次成功登录后会保存 AutoLogin 凭证，后续 SESSION 失效将由服务器静默续期。"
+            sessionReady
+              ? "服务器会在 SESSION 仍有效时每 45 分钟主动换新。若最终失效，可使用账号密码和图形验证码恢复，也可重新获取 Code。"
+              : sessionNeedsReauth
+                ? "现有 SESSION 已失效，缓存字段不能在过期后静默恢复；推荐使用账号密码和图形验证码换取新凭证，也可提交新的小程序 Code。"
+                : "首次成功登录后会保存 AutoLogin 凭证，并在 SESSION 有效期内每 45 分钟主动换新。"
           }
           style={{ marginBottom: 16 }}
         />
         <Tabs
+          activeKey={sessionTab}
+          onChange={(key) => {
+            setSessionTab(key);
+            if (key === "account" && !accountChallenge && !accountBusy) {
+              void loadAccountCaptcha();
+            }
+          }}
           items={[
+            {
+              key: "account",
+              label: "账号密码（推荐）",
+              children: (
+                <div className="session-tab account-login-tab">
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="不依赖微信运行时"
+                    description="按 594 版小程序的 login.action 流程登录。图形验证码由服务端强制要求；明文密码只用于本次请求，不写入配置、缓存或日志。"
+                  />
+                  <label htmlFor="xyb-account-username">校友邦账号</label>
+                  <Input
+                    id="xyb-account-username"
+                    value={accountUsername}
+                    onChange={(event) => setAccountUsername(event.target.value)}
+                    placeholder="手机号或校友邦账号"
+                    autoComplete="username"
+                    maxLength={64}
+                  />
+                  <label htmlFor="xyb-account-password">校友邦密码</label>
+                  <Input.Password
+                    id="xyb-account-password"
+                    value={accountPassword}
+                    onChange={(event) => setAccountPassword(event.target.value)}
+                    placeholder="输入校友邦密码"
+                    autoComplete="current-password"
+                    maxLength={256}
+                  />
+                  <label htmlFor="xyb-account-captcha">图形验证码</label>
+                  <div className="account-captcha-row">
+                    <Input
+                      id="xyb-account-captcha"
+                      value={accountPicCode}
+                      onChange={(event) => setAccountPicCode(event.target.value)}
+                      placeholder="输入右侧验证码"
+                      autoComplete="off"
+                      maxLength={32}
+                      onPressEnter={() => {
+                        if (
+                          accountChallenge &&
+                          accountUsername.trim() &&
+                          accountPassword &&
+                          accountPicCode.trim()
+                        ) {
+                          void recoverWithAccount();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="account-captcha-image"
+                      disabled={accountBusy}
+                      onClick={() => void loadAccountCaptcha(true)}
+                      aria-label="刷新图形验证码"
+                    >
+                      {accountChallenge ? (
+                        <img
+                          src={accountChallenge.image}
+                          alt="校友邦图形验证码"
+                        />
+                      ) : (
+                        <span>{accountBusy ? "获取中…" : "获取验证码"}</span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="account-challenge-meta">
+                    <span>点击验证码图片可刷新</span>
+                    {accountChallenge && (
+                      <span>
+                        有效至{" "}
+                        {formatDateTime(
+                          new Date(
+                            accountChallenge.expiresAt * 1000,
+                          ).toISOString(),
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    type="primary"
+                    block
+                    loading={accountBusy}
+                    disabled={
+                      !accountChallenge ||
+                      !accountUsername.trim() ||
+                      !accountPassword ||
+                      !accountPicCode.trim()
+                    }
+                    onClick={recoverWithAccount}
+                  >
+                    验证并恢复 SESSION
+                  </Button>
+                </div>
+              ),
+            },
             {
               key: "manual",
               label: "输入 Code",

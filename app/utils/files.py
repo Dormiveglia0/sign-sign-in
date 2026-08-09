@@ -288,7 +288,13 @@ def load_session_cache() -> dict:
         return {}
 
 
-def save_session_cache(session_id: str, encrypt_value: str, open_id: str, union_id: str, trainee_id: str = None):
+def save_session_cache(
+    session_id: str,
+    encrypt_value: str,
+    open_id: str = "",
+    union_id: str = "",
+    trainee_id: str = None,
+):
     """保存会话缓存，由服务端失效响应决定何时清除。"""
     import time
     cache = {
@@ -316,7 +322,9 @@ def get_valid_session_cache() -> dict:
     if cache.get("valid") is False:
         return None
 
-    required = ("sessionId", "encryptValue", "openId", "unionId")
+    # 594 版账号密码登录允许 openId/unionId 为空；有效会话的必要字段
+    # 只有服务端签发的 sessionId 和 encryptValue。
+    required = ("sessionId", "encryptValue")
     if not all(cache.get(key) for key in required):
         return None
 
@@ -330,7 +338,7 @@ def get_valid_session_cache() -> dict:
 
 
 def invalidate_session_cache():
-    """保留静默续期凭证，只把当前 SESSION 标记为失效。"""
+    """保留诊断字段，只把当前 SESSION 标记为失效。"""
     cache = load_session_cache()
     if cache:
         cache["valid"] = False

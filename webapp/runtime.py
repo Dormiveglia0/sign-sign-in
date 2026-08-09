@@ -21,6 +21,7 @@ from app.config.common import (
     SESSION_CACHE_FILE,
 )
 from app.apis.xybsyw import (
+    SESSION_REAUTH_REQUIRED,
     auto_login,
     is_session_expired_error,
 )
@@ -167,6 +168,7 @@ class ImageRotation:
 class TaskManager:
     def __init__(self, image_rotation: ImageRotation | None = None):
         self.lock = threading.RLock()
+        self.session_lock = threading.Lock()
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None
         self.image_rotation = image_rotation or ImageRotation()
@@ -222,23 +224,26 @@ class TaskManager:
         source: str = "manual",
         random_image: bool = False,
     ) -> dict:
-        with self.lock:
-            if self.state["status"] in {"queued", "running", "stopping"}:
-                raise RuntimeError("已有任务正在执行")
-            if mode.startswith("photo_") and random_image:
-                image_path = self.image_rotation.choose(remember=source == "auto")
-                logging.info(
-                    "🎲 %s随机图片: %s",
-                    "定时任务不重复" if source == "auto" else "手动任务",
-                    Path(image_path).name,
+        with self.session_lock:
+            if not get_valid_session_cache():
+                raise RuntimeError(SESSION_REAUTH_REQUIRED)
+            with self.lock:
+                if self.state["status"] in {"queued", "running", "stopping"}:
+                    raise RuntimeError("已有任务正在执行")
+                if mode.startswith("photo_") and random_image:
+                    image_path = self.image_rotation.choose(remember=source == "auto")
+                    logging.info(
+                        "🎲 %s随机图片: %s",
+                        "定时任务不重复" if source == "auto" else "手动任务",
+                        Path(image_path).name,
+                    )
+                option = mode_to_option(mode, image_path)
+                return self._start(
+                    mode=mode,
+                    action=option["action"],
+                    source=source,
+                    target=lambda flow: flow.run(option),
                 )
-            option = mode_to_option(mode, image_path)
-            return self._start(
-                mode=mode,
-                action=option["action"],
-                source=source,
-                target=lambda flow: flow.run(option),
-            )
 
     def start_session_refresh(self, code: str, source: str = "manual") -> dict:
         return self._start(
@@ -258,18 +263,7 @@ class TaskManager:
         success = False
         result = None
         try:
-            try:
-                result = target(SignFlow(stop_event=self.stop_event))
-            except Exception as initial_error:
-                if not is_session_expired_error(initial_error):
-                    raise
-                with self.lock:
-                    if self.state["id"] == task_id:
-                        self.state["message"] = "SESSION 已失效，正在静默续期"
-                logging.warning("🔄 SESSION 已失效，正在静默续期")
-                config = read_config(CONFIG_FILE)
-                auto_login(config["input"])
-                result = target(SignFlow(stop_event=self.stop_event))
+            result = target(SignFlow(stop_event=self.stop_event))
             status = "success"
             message = "执行完毕"
             success = True
@@ -279,7 +273,11 @@ class TaskManager:
             logging.warning("🚫 任务已停止")
         except Exception as exc:
             status = "failed"
-            message = str(exc)
+            message = (
+                SESSION_REAUTH_REQUIRED
+                if is_session_expired_error(exc)
+                else str(exc)
+            )
             logging.error("❌ 任务失败: %s", message)
 
         with self.lock:
@@ -737,11 +735,246 @@ class CaptureManager:
         return self.snapshot()
 
 
+class SessionKeeper:
+    """在 SESSION 仍有效时周期性换新，避免等到过期后再恢复。"""
+
+    def __init__(
+        self,
+        task_manager: TaskManager,
+        *,
+        interval_minutes: int = 45,
+        retry_minutes: int = 10,
+    ):
+        self.task_manager = task_manager
+        self.interval_minutes = max(5, int(interval_minutes))
+        self.retry_minutes = max(1, int(retry_minutes))
+        self.stop_event = threading.Event()
+        self.lock = threading.RLock()
+        self.thread: threading.Thread | None = None
+        self.retry_after = 0.0
+        self.last_cache_timestamp = 0
+        self.state = {
+            "enabled": True,
+            "credentialAvailable": False,
+            "intervalMinutes": self.interval_minutes,
+            "status": "not_initialized",
+            "lastAttemptAt": None,
+            "lastSuccessAt": None,
+            "nextAttemptAt": None,
+            "lastError": "",
+        }
+
+    @staticmethod
+    def _timestamp(value) -> int:
+        try:
+            return max(0, int(value or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _iso_at(timestamp: float | int) -> str | None:
+        if not timestamp:
+            return None
+        return (
+            datetime.fromtimestamp(timestamp)
+            .astimezone()
+            .isoformat(timespec="seconds")
+        )
+
+    @staticmethod
+    def _has_credentials(cache: dict) -> bool:
+        return all(
+            cache.get(key)
+            for key in ("sessionId", "encryptValue")
+        )
+
+    def _update(self, **changes) -> None:
+        with self.lock:
+            self.state.update(changes)
+
+    def start(self) -> None:
+        if self.thread and self.thread.is_alive():
+            return
+        self.stop_event.clear()
+        self.thread = threading.Thread(
+            target=self._loop,
+            name="web-session-keeper",
+            daemon=True,
+        )
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=2)
+
+    def snapshot(self) -> dict:
+        with self.lock:
+            return copy.deepcopy(self.state)
+
+    def _loop(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                self._tick()
+            except Exception:
+                logging.exception("SESSION 主动保活检查失败")
+            self.stop_event.wait(5)
+
+    def _tick(self) -> None:
+        cache = load_session_cache()
+        timestamp = self._timestamp(cache.get("timestamp"))
+        has_credentials = self._has_credentials(cache)
+        valid_session = bool(get_valid_session_cache())
+
+        if timestamp != self.last_cache_timestamp:
+            self.last_cache_timestamp = timestamp
+            self.retry_after = 0.0
+            self._update(
+                lastSuccessAt=self._iso_at(timestamp),
+                lastError="",
+            )
+
+        if not has_credentials:
+            self.retry_after = 0.0
+            self._update(
+                credentialAvailable=False,
+                status="not_initialized",
+                lastSuccessAt=None,
+                nextAttemptAt=None,
+                lastError="",
+            )
+            return
+
+        if not valid_session:
+            self.retry_after = 0.0
+            self._update(
+                credentialAvailable=False,
+                status="reauth_required",
+                nextAttemptAt=None,
+                lastError=SESSION_REAUTH_REQUIRED,
+            )
+            return
+
+        now = time.time()
+        due_at = (
+            timestamp + self.interval_minutes * 60
+            if timestamp
+            else now
+        )
+        busy = self.task_manager.snapshot()["status"] in {
+            "queued",
+            "running",
+            "stopping",
+        }
+        if busy:
+            self._update(
+                credentialAvailable=True,
+                status="active",
+                nextAttemptAt=self._iso_at(max(due_at, now + 60)),
+            )
+            return
+
+        if self.retry_after and now < self.retry_after:
+            self._update(
+                credentialAvailable=True,
+                status="retrying",
+                nextAttemptAt=self._iso_at(self.retry_after),
+            )
+            return
+
+        if now < due_at:
+            self._update(
+                credentialAvailable=True,
+                status="active",
+                nextAttemptAt=self._iso_at(due_at),
+                lastError="",
+            )
+            return
+
+        try:
+            with self.task_manager.session_lock:
+                if self.task_manager.snapshot()["status"] in {
+                    "queued",
+                    "running",
+                    "stopping",
+                }:
+                    self._update(
+                        credentialAvailable=True,
+                        status="active",
+                        nextAttemptAt=self._iso_at(now + 60),
+                    )
+                    return
+                latest_before_renewal = load_session_cache()
+                if not get_valid_session_cache():
+                    self._update(
+                        credentialAvailable=False,
+                        status="reauth_required",
+                        nextAttemptAt=None,
+                        lastError=SESSION_REAUTH_REQUIRED,
+                    )
+                    return
+
+                attempt_at = iso_now()
+                self._update(
+                    credentialAvailable=True,
+                    status="renewing",
+                    lastAttemptAt=attempt_at,
+                    nextAttemptAt=None,
+                    lastError="",
+                )
+                stale_session_id = str(
+                    latest_before_renewal.get("sessionId") or ""
+                )
+                config = read_config(CONFIG_FILE)
+                renewed = auto_login(
+                    config["input"],
+                    stale_session_id=stale_session_id,
+                )
+                if not renewed or not renewed.get("sessionId"):
+                    raise RuntimeError("主动续期未返回新 SESSION")
+        except Exception as exc:
+            latest = load_session_cache()
+            if latest.get("valid") is False:
+                self.retry_after = 0.0
+                self._update(
+                    credentialAvailable=False,
+                    status="reauth_required",
+                    nextAttemptAt=None,
+                    lastError=SESSION_REAUTH_REQUIRED,
+                )
+            else:
+                self.retry_after = now + self.retry_minutes * 60
+                error = f"主动续期失败: {exc}"
+                self._update(
+                    credentialAvailable=True,
+                    status="retrying",
+                    nextAttemptAt=self._iso_at(self.retry_after),
+                    lastError=error,
+                )
+                logging.warning("%s", error)
+            return
+
+        renewed_cache = load_session_cache()
+        renewed_at = self._timestamp(renewed_cache.get("timestamp"))
+        self.last_cache_timestamp = renewed_at
+        self.retry_after = 0.0
+        self._update(
+            credentialAvailable=True,
+            status="active",
+            lastSuccessAt=self._iso_at(renewed_at),
+            nextAttemptAt=self._iso_at(
+                renewed_at + self.interval_minutes * 60
+            ),
+            lastError="",
+        )
+
+
 class Runtime:
     def __init__(self):
         self.logs = MemoryLogHandler()
         self.image_rotation = ImageRotation()
         self.tasks = TaskManager(self.image_rotation)
+        self.session_keeper = SessionKeeper(self.tasks)
         self.scheduler = Scheduler(self.tasks)
         self.capture = CaptureManager(self.tasks)
 
@@ -750,6 +983,7 @@ class Runtime:
         root_logger.setLevel(logging.INFO)
         if self.logs not in root_logger.handlers:
             root_logger.addHandler(self.logs)
+        self.session_keeper.start()
         self.scheduler.start()
         logging.info("SignSignIn Linux 服务已启动")
 
@@ -763,6 +997,7 @@ class Runtime:
                 self.capture.stop()
         except Exception:
             pass
+        self.session_keeper.stop()
         self.scheduler.stop()
         logging.info("SignSignIn Linux 服务已停止")
         logging.getLogger().removeHandler(self.logs)
@@ -776,10 +1011,9 @@ class Runtime:
                 int(raw_session["timestamp"])
             ).astimezone().isoformat(timespec="seconds")
         renewal_available = bool(
-            raw_session.get("encryptValue")
-            and raw_session.get("openId")
-            and raw_session.get("unionId")
+            session
         )
+        auto_renew = self.session_keeper.snapshot()
         return {
             "time": iso_now(),
             "pid": os.getpid(),
@@ -790,18 +1024,7 @@ class Runtime:
                     str(session.get("sessionId") or "")[-4:] if session else ""
                 ),
                 "cachedAt": cached_at,
-                "autoRenew": {
-                    "enabled": True,
-                    "credentialAvailable": renewal_available,
-                    "intervalMinutes": 0,
-                    "status": (
-                        "active" if renewal_available else "not_initialized"
-                    ),
-                    "lastAttemptAt": None,
-                    "lastSuccessAt": cached_at,
-                    "nextAttemptAt": None,
-                    "lastError": "",
-                },
+                "autoRenew": auto_renew,
             },
             "task": self.tasks.snapshot(),
             "scheduler": self.scheduler.snapshot(),

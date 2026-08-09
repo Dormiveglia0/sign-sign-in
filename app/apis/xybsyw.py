@@ -1,10 +1,14 @@
+import base64
+import hashlib
 import logging
 import os
+import secrets
 import tempfile
 import threading
 import time
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
@@ -42,10 +46,68 @@ _auto_login_lock = threading.Lock()
 _security_fingerprint_lock = threading.Lock()
 _security_token_lock = threading.Lock()
 _security_token_cache = {}
+_account_login_challenge_lock = threading.Lock()
+_account_login_challenges = {}
+ACCOUNT_LOGIN_CHALLENGE_TTL = 5 * 60
+ACCOUNT_LOGIN_CHALLENGE_LIMIT = 8
+SESSION_REAUTH_REQUIRED = (
+    "校友邦 SESSION 已失效，请使用账号密码和图形验证码恢复，"
+    "或重新获取 Code 初始化凭证"
+)
 
 
 class SessionExpired(RuntimeError):
     pass
+
+
+_SENSITIVE_LOG_KEYS = {
+    "authorization",
+    "cookie",
+    "devicecode",
+    "encryptvalue",
+    "jsessionid",
+    "openid",
+    "password",
+    "piccode",
+    "sessionid",
+    "unionid",
+}
+
+
+def _redact_for_log(value):
+    if isinstance(value, dict):
+        return {
+            key: (
+                "***"
+                if str(key).lower() in _SENSITIVE_LOG_KEYS
+                else _redact_for_log(item)
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_redact_for_log(item) for item in value]
+    return value
+
+
+def _response_log_summary(response):
+    try:
+        payload = response.json()
+    except Exception:
+        return {
+            "status": response.status_code,
+            "contentType": response.headers.get("content-type", ""),
+            "contentLength": len(response.content or b""),
+        }
+    if not isinstance(payload, dict):
+        return {"status": response.status_code, "type": type(payload).__name__}
+    data = payload.get("data")
+    return {
+        "status": response.status_code,
+        "code": payload.get("code"),
+        "msg": payload.get("msg", payload.get("message", "")),
+        "hasData": data is not None,
+        "dataType": type(data).__name__ if data is not None else "none",
+    }
 
 
 def is_session_expired_error(error):
@@ -88,9 +150,9 @@ def check_session_validity(response_json):
 
 
 def handle_invalid_session():
-    """保留 encryptValue，供小程序同款 AutoLogin 静默续期。"""
+    """标记当前 SESSION 失效，保留字段仅供状态诊断。"""
     invalidate_session_cache()
-    logging.warning('❌ JSESSIONID已失效，准备静默续期')
+    logging.warning("❌ JSESSIONID 已失效，需要重新初始化凭证")
 
 
 def _normalize_map_provider(provider):
@@ -201,8 +263,8 @@ def _fetch_security_token(config, fingerprint, args=None, timeout=5):
             "准备请求校友邦风控Token: url:%s, headers:%s, "
             "data:{'fp': '***'}, cookies:%s",
             url,
-            headers,
-            cookies,
+            _redact_for_log(headers),
+            _redact_for_log(cookies),
         )
         response = requests.post(
             url,
@@ -211,8 +273,26 @@ def _fetch_security_token(config, fingerprint, args=None, timeout=5):
             data={"fp": fingerprint},
             timeout=timeout,
         )
-        logging.debug(f"收到风控Token响应: {response} {response.text}")
-        data = _require_data(response, "获取校友邦风控Token失败")
+        logging.debug(
+            "收到风控Token响应: %s",
+            _response_log_summary(response),
+        )
+        try:
+            payload = response.json()
+        except Exception as exc:
+            raise RuntimeError(
+                f"获取校友邦风控Token失败: 响应解析失败 {exc}"
+            ) from exc
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if (
+            response.status_code != 200
+            or not isinstance(payload, dict)
+            or not _is_success_code(payload.get("code"))
+            or not data
+        ):
+            raise RuntimeError(
+                f"获取校友邦风控Token失败: {_response_message(payload)}"
+            )
         if not data:
             raise RuntimeError("获取校友邦风控Token失败: data为空")
         token = str(data)
@@ -230,40 +310,303 @@ def _fetch_security_token(config, fingerprint, args=None, timeout=5):
 
 def _build_security_context(data, config, args=None):
     fingerprint = _security_fingerprint(config)
-    security_token = _fetch_security_token(config, fingerprint, args=args)
+    try:
+        security_token = _fetch_security_token(
+            config,
+            fingerprint,
+            args=args,
+        )
+    except Exception as exc:
+        # 594 小程序会捕获 GetToken 异常，并用空 token/st 继续原请求。
+        # 这样公共登录接口在旧 SESSION 已失效时仍有机会返回验证码。
+        logging.warning(
+            "校友邦风控 Token 获取失败，按 594 逻辑以空 Token 继续: %s",
+            exc,
+        )
+        security_token = ""
     return {
         "params": get_security_params(data, security_token, fingerprint),
         "url_token": get_security_url_token(security_token),
     }
 
 
-def _form_post(url, data, config, args, include_device_code=False, timeout=5):
+def _form_post(
+    url,
+    data,
+    config,
+    args,
+    include_device_code=False,
+    timeout=5,
+    request_client=None,
+    use_session_cookies=False,
+):
     security = _build_security_context(data, config, args=args)
     request_data = {**data, **security["params"]}
     headers = {
         **_base_xyb_headers(config),
-        "encryptvalue": args["encryptValue"],
+        "encryptvalue": args.get("encryptValue", ""),
         "n": XYB_N_HEADER,
         "wechat": "1",
     }
     if include_device_code:
         headers["devicecode"] = get_device_code(openId=args.get("openId", ""), device=config["device"])
-    cookies = {"JSESSIONID": args["sessionId"]}
-    logging.debug(f"准备发起校友邦请求。url:{url}, headers:{headers}, data:{request_data}, cookies:{cookies}")
-    response = requests.post(
+    session_id = str(args.get("sessionId") or "")
+    cookies = {"JSESSIONID": session_id} if session_id else None
+    logging.debug(
+        "准备发起校友邦请求。url:%s, headers:%s, data:%s, cookies:%s",
         url,
-        headers=headers,
-        cookies=cookies,
-        data=request_data,
-        params={"t": security["url_token"]},
-        timeout=timeout,
+        _redact_for_log(headers),
+        _redact_for_log(request_data),
+        _redact_for_log(cookies),
     )
-    logging.debug(f"收到响应:{response} {response.text}")
+    client = request_client or requests
+    request_options = {
+        "headers": headers,
+        "data": request_data,
+        "params": {"t": security["url_token"]},
+        "timeout": timeout,
+    }
+    if not use_session_cookies:
+        request_options["cookies"] = cookies
+    response = client.post(url, **request_options)
+    logging.debug("收到响应: %s", _response_log_summary(response))
     return response
 
 
+def _account_login_args(cache=None):
+    cache = cache or load_session_cache()
+    return {
+        "sessionId": str(cache.get("sessionId") or ""),
+        "encryptValue": str(cache.get("encryptValue") or ""),
+        "openId": str(cache.get("openId") or ""),
+        "unionId": str(cache.get("unionId") or ""),
+        "traineeId": cache.get("traineeId"),
+    }
+
+
+def _captcha_data_uri(value, client):
+    if isinstance(value, dict):
+        value = (
+            value.get("image")
+            or value.get("codeImage")
+            or value.get("base64")
+            or ""
+        )
+    text = str(value or "").strip()
+    if not text:
+        raise RuntimeError("获取图形验证码失败: 返回图片为空")
+    if text.startswith("data:image/"):
+        return text
+
+    if text.startswith(("https://", "http://", "/")):
+        image_url = urljoin("https://xcx.xybsyw.com/", text)
+        parsed = urlparse(image_url)
+        if parsed.scheme != "https" or parsed.hostname != "xcx.xybsyw.com":
+            raise RuntimeError("获取图形验证码失败: 图片地址不受信任")
+        response = client.get(image_url, timeout=10)
+        response.raise_for_status()
+        content_type = response.headers.get("content-type", "image/png")
+        if not content_type.startswith("image/"):
+            content_type = "image/png"
+        encoded = base64.b64encode(response.content).decode("ascii")
+        return f"data:{content_type};base64,{encoded}"
+
+    compact = "".join(text.split())
+    try:
+        raw = base64.b64decode(compact, validate=True)
+    except Exception as exc:
+        raise RuntimeError("获取图形验证码失败: 图片格式无法解析") from exc
+    if raw.startswith(b"\xff\xd8\xff"):
+        content_type = "image/jpeg"
+    elif raw.startswith(b"GIF8"):
+        content_type = "image/gif"
+    elif raw.startswith(b"RIFF") and raw[8:12] == b"WEBP":
+        content_type = "image/webp"
+    else:
+        content_type = "image/png"
+    return f"data:{content_type};base64,{compact}"
+
+
+def _purge_account_login_challenges(now=None):
+    now = time.time() if now is None else now
+    expired = [
+        challenge_id
+        for challenge_id, challenge in _account_login_challenges.items()
+        if challenge["expiresAt"] <= now
+    ]
+    for challenge_id in expired:
+        challenge = _account_login_challenges.pop(challenge_id, None)
+        if challenge:
+            challenge["client"].close()
+
+
+def clear_account_login_challenges():
+    with _account_login_challenge_lock:
+        for challenge in _account_login_challenges.values():
+            challenge["client"].close()
+        _account_login_challenges.clear()
+
+
+def create_account_login_challenge(config):
+    """获取账号登录图形验证码，并在内存中保留同一 HTTP 会话。"""
+    cache = load_session_cache()
+    args = _account_login_args(cache)
+    client = requests.Session()
+    if args["sessionId"]:
+        client.cookies.set("JSESSIONID", args["sessionId"])
+
+    response = _form_post(
+        "https://xcx.xybsyw.com/school/common/plugins/loadCaptcha.action",
+        {},
+        config=config,
+        args=args,
+        include_device_code=False,
+        timeout=10,
+        request_client=client,
+        use_session_cookies=True,
+    )
+    try:
+        payload = response.json()
+    except Exception as exc:
+        raise RuntimeError(
+            f"获取图形验证码失败: 响应解析失败 {exc}"
+        ) from exc
+    image = payload.get("data") if isinstance(payload, dict) else None
+    if (
+        response.status_code != 200
+        or not isinstance(payload, dict)
+        or not _is_success_code(payload.get("code"))
+        or not image
+    ):
+        raise RuntimeError(
+            f"获取图形验证码失败: {_response_message(payload)}"
+        )
+
+    try:
+        image_uri = _captcha_data_uri(image, client)
+    except Exception:
+        client.close()
+        raise
+
+    challenge_id = secrets.token_urlsafe(32)
+    expires_at = time.time() + ACCOUNT_LOGIN_CHALLENGE_TTL
+    with _account_login_challenge_lock:
+        _purge_account_login_challenges()
+        while len(_account_login_challenges) >= ACCOUNT_LOGIN_CHALLENGE_LIMIT:
+            oldest_id = min(
+                _account_login_challenges,
+                key=lambda item: _account_login_challenges[item]["expiresAt"],
+            )
+            oldest = _account_login_challenges.pop(oldest_id)
+            oldest["client"].close()
+        _account_login_challenges[challenge_id] = {
+            "client": client,
+            "args": args,
+            "expiresAt": expires_at,
+        }
+    return {
+        "challengeId": challenge_id,
+        "image": image_uri,
+        "expiresAt": int(expires_at),
+    }
+
+
+def _take_account_login_challenge(challenge_id):
+    with _account_login_challenge_lock:
+        _purge_account_login_challenges()
+        challenge = _account_login_challenges.pop(challenge_id, None)
+    if not challenge:
+        raise RuntimeError("图形验证码已过期，请重新获取")
+    return challenge
+
+
+def _reset_security_context(config):
+    with _security_token_lock:
+        _security_token_cache.clear()
+    with _security_fingerprint_lock:
+        try:
+            SECURITY_FINGERPRINT_FILE.unlink(missing_ok=True)
+        except OSError:
+            pass
+    config.pop("securityFingerprint", None)
+
+
+def account_password_login(
+    config,
+    challenge_id,
+    username,
+    password,
+    pic_code,
+):
+    """按 594 小程序账号密码流程登录；明文密码只在本次调用内使用。"""
+    username = str(username or "").strip()
+    password = str(password or "")
+    pic_code = str(pic_code or "").strip()
+    if not username or not password or not pic_code:
+        raise RuntimeError("账号、密码和图形验证码不能为空")
+
+    challenge = _take_account_login_challenge(challenge_id)
+    args = challenge["args"]
+    device = config.get("device") or {}
+    data = {
+        "picCode": pic_code,
+        "username": username,
+        "password": hashlib.md5(password.encode("utf-8")).hexdigest(),
+        "openId": args.get("openId", ""),
+        "unionId": args.get("unionId", ""),
+        "model": device.get("model", ""),
+        "brand": device.get("brand", ""),
+        "platform": device.get("platform", ""),
+        "system": device.get("system", ""),
+        "deviceId": "",
+    }
+    client = challenge["client"]
+    try:
+        response = _form_post(
+            "https://xcx.xybsyw.com/login/login.action",
+            data,
+            config=config,
+            args=args,
+            include_device_code=True,
+            timeout=15,
+            request_client=client,
+            use_session_cookies=True,
+        )
+    finally:
+        client.close()
+    try:
+        payload = response.json()
+    except Exception as exc:
+        raise RuntimeError(
+            f"账号密码登录失败: 响应解析失败 {exc}"
+        ) from exc
+    renewed = payload.get("data") if isinstance(payload, dict) else None
+    if (
+        response.status_code != 200
+        or not isinstance(payload, dict)
+        or not _is_success_code(payload.get("code"))
+        or not isinstance(renewed, dict)
+        or not renewed.get("sessionId")
+        or not renewed.get("encryptValue")
+    ):
+        raise RuntimeError(
+            f"账号密码登录失败: {_response_message(payload)}"
+        )
+
+    _reset_security_context(config)
+    save_session_cache(
+        session_id=renewed["sessionId"],
+        encrypt_value=renewed["encryptValue"],
+        open_id=str(renewed.get("openId") or args.get("openId") or ""),
+        union_id=str(renewed.get("unionId") or args.get("unionId") or ""),
+        trainee_id=args.get("traineeId"),
+    )
+    logging.info("✅ 校友邦账号密码登录成功")
+    return get_valid_session_cache()
+
+
 def auto_login(config, stale_session_id=None):
-    """复刻小程序 AutoLogin.action，用 encryptValue 静默换新 SESSION。"""
+    """在现有 SESSION 仍有效时主动轮换登录凭证。"""
     with _auto_login_lock:
         cache = load_session_cache()
         if (
@@ -274,11 +617,16 @@ def auto_login(config, stale_session_id=None):
         ):
             return get_valid_session_cache()
 
+        if cache.get("valid") is False:
+            raise SessionExpired(SESSION_REAUTH_REQUIRED)
+
         encrypt_value = str(cache.get("encryptValue") or "").strip()
         open_id = str(cache.get("openId") or "").strip()
         union_id = str(cache.get("unionId") or "").strip()
-        if not encrypt_value or not open_id or not union_id:
-            raise RuntimeError("缺少静默续期凭证，首次使用仍需获取一次 Code")
+        if not encrypt_value:
+            raise RuntimeError(
+                "缺少主动续期凭证，请使用账号密码恢复或重新获取 Code 初始化"
+            )
 
         url = "https://xcx.xybsyw.com/login/AutoLogin.action"
         data = {"encryptValue": encrypt_value}
@@ -310,7 +658,7 @@ def auto_login(config, stale_session_id=None):
         try:
             payload = response.json()
         except Exception as exc:
-            raise RuntimeError(f"静默续期失败: 响应解析失败 {exc}") from exc
+            raise RuntimeError(f"主动续期失败: 响应解析失败 {exc}") from exc
         renewed = payload.get("data") if isinstance(payload, dict) else None
         if (
             response.status_code != 200
@@ -320,7 +668,7 @@ def auto_login(config, stale_session_id=None):
             or not renewed.get("encryptValue")
         ):
             raise RuntimeError(
-                f"静默续期失败: {_response_message(payload)}"
+                f"主动续期失败: {_response_message(payload)}"
             )
 
         save_session_cache(
@@ -330,7 +678,7 @@ def auto_login(config, stale_session_id=None):
             union_id=union_id,
             trainee_id=cache.get("traineeId"),
         )
-        logging.info("✅ SESSION 静默续期成功")
+        logging.info("✅ SESSION 主动续期成功")
         return get_valid_session_cache()
 
 
@@ -546,8 +894,8 @@ def login(config, use_cache=True):
                 'sessionId': cached['sessionId'],
                 'traineeId': cached.get('traineeId')
             }
-        if load_session_cache().get("encryptValue"):
-            return auto_login(config)
+        if load_session_cache().get("valid") is False:
+            raise SessionExpired(SESSION_REAUTH_REQUIRED)
 
     code = config.get('code')
     if not code or code == '':

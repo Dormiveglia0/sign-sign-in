@@ -1,5 +1,7 @@
 """Minimal end-to-end check for a running local web service."""
 
+import base64
+import hashlib
 import json
 import os
 import tempfile
@@ -18,7 +20,7 @@ from app.utils import files as file_utils
 from app.utils.gotify import build_gotify_message_url, notify_gotify
 from webapp import runtime as runtime_module
 from webapp import security as web_security
-from webapp.runtime import ImageRotation, TaskManager
+from webapp.runtime import ImageRotation, SessionKeeper, TaskManager
 
 
 def check_session_cache_has_no_local_expiry():
@@ -38,21 +40,71 @@ def check_session_cache_has_no_local_expiry():
         file_utils.SESSION_CACHE_FILE = original
 
 
-def check_valid_session_is_not_proactively_renewed():
+def check_session_keeper_proactively_renews():
     original = file_utils.SESSION_CACHE_FILE
     try:
         with tempfile.TemporaryDirectory() as directory:
             file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
-            file_utils.save_session_cache("session", "encrypt", "open", "union")
+            file_utils.save_session_cache(
+                "old-session",
+                "old-encrypt",
+                "open",
+                "union",
+            )
             cache = file_utils.load_session_cache()
-            cache["timestamp"] = 1
+            cache["timestamp"] = int(time.time()) - 6 * 60
             Path(file_utils.SESSION_CACHE_FILE).write_text(
                 json.dumps(cache),
                 encoding="utf-8",
             )
-            with patch.object(xybsyw, "auto_login") as renew:
-                assert xybsyw.login({}, use_cache=True)["sessionId"] == "session"
-            renew.assert_not_called()
+            keeper = SessionKeeper(TaskManager(), interval_minutes=5)
+
+            def renew(_config, stale_session_id=None):
+                assert stale_session_id == "old-session"
+                file_utils.save_session_cache(
+                    "new-session",
+                    "new-encrypt",
+                    "open",
+                    "union",
+                )
+                return file_utils.get_valid_session_cache()
+
+            with (
+                patch("webapp.runtime.auto_login", side_effect=renew) as rotate,
+                patch(
+                    "webapp.runtime.read_config",
+                    return_value={"input": {}},
+                ),
+            ):
+                keeper._tick()
+            rotate.assert_called_once()
+            assert file_utils.get_valid_session_cache()["sessionId"] == "new-session"
+            assert keeper.snapshot()["status"] == "active"
+            assert keeper.snapshot()["nextAttemptAt"]
+    finally:
+        file_utils.SESSION_CACHE_FILE = original
+
+
+def check_invalid_session_requires_reinitialization():
+    original = file_utils.SESSION_CACHE_FILE
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
+            file_utils.save_session_cache(
+                "expired-session",
+                "expired-encrypt",
+                "open",
+                "union",
+            )
+            file_utils.invalidate_session_cache()
+            keeper = SessionKeeper(TaskManager(), interval_minutes=5)
+            with patch("webapp.runtime.auto_login") as rotate:
+                keeper._tick()
+            rotate.assert_not_called()
+            status = keeper.snapshot()
+            assert status["status"] == "reauth_required"
+            assert status["credentialAvailable"] is False
+            assert "重新获取 Code" in status["lastError"]
     finally:
         file_utils.SESSION_CACHE_FILE = original
 
@@ -93,7 +145,7 @@ def check_consumed_code_message():
             raise AssertionError("Consumed Code should fail")
 
 
-def check_silent_session_renewal():
+def check_proactive_session_rotation():
     original = file_utils.SESSION_CACHE_FILE
     config = {
         "userAgent": "test",
@@ -123,9 +175,6 @@ def check_silent_session_renewal():
                 "open",
                 "union",
             )
-            xybsyw.handle_invalid_session()
-            assert file_utils.get_valid_session_cache() is None
-            assert file_utils.load_session_cache()["encryptValue"] == "old-encrypt"
             with (
                 patch.object(
                     xybsyw,
@@ -156,7 +205,7 @@ def check_silent_session_renewal():
         file_utils.SESSION_CACHE_FILE = original
 
 
-def check_task_retries_after_silent_renewal():
+def check_task_does_not_retry_expired_session():
     manager = TaskManager()
     calls = 0
 
@@ -171,7 +220,7 @@ def check_task_retries_after_silent_renewal():
         return {"ok": True}
 
     with (
-        patch("webapp.runtime.auto_login") as renew,
+        patch("webapp.runtime.auto_login") as rotate,
         patch("webapp.runtime._save_history"),
         patch.object(TaskManager, "_notify_result"),
     ):
@@ -182,9 +231,10 @@ def check_task_retries_after_silent_renewal():
             target=target,
         )
         manager.thread.join(timeout=3)
-    assert manager.snapshot()["status"] == "success"
-    assert calls == 2
-    renew.assert_called_once()
+    assert manager.snapshot()["status"] == "failed"
+    assert "重新获取 Code" in manager.snapshot()["message"]
+    assert calls == 1
+    rotate.assert_not_called()
 
 
 def check_random_image_rotation():
@@ -254,6 +304,130 @@ def check_stable_security_context():
         xybsyw._security_token_cache.clear()
 
 
+def check_security_token_fallback_matches_594():
+    with (
+        patch.object(xybsyw, "_security_fingerprint", return_value="f" * 32),
+        patch.object(
+            xybsyw,
+            "_fetch_security_token",
+            side_effect=RuntimeError("token unavailable"),
+        ),
+    ):
+        context = xybsyw._build_security_context(
+            {"username": "account"},
+            {},
+        )
+    assert context["url_token"] == "5381"
+    assert context["params"]["st"] == ""
+    assert context["params"]["fp"] == "f" * 32
+
+
+def check_account_password_recovery():
+    original = file_utils.SESSION_CACHE_FILE
+    png = base64.b64encode(b"\x89PNG\r\n\x1a\nselfcheck").decode("ascii")
+
+    def response(payload):
+        return SimpleNamespace(
+            status_code=200,
+            text=json.dumps(payload),
+            json=lambda: payload,
+        )
+
+    class FakeCookies:
+        def __init__(self):
+            self.values = {}
+
+        def set(self, key, value):
+            self.values[key] = value
+
+    class FakeClient:
+        def __init__(self):
+            self.cookies = FakeCookies()
+            self.calls = []
+            self.closed = False
+
+        def post(self, url, **kwargs):
+            self.calls.append((url, kwargs))
+            if url.endswith("loadCaptcha.action"):
+                return response({"code": "200", "data": png, "msg": "操作成功"})
+            return response(
+                {
+                    "code": "200",
+                    "data": {
+                        "sessionId": "password-session",
+                        "encryptValue": "password-encrypt",
+                    },
+                    "msg": "操作成功",
+                }
+            )
+
+        def close(self):
+            self.closed = True
+
+    config = {
+        "userAgent": "test",
+        "device": {
+            "brand": "OnePlus",
+            "model": "PHP110",
+            "system": "Android 15",
+            "platform": "android",
+        },
+    }
+    client = FakeClient()
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            file_utils.SESSION_CACHE_FILE = str(Path(directory) / "session.json")
+            file_utils.save_session_cache("expired", "old-encrypt")
+            file_utils.invalidate_session_cache()
+            xybsyw.clear_account_login_challenges()
+            with (
+                patch.object(xybsyw.requests, "Session", return_value=client),
+                patch.object(
+                    xybsyw,
+                    "_build_security_context",
+                    return_value={"params": {}, "url_token": "5381"},
+                ),
+                patch.object(xybsyw, "get_device_code", return_value="device"),
+                patch.object(xybsyw, "_reset_security_context"),
+            ):
+                challenge = xybsyw.create_account_login_challenge(config)
+                assert challenge["image"].startswith("data:image/png;base64,")
+                renewed = xybsyw.account_password_login(
+                    config,
+                    challenge["challengeId"],
+                    "15600000000",
+                    "password",
+                    "ABCD",
+                )
+
+            assert renewed["sessionId"] == "password-session"
+            assert renewed["openId"] == ""
+            login_data = client.calls[1][1]["data"]
+            assert login_data["picCode"] == "ABCD"
+            assert login_data["password"] == hashlib.md5(
+                b"password"
+            ).hexdigest()
+            assert login_data["password"] != "password"
+            assert client.closed is True
+            assert xybsyw._redact_for_log(
+                {
+                    "JSESSIONID": "session",
+                    "password": login_data["password"],
+                    "safe": "visible",
+                }
+            ) == {
+                "JSESSIONID": "***",
+                "password": "***",
+                "safe": "visible",
+            }
+            assert file_utils.get_valid_session_cache()["encryptValue"] == (
+                "password-encrypt"
+            )
+    finally:
+        xybsyw.clear_account_login_challenges()
+        file_utils.SESSION_CACHE_FILE = original
+
+
 def check_chinese_watermark_font():
     font = xybsyw._load_watermark_font(28)
     assert Path(font.path).name == "WenQuanYiZenHei.ttc"
@@ -306,13 +480,16 @@ def check_gotify_notification():
 
 def main():
     check_session_cache_has_no_local_expiry()
-    check_valid_session_is_not_proactively_renewed()
+    check_session_keeper_proactively_renews()
+    check_invalid_session_requires_reinitialization()
     check_device_platform_consistency()
     check_consumed_code_message()
-    check_silent_session_renewal()
-    check_task_retries_after_silent_renewal()
+    check_proactive_session_rotation()
+    check_task_does_not_retry_expired_session()
     check_random_image_rotation()
     check_stable_security_context()
+    check_security_token_fallback_matches_594()
+    check_account_password_recovery()
     check_chinese_watermark_font()
     check_gotify_notification()
     capture_command = MitmService(

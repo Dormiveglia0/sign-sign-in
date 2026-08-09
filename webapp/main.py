@@ -43,11 +43,14 @@ from app.apis.jielong import (
     submit_record,
 )
 from app.apis.xybsyw import (
-    SessionExpired,
-    auto_login,
+    SESSION_REAUTH_REQUIRED,
+    account_password_login,
     blog_list,
+    clear_account_login_challenges,
+    create_account_login_challenge,
     get_default_plan,
     get_plan,
+    is_session_expired_error,
     load_blog_date,
     load_blog_year,
     login,
@@ -189,14 +192,12 @@ async def _blocking(function, *args, **kwargs):
         return await run_in_threadpool(function, *args, **kwargs)
     except HTTPException:
         raise
-    except SessionExpired:
-        try:
-            config = read_config(CONFIG_FILE)
-            await run_in_threadpool(auto_login, config["input"])
-            return await run_in_threadpool(function, *args, **kwargs)
-        except Exception as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        if is_session_expired_error(exc):
+            raise HTTPException(
+                status_code=409,
+                detail=SESSION_REAUTH_REQUIRED,
+            ) from exc
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -353,13 +354,10 @@ class TaskInput(BaseModel):
 @protected.post("/tasks")
 def start_task(payload: TaskInput):
     status = runtime.status()
-    if not (
-        status["session"]["valid"]
-        or status["session"]["renewalAvailable"]
-    ):
+    if not status["session"]["valid"]:
         raise HTTPException(
             status_code=409,
-            detail="校友邦登录凭证不可用，请先完成一次初始化",
+            detail=SESSION_REAUTH_REQUIRED,
         )
     image_path = ""
     try:
@@ -386,6 +384,13 @@ class SessionInput(BaseModel):
     code: str = Field(min_length=4, max_length=4096)
 
 
+class AccountLoginInput(BaseModel):
+    challengeId: str = Field(min_length=16, max_length=128)
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
+    picCode: str = Field(min_length=1, max_length=32)
+
+
 @protected.post("/session/refresh")
 def refresh_session(payload: SessionInput):
     code = payload.code.strip()
@@ -397,8 +402,35 @@ def refresh_session(payload: SessionInput):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+@protected.post("/session/account/captcha")
+async def account_login_captcha():
+    config = read_config(CONFIG_FILE)
+    return await _blocking(
+        create_account_login_challenge,
+        config["input"],
+    )
+
+
+@protected.post("/session/account/login")
+async def account_login(payload: AccountLoginInput):
+    config = read_config(CONFIG_FILE)
+    session = await _blocking(
+        account_password_login,
+        config["input"],
+        payload.challengeId,
+        payload.username,
+        payload.password,
+        payload.picCode,
+    )
+    return {
+        "ok": True,
+        "sessionSuffix": str(session.get("sessionId") or "")[-4:],
+    }
+
+
 @protected.delete("/session")
 def delete_session():
+    clear_account_login_challenges()
     clear_session_cache()
     logging.info("已清除校友邦登录凭证")
     return {"ok": True}
