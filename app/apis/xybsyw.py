@@ -728,19 +728,24 @@ def _regeo_tencent(userAgent, location, key=None):
         "get_poi": "1",
     }
     try:
-        logging.debug(f"馃洨锔?鍑嗗鍙戣捣璇锋眰銆倁rl:{url}, headers:{headers}, params:{params}")
+        logging.debug(
+            "🛩️ 准备发起请求。url:%s, headers:%s, params:%s",
+            url,
+            headers,
+            params,
+        )
         response = requests.get(url, headers=headers, params=params, timeout=5)
-        logging.debug(f"馃摗 鏀跺埌鍝嶅簲:{response} {response.text}")
+        logging.debug("📡 收到响应:%s %s", response, response.text)
         res = response.json()
         if response.status_code == 200 and res.get("status") == 0 and res.get("result"):
             regeocode = _normalize_tencent_regeo(res["result"])
             if not regeocode["formatted_address"]:
                 regeocode["formatted_address"] = f"{location['longitude']},{location['latitude']}"
-            logging.info(f"馃搷 瑙ｆ瀽浣嶇疆: {regeocode['formatted_address']}")
+            logging.info("📍 解析位置: %s", regeocode["formatted_address"])
             return regeocode
-        raise RuntimeError(f"浣嶇疆瑙ｆ瀽澶辫触: {res}")
+        raise RuntimeError(f"位置解析失败: {res}")
     except Exception as e:
-        logging.error(f"鑵捐鍦板浘鎺ュ彛璇锋眰澶辫触: {e}")
+        logging.error("腾讯地图接口请求失败: %s", e)
         raise e
 
 

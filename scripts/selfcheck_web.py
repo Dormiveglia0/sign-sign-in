@@ -428,6 +428,22 @@ def check_account_password_recovery():
         file_utils.SESSION_CACHE_FILE = original
 
 
+def check_task_history_redacts_credentials():
+    record = runtime_module._sanitize_task_record(
+        {
+            "mode": "session",
+            "status": "success",
+            "result": {
+                "sessionId": "secret-session",
+                "encryptValue": "secret-encrypt",
+                "nested": {"openId": "secret-open"},
+            },
+        }
+    )
+    assert record["result"] == {"credentialsUpdated": True}
+    assert "secret" not in json.dumps(record)
+
+
 def check_chinese_watermark_font():
     font = xybsyw._load_watermark_font(28)
     assert Path(font.path).name == "WenQuanYiZenHei.ttc"
@@ -490,6 +506,7 @@ def main():
     check_stable_security_context()
     check_security_token_fallback_matches_594()
     check_account_password_recovery()
+    check_task_history_redacts_credentials()
     check_chinese_watermark_font()
     check_gotify_notification()
     capture_command = MitmService(

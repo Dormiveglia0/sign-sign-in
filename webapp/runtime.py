@@ -81,12 +81,49 @@ class MemoryLogHandler(logging.Handler):
             self.entries.clear()
 
 
+SENSITIVE_TASK_RESULT_KEYS = {
+    "sessionid",
+    "encryptvalue",
+    "openid",
+    "unionid",
+}
+
+
+def _redact_task_value(value):
+    if isinstance(value, dict):
+        return {
+            key: _redact_task_value(item)
+            for key, item in value.items()
+            if str(key).lower() not in SENSITIVE_TASK_RESULT_KEYS
+        }
+    if isinstance(value, list):
+        return [_redact_task_value(item) for item in value]
+    return value
+
+
+def _sanitize_task_record(record: dict) -> dict:
+    if not isinstance(record, dict):
+        return {}
+    clean = _redact_task_value(copy.deepcopy(record))
+    if clean.get("mode") == "session" and "result" in clean:
+        clean["result"] = {
+            "credentialsUpdated": clean.get("status") == "success",
+        }
+    return clean
+
+
 def _load_history() -> deque[dict]:
     try:
         with TASK_HISTORY_FILE.open("r", encoding="utf-8") as handle:
             values = json.load(handle)
         if isinstance(values, list):
-            return deque(values[-50:], maxlen=50)
+            original = values[-50:]
+            sanitized = [_sanitize_task_record(item) for item in original]
+            history = deque(sanitized, maxlen=50)
+            if sanitized != original:
+                _save_history(history)
+                logging.warning("已从任务历史中移除登录凭证字段")
+            return history
     except (OSError, json.JSONDecodeError):
         pass
     return deque(maxlen=50)
@@ -96,7 +133,13 @@ def _save_history(history: deque[dict]) -> None:
     TASK_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     temporary = TASK_HISTORY_FILE.with_suffix(".tmp")
     with temporary.open("w", encoding="utf-8") as handle:
-        json.dump(list(history), handle, ensure_ascii=False, indent=2)
+        json.dump(
+            [_sanitize_task_record(item) for item in history],
+            handle,
+            ensure_ascii=False,
+            indent=2,
+        )
+    os.chmod(temporary, 0o600)
     os.replace(temporary, TASK_HISTORY_FILE)
 
 
@@ -190,7 +233,11 @@ class TaskManager:
 
     def history_snapshot(self) -> list[dict]:
         with self.lock:
-            return list(reversed(copy.deepcopy(self.history)))
+            return list(
+                reversed(
+                    [_sanitize_task_record(item) for item in self.history]
+                )
+            )
 
     def _start(self, *, mode: str, action: str, source: str, target) -> dict:
         with self.lock:
@@ -287,8 +334,13 @@ class TaskManager:
             self.state["message"] = message
             self.state["finishedAt"] = iso_now()
             if result:
-                self.state["result"] = result
-            record = copy.deepcopy(self.state)
+                if self.state.get("mode") == "session":
+                    self.state["result"] = {
+                        "credentialsUpdated": success,
+                    }
+                else:
+                    self.state["result"] = _redact_task_value(result)
+            record = _sanitize_task_record(self.state)
             self.history.append(record)
             try:
                 _save_history(self.history)

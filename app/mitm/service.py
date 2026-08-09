@@ -12,7 +12,8 @@ from app.utils.commands import check_port_listening, get_process_by_port, kill_p
 
 
 class MitmService:
-    START_TIMEOUT_SECONDS = 6.0
+    # Alpine/aarch64 冷启动时加载 mitmproxy 依赖可能超过 6 秒。
+    START_TIMEOUT_SECONDS = 20.0
     POLL_INTERVAL_SECONDS = 0.1
 
     def __init__(
