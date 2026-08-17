@@ -508,10 +508,7 @@ export default function SettingsPage() {
           <Form.Item
             label="新密码"
             name="newPassword"
-            rules={[
-              { required: true },
-              { min: 12, message: "至少 12 个字符" },
-            ]}
+            rules={[{ required: true }]}
           >
             <Input.Password autoComplete="new-password" />
           </Form.Item>

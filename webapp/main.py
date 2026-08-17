@@ -83,6 +83,13 @@ from app.utils.gotify import (
     get_gotify_config,
     notify_gotify,
 )
+from webapp.companion_auth import (
+    companion_snapshot,
+    exchange_pairing_code,
+    issue_pairing_code,
+    revoke_companion,
+    verify_companion_token,
+)
 from webapp.runtime import Runtime
 from webapp.security import (
     CSRF_COOKIE,
@@ -104,10 +111,23 @@ FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 runtime = Runtime()
+COMPANION_API_PREFIX = "/api/companion/v1"
 
 
 def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
+
+
+def require_companion(request: Request) -> dict:
+    authorization = str(request.headers.get("authorization") or "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not verify_companion_token(token.strip()):
+        raise HTTPException(
+            status_code=401,
+            detail="Windows 采集端认证失败，请重新配对",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {"authenticated": True}
 
 
 def _set_auth_cookies(
@@ -226,10 +246,12 @@ app = FastAPI(
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
+    companion_api = request.url.path.startswith(COMPANION_API_PREFIX)
     if (
         request.method in {"POST", "PUT", "PATCH", "DELETE"}
         and request.url.path.startswith("/api/")
         and request.url.path != "/api/auth/login"
+        and not companion_api
     ):
         try:
             require_auth(request)
@@ -276,7 +298,7 @@ class LoginInput(BaseModel):
 
 class PasswordInput(BaseModel):
     currentPassword: str = Field(min_length=1, max_length=256)
-    newPassword: str = Field(min_length=12, max_length=256)
+    newPassword: str = Field(min_length=1, max_length=256)
 
 
 @app.get("/api/health")
@@ -308,6 +330,10 @@ def auth_login(payload: LoginInput, request: Request, response: Response):
 
 
 protected = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
+companion_api = APIRouter(
+    prefix=COMPANION_API_PREFIX,
+    dependencies=[Depends(require_companion)],
+)
 
 
 @protected.post("/auth/logout")
@@ -332,7 +358,9 @@ async def auth_change_password(payload: PasswordInput):
 
 @protected.get("/status")
 def get_status():
-    return runtime.status()
+    status = runtime.status()
+    status["companion"] = companion_snapshot()
+    return status
 
 
 @protected.get("/tasks")
@@ -391,6 +419,15 @@ class AccountLoginInput(BaseModel):
     picCode: str = Field(min_length=1, max_length=32)
 
 
+class CompanionPairInput(BaseModel):
+    code: str = Field(min_length=8, max_length=64)
+    deviceName: str = Field(default="Windows 采集端", max_length=100)
+
+
+class CompanionSessionInput(BaseModel):
+    code: str = Field(min_length=4, max_length=4096)
+
+
 @protected.post("/session/refresh")
 def refresh_session(payload: SessionInput):
     code = payload.code.strip()
@@ -426,6 +463,95 @@ async def account_login(payload: AccountLoginInput):
         "ok": True,
         "sessionSuffix": str(session.get("sessionId") or "")[-4:],
     }
+
+
+@protected.post("/companion/pairing")
+def create_companion_pairing():
+    return issue_pairing_code()
+
+
+@protected.delete("/companion")
+def delete_companion():
+    revoke_companion()
+    logging.info("已撤销 Windows 微信凭证采集端")
+    return {"ok": True}
+
+
+@app.post(f"{COMPANION_API_PREFIX}/pair")
+def pair_companion(payload: CompanionPairInput, request: Request):
+    try:
+        token = exchange_pairing_code(
+            payload.code,
+            device_name=payload.deviceName,
+            client_ip=_client_ip(request),
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    logging.info("Windows 微信凭证采集端配对成功")
+    return {"token": token}
+
+
+@companion_api.get("/status")
+def companion_status():
+    status = runtime.status()
+    session = status["session"]
+    task = status["task"]
+    return {
+        "version": PROJECT_VERSION,
+        "needsRefresh": not bool(session["valid"]),
+        "sessionStatus": session["autoRenew"]["status"],
+        "sessionUpdatedAt": session["cachedAt"],
+        "busy": task["status"] in {"queued", "running", "stopping"},
+        "task": {
+            "id": task["id"],
+            "status": task["status"],
+            "source": task["source"],
+            "mode": task["mode"],
+            "message": task["message"],
+        },
+    }
+
+
+@companion_api.get("/tasks/{task_id}")
+def companion_task_status(task_id: str):
+    task_id = str(task_id or "").strip()
+    if not task_id or len(task_id) > 64:
+        raise HTTPException(status_code=422, detail="任务 ID 格式无效")
+    candidates = [
+        runtime.tasks.snapshot(),
+        *runtime.tasks.history_snapshot(),
+    ]
+    task = next(
+        (
+            item
+            for item in candidates
+            if str(item.get("id") or "") == task_id
+            and str(item.get("source") or "") == "companion"
+        ),
+        None,
+    )
+    if not task:
+        raise HTTPException(status_code=404, detail="未找到凭证刷新任务")
+    return {
+        "id": task_id,
+        "status": task.get("status"),
+        "message": task.get("message"),
+        "startedAt": task.get("startedAt"),
+        "finishedAt": task.get("finishedAt"),
+    }
+
+
+@companion_api.post("/session/refresh", status_code=202)
+def companion_refresh_session(payload: CompanionSessionInput):
+    code = payload.code.strip()
+    if not code or "\n" in code or "\r" in code:
+        raise HTTPException(status_code=422, detail="Code 格式无效")
+    try:
+        return runtime.tasks.start_session_refresh(code, source="companion")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @protected.delete("/session")
@@ -1109,6 +1235,7 @@ async def jielong_submit(payload: JielongSubmitInput):
 
 
 app.include_router(protected)
+app.include_router(companion_api)
 
 if FRONTEND_DIST.is_dir():
     app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

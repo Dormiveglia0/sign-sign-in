@@ -83,6 +83,13 @@ export interface SystemStatus {
   task: TaskState;
   scheduler: ScheduleState;
   capture: CaptureState;
+  companion: {
+    configured: boolean;
+    deviceName: string;
+    createdAt: string | null;
+    lastSeenAt: string | null;
+    pairingExpiresAt: string | null;
+  };
 }
 
 export interface ImageItem {

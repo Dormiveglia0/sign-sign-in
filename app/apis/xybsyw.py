@@ -51,8 +51,8 @@ _account_login_challenges = {}
 ACCOUNT_LOGIN_CHALLENGE_TTL = 5 * 60
 ACCOUNT_LOGIN_CHALLENGE_LIMIT = 8
 SESSION_REAUTH_REQUIRED = (
-    "校友邦 SESSION 已失效，请使用账号密码和图形验证码恢复，"
-    "或重新获取 Code 初始化凭证"
+    "校友邦 SESSION 已失效，账号密码不能单独重建微信会话；"
+    "请通过真实微信自动恢复或重新获取 Code"
 )
 
 
@@ -117,6 +117,27 @@ def is_session_expired_error(error):
             return True
         current = current.__cause__ or current.__context__
     return False
+
+
+def _reset_security_token():
+    """清除风控 Token，但保留与官方小程序一致的设备指纹。"""
+    with _security_token_lock:
+        _security_token_cache.clear()
+
+
+def _handle_security_token_rejection(response):
+    """594 小程序收到 code=604 时会清除 Token，下一次请求重新获取。"""
+    try:
+        payload = response.json()
+    except Exception:
+        return False
+    if not isinstance(payload, dict) or str(payload.get("code")) != "604":
+        return False
+    _reset_security_token()
+    logging.warning(
+        "校友邦要求刷新安全令牌(code=604)，已保留设备指纹并清除旧 Token"
+    )
+    return True
 
 
 def _normalize_address_text(value):
@@ -370,18 +391,41 @@ def _form_post(
         request_options["cookies"] = cookies
     response = client.post(url, **request_options)
     logging.debug("收到响应: %s", _response_log_summary(response))
+    _handle_security_token_rejection(response)
     return response
 
 
 def _account_login_args(cache=None):
     cache = cache or load_session_cache()
     return {
+        # 官方小程序在 wx.login/getOpenId 建立的同一会话中加载验证码并
+        # 调用 login.action。账号密码登录不能从一个完全空白的会话开始。
         "sessionId": str(cache.get("sessionId") or ""),
         "encryptValue": str(cache.get("encryptValue") or ""),
         "openId": str(cache.get("openId") or ""),
         "unionId": str(cache.get("unionId") or ""),
         "traineeId": cache.get("traineeId"),
     }
+
+
+def _replace_session_cookie(client, session_id):
+    """让账号登录链路只携带一个域名、路径明确的 JSESSIONID。"""
+    client.cookies.clear()
+    if session_id:
+        client.cookies.set(
+            "JSESSIONID",
+            str(session_id),
+            domain="xcx.xybsyw.com",
+            path="/",
+        )
+
+
+def _response_session_id(response, fallback=""):
+    """优先采用服务端本次响应换新的 JSESSIONID。"""
+    for cookie in response.cookies:
+        if cookie.name == "JSESSIONID" and cookie.value:
+            return str(cookie.value)
+    return str(fallback or "")
 
 
 def _captcha_data_uri(value, client):
@@ -452,8 +496,7 @@ def create_account_login_challenge(config):
     cache = load_session_cache()
     args = _account_login_args(cache)
     client = requests.Session()
-    if args["sessionId"]:
-        client.cookies.set("JSESSIONID", args["sessionId"])
+    _replace_session_cookie(client, args.get("sessionId"))
 
     response = _form_post(
         "https://xcx.xybsyw.com/school/common/plugins/loadCaptcha.action",
@@ -465,6 +508,11 @@ def create_account_login_challenge(config):
         request_client=client,
         use_session_cookies=True,
     )
+    args["sessionId"] = _response_session_id(
+        response,
+        args.get("sessionId"),
+    )
+    _replace_session_cookie(client, args.get("sessionId"))
     try:
         payload = response.json()
     except Exception as exc:
@@ -521,8 +569,7 @@ def _take_account_login_challenge(challenge_id):
 
 
 def _reset_security_context(config):
-    with _security_token_lock:
-        _security_token_cache.clear()
+    _reset_security_token()
     with _security_fingerprint_lock:
         try:
             SECURITY_FINGERPRINT_FILE.unlink(missing_ok=True)
@@ -589,8 +636,30 @@ def account_password_login(
         or not renewed.get("sessionId")
         or not renewed.get("encryptValue")
     ):
+        summary = _response_log_summary(response)
+        logging.warning(
+            "校友邦账号密码登录被拒绝: status=%s, code=%s, msg=%s",
+            summary.get("status"),
+            summary.get("code"),
+            summary.get("msg"),
+        )
+        message = _response_message(payload)
+        if str(summary.get("code")) == "701":
+            message = (
+                "当前会话缺少有效的微信初始化（校友邦代码 701）。"
+                "请先通过‘代理自动获取’或‘输入 Code’完成 "
+                "wx.login/getOpenId，再刷新验证码重试；"
+                "账号密码不能单独替代该握手"
+            )
+        elif str(summary.get("code")) == "604":
+            message = (
+                "安全令牌已刷新，请使用页面自动更新的新验证码重试一次"
+                "（校友邦代码 604）"
+            )
+        elif summary.get("code") in (202, "202") and message == "操作失败":
+            message = "操作失败（请确认账号、密码和完整验证码，验证码区分大小写）"
         raise RuntimeError(
-            f"账号密码登录失败: {_response_message(payload)}"
+            f"账号密码登录失败: {message}"
         )
 
     _reset_security_context(config)
@@ -625,7 +694,7 @@ def auto_login(config, stale_session_id=None):
         union_id = str(cache.get("unionId") or "").strip()
         if not encrypt_value:
             raise RuntimeError(
-                "缺少主动续期凭证，请使用账号密码恢复或重新获取 Code 初始化"
+                "缺少主动续期凭证，请通过真实微信自动恢复或重新获取 Code"
             )
 
         url = "https://xcx.xybsyw.com/login/AutoLogin.action"
@@ -655,6 +724,7 @@ def auto_login(config, stale_session_id=None):
             params={"t": security["url_token"]},
             timeout=10,
         )
+        _handle_security_token_rejection(response)
         try:
             payload = response.json()
         except Exception as exc:
@@ -836,7 +906,12 @@ def get_open_id(config, code):
             "devicecode": get_device_code("", config['device']),
         }
         request_data = {**data, **security["params"]}
-        logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, data:{request_data}")
+        logging.debug(
+            "🛩️ 准备发起请求。url:%s, headers:%s, data:%s",
+            url,
+            _redact_for_log(headers),
+            _redact_for_log(request_data),
+        )
         response = requests.post(
             url=url,
             headers=headers,
@@ -845,7 +920,8 @@ def get_open_id(config, code):
             allow_redirects=False,
             timeout=5,
         )
-        logging.debug(f"📡 收到响应:{response} {response.text}")
+        _handle_security_token_rejection(response)
+        logging.debug("📡 收到响应: %s", _response_log_summary(response))
         res = response.json()
         if str(res.get('code')) == '202':
             raise RuntimeError(
@@ -874,7 +950,7 @@ def wx_login(config, openIdData):
             include_device_code=True,
             timeout=5,
         )
-        logging.debug(f"📡 收到响应:{response} {response.text}")
+        logging.debug("📡 收到响应: %s", _response_log_summary(response))
         return _require_data(response, "登录失败")
     except Exception as e:
         raise RuntimeError(f"登录失败: {e}")

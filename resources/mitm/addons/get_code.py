@@ -59,7 +59,20 @@ def format_pairs(items):
     parts = []
     for key, value in items:
         key_text = str(key or "")
-        if key_text.lower() in {"code", "openid", "unionid", "sessionid", "encryptvalue", "authorization"}:
+        if key_text.lower() in {
+            "authorization",
+            "code",
+            "devicetoken",
+            "encryptvalue",
+            "jsessionid",
+            "mobile",
+            "name",
+            "openid",
+            "sessionid",
+            "unionid",
+            "userid",
+            "username",
+        }:
             value_text = mask_value(value)
         else:
             value_text = compact_text(value, 40)
@@ -100,9 +113,9 @@ def log_request_details(flow: http.HTTPFlow):
     if form_items:
         append_packet_log(f"[MITM][REQ][FORM] {format_pairs(form_items[:12])}")
     else:
-        body_preview = compact_text(flow.request.get_text(strict=False), 160)
-        if body_preview:
-            append_packet_log(f"[MITM][REQ][BODY] {body_preview}")
+        body_size = len(flow.request.content or b"")
+        if body_size:
+            append_packet_log(f"[MITM][REQ][BODY] bytes={body_size}")
 
 
 def log_response_details(flow: http.HTTPFlow):
@@ -111,16 +124,15 @@ def log_response_details(flow: http.HTTPFlow):
 
     label = flow_label(flow)
     content_type = flow.response.headers.get("content-type", "")
-    body_text = flow.response.get_text(strict=False)
     append_packet_log(
         f"[MITM][RES] {label} | status={flow.response.status_code} | type={content_type or '-'} | bytes={len(flow.response.content or b'')}"
     )
 
     if "application/json" in content_type.lower():
         try:
-            payload = json.loads(body_text or "{}")
+            payload = json.loads(flow.response.get_text(strict=False) or "{}")
         except json.JSONDecodeError:
-            append_packet_log(f"[MITM][RES][BODY] {compact_text(body_text, 180)}")
+            append_packet_log("[MITM][RES][JSON] invalid_json=true")
             return
 
         if isinstance(payload, dict):
@@ -134,12 +146,10 @@ def log_response_details(flow: http.HTTPFlow):
                 summary += f", data_len={len(data)}"
             append_packet_log(f"[MITM][RES][JSON] {summary}")
         else:
-            append_packet_log(f"[MITM][RES][JSON] {compact_text(payload, 180)}")
+            append_packet_log(
+                f"[MITM][RES][JSON] root_type={type(payload).__name__}"
+            )
         return
-
-    snippet = compact_text(body_text, 180)
-    if snippet:
-        append_packet_log(f"[MITM][RES][BODY] {snippet}")
 
 
 def write_payload(payload: dict):
@@ -204,8 +214,9 @@ class GetCode:
             append_packet_log(f"[MITM] 未在 {flow.request.method} {flow.request.pretty_url} 中捕获到 code")
             return
 
-        code_preview = mask_value(code)
-        append_packet_log(f"[MITM] ?? {flow.request.method} {flow.request.pretty_url} | code={code_preview}")
+        append_packet_log(
+            f"[MITM] 捕获 {flow.request.method} {flow.request.pretty_url} | code=<redacted>"
+        )
 
         try:
             write_payload({"source": XYB_SOURCE, "code": code})
@@ -242,7 +253,7 @@ class GetCode:
         }
         append_packet_log(
             "[MITM] 捕获 User/Token | "
-            f"code={mask_value(code)} | authorization={mask_value(payload['authorization'])}"
+            "code=<redacted> | authorization=<redacted>"
         )
 
         try:

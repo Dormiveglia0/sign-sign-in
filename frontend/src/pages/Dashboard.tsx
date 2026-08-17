@@ -75,6 +75,12 @@ interface AccountCaptchaChallenge {
   expiresAt: number;
 }
 
+interface CompanionPairing {
+  code: string;
+  expiresAt: string;
+  expiresInSeconds: number;
+}
+
 function taskStateTag(status?: string) {
   if (status === "success") return <StateTag state="success">成功</StateTag>;
   if (status === "failed") return <StateTag state="danger">失败</StateTag>;
@@ -102,6 +108,9 @@ export default function Dashboard() {
   const [accountChallenge, setAccountChallenge] =
     useState<AccountCaptchaChallenge | null>(null);
   const [accountBusy, setAccountBusy] = useState(false);
+  const [companionBusy, setCompanionBusy] = useState(false);
+  const [companionPairing, setCompanionPairing] =
+    useState<CompanionPairing | null>(null);
   const [busy, setBusy] = useState(false);
 
   const activeTask = ["queued", "running", "stopping"].includes(
@@ -229,25 +238,27 @@ export default function Dashboard() {
       setAccountPicCode("");
       setAccountChallenge(null);
       setSessionOpen(false);
-      message.success("账号密码验证成功，校友邦 SESSION 已恢复");
+      message.success("账号密码验证成功，校友邦 SESSION 已更新");
       await refreshStatus();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "账号登录失败");
+      const detail = error instanceof Error ? error.message : "账号登录失败";
+      message.error(detail);
       setAccountChallenge(null);
       setAccountPicCode("");
-      await loadAccountCaptcha();
+      if (detail.includes("代码 701") || detail.includes("微信初始化")) {
+        setSessionTab("capture");
+      } else {
+        await loadAccountCaptcha();
+      }
     } finally {
       setAccountBusy(false);
     }
   }
 
   function openSessionManager() {
-    const nextTab = sessionNeedsReauth ? "account" : "manual";
+    const nextTab = sessionNeedsReauth ? "capture" : "manual";
     setSessionTab(nextTab);
     setSessionOpen(true);
-    if (nextTab === "account" && !accountChallenge) {
-      void loadAccountCaptcha();
-    }
   }
 
   function closeSessionManager() {
@@ -279,6 +290,33 @@ export default function Dashboard() {
       message.error(error instanceof Error ? error.message : "关闭失败");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function createCompanionPairing() {
+    setCompanionBusy(true);
+    try {
+      const pairing = await api<CompanionPairing>("/api/companion/pairing", {
+        method: "POST",
+      });
+      setCompanionPairing(pairing);
+      message.success("一次性配对码已生成，10 分钟内有效");
+      await refreshStatus();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "生成配对码失败");
+    } finally {
+      setCompanionBusy(false);
+    }
+  }
+
+  async function copyCompanionCommand() {
+    if (!companionPairing) return;
+    const command = `scripts\\credential_companion.cmd pair --server "${window.location.origin}" --code ${companionPairing.code}`;
+    try {
+      await navigator.clipboard.writeText(command);
+      message.success("配对命令已复制");
+    } catch {
+      message.warning("浏览器未允许复制，请手动选择命令");
     }
   }
 
@@ -314,7 +352,7 @@ export default function Dashboard() {
             ? `下次保活 ${formatDateTime(sessionKeeper.nextAttemptAt)}`
             : status?.session.cachedAt
               ? `更新于 ${formatDateTime(status.session.cachedAt)}`
-              : "可用账号密码或有效 Code 初始化",
+              : "需要新的 Code 建立微信会话",
         icon: KeyRound,
         tone: sessionReady
           ? sessionKeeper?.status === "retrying"
@@ -568,8 +606,8 @@ export default function Dashboard() {
                   ? `预计 ${formatDateTime(sessionKeeper.nextAttemptAt)} 再次保活`
                   : "保活调度正在同步"
                 : sessionNeedsReauth
-                  ? "可用账号密码和图形验证码恢复，或提交新的小程序 Code"
-                  : "需要先用账号密码或有效 Code 初始化"}
+                  ? "请重新获取小程序 Code；账号密码不能单独恢复"
+                  : "需要先用有效 Code 初始化微信会话"}
             </span>
             <div className="session-detail-grid">
               <div>
@@ -700,15 +738,15 @@ export default function Dashboard() {
             sessionReady
               ? "SESSION 主动保活已启用"
               : sessionNeedsReauth
-                ? "SESSION 已失效，可使用账号密码恢复"
-                : "首次初始化可使用账号密码或有效 Code"
+                ? "SESSION 已失效，需要新的 wx.login Code"
+                : "首次初始化需要有效的 wx.login Code"
           }
           description={
             sessionReady
-              ? "服务器会在 SESSION 仍有效时每 45 分钟主动换新。若最终失效，可使用账号密码和图形验证码恢复，也可重新获取 Code。"
+              ? "服务器会在 SESSION 仍有效时每 45 分钟主动换新。若最终失效，必须重新获取 Code 建立微信会话；账号密码仅用于有效初始化会话中的补充登录。"
               : sessionNeedsReauth
-                ? "现有 SESSION 已失效，缓存字段不能在过期后静默恢复；推荐使用账号密码和图形验证码换取新凭证，也可提交新的小程序 Code。"
-                : "首次成功登录后会保存 AutoLogin 凭证，并在 SESSION 有效期内每 45 分钟主动换新。"
+                ? "现有 SESSION 已失效，缓存字段和账号密码都不能绕过 wx.login/getOpenId；请使用代理自动获取或提交新的 Code。"
+                : "请先用代理自动获取或输入 Code 建立微信会话；成功后会在 SESSION 有效期内每 45 分钟主动换新。"
           }
           style={{ marginBottom: 16 }}
         />
@@ -723,14 +761,14 @@ export default function Dashboard() {
           items={[
             {
               key: "account",
-              label: "账号密码（推荐）",
+              label: "账号密码（需有效会话）",
               children: (
                 <div className="session-tab account-login-tab">
                   <Alert
                     type="info"
                     showIcon
-                    message="不依赖微信运行时"
-                    description="按 594 版小程序的 login.action 流程登录。图形验证码由服务端强制要求；明文密码只用于本次请求，不写入配置、缓存或日志。"
+                    message="依赖微信初始化会话"
+                    description="594 版小程序会先通过 wx.login/getOpenId 建立会话，再调用 login.action。若出现代码 701，请先使用“代理自动获取”或“输入 Code”；明文密码只用于本次请求，不写入配置、缓存或日志。"
                   />
                   <label htmlFor="xyb-account-username">校友邦账号</label>
                   <Input
@@ -850,14 +888,71 @@ export default function Dashboard() {
             },
             {
               key: "capture",
-              label: "代理自动获取",
+              label: "真实微信自动恢复",
               children: (
                 <div className="session-tab">
+                  <div className="companion-panel">
+                    <Alert
+                      type={status?.companion?.configured ? "success" : "info"}
+                      showIcon
+                      message={
+                        status?.companion?.configured
+                          ? "Windows 微信采集端已配对"
+                          : "推荐：Windows 真实微信自动恢复"
+                      }
+                      description={
+                        status?.companion?.configured
+                          ? `设备 ${status.companion.deviceName || "Windows 采集端"}；${
+                              status.companion.lastSeenAt
+                                ? `最近连接 ${formatDateTime(status.companion.lastSeenAt)}`
+                                : "等待首次连接"
+                            }。采集端每天主动获取一次全新 wx.login Code，SESSION 失效时立即恢复。`
+                          : "采集端使用已登录的电脑版微信运行官方小程序，捕获一次性 Code 后直接回写 OpenWrt；长期令牌由 Windows DPAPI 加密，不记录 Code、SESSION 或令牌明文。"
+                      }
+                    />
+                    <div className="companion-actions">
+                      <Button
+                        type="primary"
+                        icon={<TerminalSquare size={16} />}
+                        loading={companionBusy}
+                        onClick={createCompanionPairing}
+                      >
+                        {status?.companion?.configured
+                          ? "生成重新配对码"
+                          : "生成一次性配对码"}
+                      </Button>
+                      <span>配对码 10 分钟有效；完成新配对后旧采集端自动失效。</span>
+                    </div>
+                    {companionPairing ? (
+                      <div className="companion-pairing">
+                        <div>
+                          <span>一次性配对码</span>
+                          <strong>{companionPairing.code}</strong>
+                          <small>
+                            {formatDateTime(companionPairing.expiresAt)} 前有效
+                          </small>
+                        </div>
+                        <pre>{`scripts\\credential_companion.cmd pair --server "${window.location.origin}" --code ${companionPairing.code}`}</pre>
+                        <Button onClick={copyCompanionCommand}>复制配对命令</Button>
+                        <p>
+                          配对后先运行一次验收：
+                          <code>
+                            scripts\credential_companion.cmd run --once --force
+                          </code>
+                          ；成功后运行
+                          <code>
+                            scripts\credential_companion.cmd install-task
+                          </code>
+                          安装每 5 分钟检查一次的 Windows 计划任务。
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
                   <Alert
                     type="info"
                     showIcon
-                    message="通过代理自动捕获 Code 并更新 SESSION"
-                    description="启动后会显示设备连接、访问域名、目标请求和 TLS 失败；捕获成功后会自动关闭代理并刷新凭证。"
+                    message="手动远程代理（备用）"
+                    description="若不安装 Windows 采集端，仍可临时启动 OpenWrt 代理并手动设置设备；捕获成功后会自动关闭代理并刷新凭证。"
                   />
                   <ol className="capture-steps">
                     <li>

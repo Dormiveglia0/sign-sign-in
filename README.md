@@ -15,6 +15,43 @@
 - 设备模拟：自动生成设备信息。
 - 签到逻辑：根据配置信息自动完成签到流程。
 
+## OpenWrt + 真实微信自动恢复
+
+OpenWrt 服务端可以运行在 ARM64，真实微信凭证采集端运行在已经登录微信的
+Windows 用户会话中，两端不共享二进制依赖。采集端会启动官方电脑版微信小程序，
+捕获一次性的 `wx.login` Code 并立即提交给 OpenWrt；默认每 24 小时主动刷新一次，
+检测到服务端 SESSION 无效时会立即重建。
+
+首次安装：
+
+1. 在管理页的“校友邦 SESSION → 真实微信自动恢复”中生成一次性配对码。
+2. 在本仓库根目录运行管理页显示的配对命令，例如：
+
+   ```bat
+   scripts\credential_companion.cmd pair --server "http://192.168.2.1:8787" --code XXXX-XXXX-XXXX
+   ```
+
+3. 保持电脑版微信已登录，执行一次完整验收：
+
+   ```bat
+   scripts\credential_companion.cmd run --once --force
+   ```
+
+4. 验收成功后安装当前 Windows 用户的计划任务：
+
+   ```bat
+   scripts\credential_companion.cmd install-task
+   ```
+
+计划任务每 5 分钟检查一次状态，只在当前用户已经登录 Windows 时运行。Windows
+关机、休眠或微信退出期间不会采集；恢复后下一轮会自动重试。首次抓取若提示证书
+未受信任，请按错误信息把生成的 mitmproxy CA 安装到“当前用户 → 受信任的根证书
+颁发机构”，此操作只需完成一次。
+
+安全设计：配对码 10 分钟有效且只能使用一次；OpenWrt 只保存长期令牌的 SHA-256
+摘要，Windows 使用当前用户 DPAPI 加密保存令牌；日志不会写入 Code、SESSION、
+OpenID 或令牌明文。公网服务必须使用 HTTPS，HTTP 仅允许本机或局域网地址。
+
 ## 🙏 特别鸣谢
 
 感谢所有对本项目提供支持和帮助的朋友们，你们的赞助不仅是物质上的支持，更是对我持续创作、优化与维护开源项目的巨大鼓励。

@@ -259,7 +259,7 @@ export default function Journal() {
           type="warning"
           showIcon
           message="需要可用的校友邦登录凭证"
-          description="请先回到运行总览初始化校友邦凭证。服务只会在 SESSION 仍有效时主动保活；已经失效后可使用账号密码和图形验证码恢复。若已配置自有模型，草稿生成仍可使用。"
+          description="请先回到运行总览初始化校友邦凭证。服务只会在 SESSION 仍有效时主动保活；已经失效后需通过真实微信自动恢复或重新获取 Code。若已配置自有模型，草稿生成仍可使用。"
         />
       )}
 

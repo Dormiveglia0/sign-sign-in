@@ -1067,11 +1067,14 @@ code {
   align-items: stretch;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) 150px;
+  min-height: 50px;
 }
 
 .account-captcha-image {
   display: grid;
-  height: 32px;
+  box-sizing: border-box;
+  height: 50px;
+  min-height: 50px;
   padding: 0;
   overflow: hidden;
   place-items: center;
@@ -1089,8 +1092,11 @@ code {
 }
 
 .account-captcha-image img {
-  width: 100%;
-  height: 100%;
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -1106,6 +1112,76 @@ code {
   margin-top: -8px;
   color: #7b898b;
   font-size: 10px;
+}
+
+.companion-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #cfe0dc;
+  background: #f5faf8;
+}
+
+.companion-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.companion-actions > span {
+  color: #6d7c7e;
+  font-size: 10px;
+}
+
+.companion-pairing {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #d9e4e1;
+  background: #fff;
+}
+
+.companion-pairing > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.companion-pairing span,
+.companion-pairing small,
+.companion-pairing p {
+  color: #667679;
+  font-size: 10px;
+}
+
+.companion-pairing strong {
+  color: #126c63;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+}
+
+.companion-pairing pre {
+  margin: 0;
+  padding: 10px;
+  overflow-x: auto;
+  background: #172327;
+  color: #d9e9e6;
+  font-size: 10px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.companion-pairing p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.companion-pairing p code {
+  margin: 0 4px;
 }
 
 .capture-steps {
@@ -1981,6 +2057,7 @@ code {
 
   .run-actions,
   .capture-actions,
+  .companion-actions,
   .journal-generate-row,
   .journal-submit-action,
   .jielong-submit-bar {
@@ -1999,9 +2076,16 @@ code {
 
   .run-actions .ant-btn,
   .capture-actions .ant-btn,
+  .companion-actions .ant-btn,
   .journal-submit-action .ant-btn,
   .jielong-submit-bar .ant-btn {
     width: 100%;
+  }
+
+  .companion-pairing > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
   }
 
   .live-task {

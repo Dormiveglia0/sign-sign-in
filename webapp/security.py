@@ -88,8 +88,8 @@ def change_password(current_password: str, new_password: str) -> None:
     config = read_security_config()
     if not verify_password(config["username"], current_password):
         raise HTTPException(status_code=400, detail="当前密码不正确")
-    if len(new_password) < 12:
-        raise HTTPException(status_code=422, detail="新密码至少需要 12 个字符")
+    if not new_password:
+        raise HTTPException(status_code=422, detail="新密码不能为空")
     salt = secrets.token_bytes(16)
     config["password_salt"] = _b64encode(salt)
     config["password_hash"] = _password_hash(new_password, salt)
