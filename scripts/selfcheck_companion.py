@@ -11,6 +11,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.companion import config as companion_config
+from app.companion import runner as companion_runner
+from app.config.common import XYB_APP_ID
 from webapp import companion_auth
 
 
@@ -108,11 +110,48 @@ def check_server_url_policy() -> None:
         raise AssertionError("Public companion server must require HTTPS")
 
 
+def check_wechat_launch_protocol() -> None:
+    opened: list[str] = []
+    with patch.object(
+        companion_runner,
+        "open_path_or_url",
+        side_effect=opened.append,
+    ):
+        companion_runner._wake_wechat_applet(retries=1)
+    assert opened == [
+        f"weixin://launchapplet/?app_id={XYB_APP_ID}",
+    ]
+
+
+def check_wechat_runtime_shutdown_waits() -> None:
+    class FakeProcess:
+        info = {"name": "WeChatAppEx.exe"}
+
+        def __init__(self):
+            self.killed = False
+
+        def kill(self):
+            self.killed = True
+
+    process = FakeProcess()
+    with (
+        patch.object(companion_runner.psutil, "process_iter", return_value=[process]),
+        patch.object(companion_runner.psutil, "wait_procs") as wait_procs,
+        patch.object(companion_runner.time, "sleep") as sleep,
+    ):
+        assert companion_runner._stop_applet_renderers() == 1
+    assert process.killed
+    wait_procs.assert_called_once_with([process], timeout=5)
+    sleep.assert_called_once_with(1)
+
+
 def main() -> None:
     check_pairing_token_lifecycle()
     check_windows_token_storage()
     check_refresh_schedule()
     check_server_url_policy()
+    check_wechat_launch_protocol()
+    check_wechat_runtime_shutdown_waits()
     print("credential companion self-check passed")
 
 

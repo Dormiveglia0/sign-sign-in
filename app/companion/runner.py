@@ -87,20 +87,27 @@ def _single_instance():
 
 def _stop_applet_renderers() -> int:
     stopped = 0
+    processes = []
     for process in psutil.process_iter(["name"]):
         try:
             if str(process.info.get("name") or "").lower() in RENDERER_NAMES:
                 process.kill()
+                processes.append(process)
                 stopped += 1
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
+    if processes:
+        psutil.wait_procs(processes, timeout=5)
+        # WeChat needs a short interval to tear down the old WMPF host before
+        # it can accept a new launch request reliably.
+        time.sleep(1)
     return stopped
 
 
 def _wake_wechat_applet(retries: int = 3) -> None:
     urls = (
-        f"weixin://launchapplet/?appid={XYB_APP_ID}",
-        f"weixin://launchapplet?appid={XYB_APP_ID}",
+        f"weixin://launchapplet/?app_id={XYB_APP_ID}",
+        f"weixin://launchapplet?app_id={XYB_APP_ID}",
     )
     last_error: Exception | None = None
     for attempt in range(retries):

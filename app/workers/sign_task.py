@@ -359,8 +359,8 @@ class GetCodeAndSessionThread(QThread):
 
             ### 唤起微信小程序
             weixin_urls = [
-                f"weixin://launchapplet/?appid={XYB_APP_ID}",
-                f"weixin://launchapplet?appid={XYB_APP_ID}",
+                f"weixin://launchapplet/?app_id={XYB_APP_ID}",
+                f"weixin://launchapplet?app_id={XYB_APP_ID}",
             ]
             try:
                 self.kill_wechat_before_launch()
@@ -486,7 +486,9 @@ class GetCodeAndSessionThread(QThread):
                 )
             except Exception:
                 pass
-        time.sleep(0.3)
+        # WeChat 4.x needs a short interval to tear down the WMPF host before
+        # a new launch request can create the target applet renderer.
+        time.sleep(1)
 
     @staticmethod
     def wake_applet_with_retry(weixin_urls, retries: int = 3):
