@@ -60,6 +60,26 @@ class SessionExpired(RuntimeError):
     pass
 
 
+class RetryableNetworkError(RuntimeError):
+    """A transient transport failure that is safe to retry at task level."""
+
+
+TRANSIENT_HTTP_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}
+DEFAULT_NETWORK_RETRY_DELAYS = (2, 5, 15)
+
+
+def is_retryable_network_error(error):
+    """Return True only for failures explicitly marked safe for a full retry."""
+    current = error
+    visited = set()
+    while current is not None and id(current) not in visited:
+        if isinstance(current, RetryableNetworkError):
+            return True
+        visited.add(id(current))
+        current = current.__cause__ or current.__context__
+    return False
+
+
 _SENSITIVE_LOG_KEYS = {
     "authorization",
     "cookie",
@@ -351,6 +371,56 @@ def _build_security_context(data, config, args=None):
     }
 
 
+def _request_with_network_retry(
+    send,
+    *,
+    label,
+    retry_delays=DEFAULT_NETWORK_RETRY_DELAYS,
+):
+    """Retry a transport operation whose business effect is known to be safe."""
+    delays = tuple(max(0, float(value)) for value in retry_delays)
+    total_attempts = len(delays) + 1
+    for attempt in range(total_attempts):
+        try:
+            response = send()
+        except requests.RequestException as exc:
+            if attempt >= len(delays):
+                raise RetryableNetworkError(
+                    f"{label}临时网络故障，短期重试已用尽: {exc}"
+                ) from exc
+            delay = delays[attempt]
+            logging.warning(
+                "%s网络异常，第 %s/%s 次请求失败，%.0f 秒后重试: %s",
+                label,
+                attempt + 1,
+                total_attempts,
+                delay,
+                exc,
+            )
+            time.sleep(delay)
+            continue
+
+        status_code = getattr(response, "status_code", None)
+        if status_code not in TRANSIENT_HTTP_STATUS_CODES:
+            return response
+        if attempt >= len(delays):
+            raise RetryableNetworkError(
+                f"{label}临时服务异常，短期重试已用尽: HTTP {status_code}"
+            )
+        delay = delays[attempt]
+        logging.warning(
+            "%s返回临时状态 HTTP %s，第 %s/%s 次请求失败，%.0f 秒后重试",
+            label,
+            status_code,
+            attempt + 1,
+            total_attempts,
+            delay,
+        )
+        time.sleep(delay)
+
+    raise RetryableNetworkError(f"{label}临时网络故障，短期重试已用尽")
+
+
 def _form_post(
     url,
     data,
@@ -360,36 +430,55 @@ def _form_post(
     timeout=5,
     request_client=None,
     use_session_cookies=False,
+    retry_network=False,
+    retry_delays=DEFAULT_NETWORK_RETRY_DELAYS,
 ):
-    security = _build_security_context(data, config, args=args)
-    request_data = {**data, **security["params"]}
-    headers = {
-        **_base_xyb_headers(config),
-        "encryptvalue": args.get("encryptValue", ""),
-        "n": XYB_N_HEADER,
-        "wechat": "1",
-    }
-    if include_device_code:
-        headers["devicecode"] = get_device_code(openId=args.get("openId", ""), device=config["device"])
-    session_id = str(args.get("sessionId") or "")
-    cookies = {"JSESSIONID": session_id} if session_id else None
-    logging.debug(
-        "准备发起校友邦请求。url:%s, headers:%s, data:%s, cookies:%s",
-        url,
-        _redact_for_log(headers),
-        _redact_for_log(request_data),
-        _redact_for_log(cookies),
-    )
     client = request_client or requests
-    request_options = {
-        "headers": headers,
-        "data": request_data,
-        "params": {"t": security["url_token"]},
-        "timeout": timeout,
-    }
-    if not use_session_cookies:
-        request_options["cookies"] = cookies
-    response = client.post(url, **request_options)
+    request_label = urlparse(url).path.rsplit("/", 1)[-1] or "校友邦请求"
+
+    def send():
+        # Security timestamps/tokens are generated again for every attempt.
+        security = _build_security_context(data, config, args=args)
+        request_data = {**data, **security["params"]}
+        headers = {
+            **_base_xyb_headers(config),
+            "encryptvalue": args.get("encryptValue", ""),
+            "n": XYB_N_HEADER,
+            "wechat": "1",
+        }
+        if include_device_code:
+            headers["devicecode"] = get_device_code(
+                openId=args.get("openId", ""),
+                device=config["device"],
+            )
+        session_id = str(args.get("sessionId") or "")
+        cookies = {"JSESSIONID": session_id} if session_id else None
+        logging.debug(
+            "准备发起校友邦请求。url:%s, headers:%s, data:%s, cookies:%s",
+            url,
+            _redact_for_log(headers),
+            _redact_for_log(request_data),
+            _redact_for_log(cookies),
+        )
+        request_options = {
+            "headers": headers,
+            "data": request_data,
+            "params": {"t": security["url_token"]},
+            "timeout": timeout,
+        }
+        if not use_session_cookies:
+            request_options["cookies"] = cookies
+        return client.post(url, **request_options)
+
+    response = (
+        _request_with_network_retry(
+            send,
+            label=request_label,
+            retry_delays=retry_delays,
+        )
+        if retry_network
+        else send()
+    )
     logging.debug("收到响应: %s", _response_log_summary(response))
     _handle_security_token_rejection(response)
     return response
@@ -804,7 +893,15 @@ def _regeo_tencent(userAgent, location, key=None):
             headers,
             params,
         )
-        response = requests.get(url, headers=headers, params=params, timeout=5)
+        response = _request_with_network_retry(
+            lambda: requests.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=5,
+            ),
+            label="腾讯地图位置解析",
+        )
         logging.debug("📡 收到响应:%s %s", response, response.text)
         res = response.json()
         if response.status_code == 200 and res.get("status") == 0 and res.get("result"):
@@ -840,7 +937,15 @@ def regeo(userAgent, location, provider="amap", map_keys=None):
     }
     try:
         logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, params:{params}")
-        response = requests.get(url, headers=headers, params=params, timeout=5)
+        response = _request_with_network_retry(
+            lambda: requests.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=5,
+            ),
+            label="高德地图位置解析",
+        )
         logging.debug(f"📡 收到响应:{response} {response.text}")
         res = response.json()
         if 'regeocode' in res:
@@ -865,7 +970,15 @@ def get_plan(userAgent, args, config=None):
     config = config if isinstance(config, dict) else {"userAgent": userAgent}
 
     try:
-        response = _form_post(url, data, config=config, args=args, include_device_code=False, timeout=5)
+        response = _form_post(
+            url,
+            data,
+            config=config,
+            args=args,
+            include_device_code=False,
+            timeout=5,
+            retry_network=True,
+        )
         res = response.json()
         _assert_session(res)
         if _is_plan_empty_body(res):
@@ -884,7 +997,15 @@ def get_default_plan(userAgent, args, config=None):
     config = config if isinstance(config, dict) else {"userAgent": userAgent}
 
     try:
-        response = _form_post(url, data, config=config, args=args, include_device_code=False, timeout=5)
+        response = _form_post(
+            url,
+            data,
+            config=config,
+            args=args,
+            include_device_code=False,
+            timeout=5,
+            retry_network=True,
+        )
         res = response.json()
         _assert_session(res)
         if _is_plan_empty_body(res):
@@ -1016,10 +1137,11 @@ def photo_sign_in_or_out(args, config, geo, traineeId, opt):
 
     watermark = watermark_info(args=args, config=config, traineeId=traineeId)
     watermarked_path = render_watermarked_photo(opt.get('image_path'), watermark, geo.get('formatted_address', ''))
-    policyData = commonPostPolicy(args=args, config=config)
-    timestamp = get_timestamp()
-    files = get_img_file(timestamp, watermarked_path)
+    files = {}
     try:
+        policyData = commonPostPolicy(args=args, config=config)
+        timestamp = get_timestamp()
+        files = get_img_file(timestamp, watermarked_path)
         ossData = aliyun_OSS(files=files, timestamp=timestamp, policyData=policyData,config=config)
         post_new(args=args, config=config, traineeId=traineeId, geo=geo, imgUrl=ossData['key'], opt=opt)
         # deliver_value(args=args, config=config, traineeId=traineeId)
@@ -1040,7 +1162,15 @@ def watermark_info(args, config, traineeId):
         "traineeId": str(traineeId)
     }
 
-    response = _form_post(url, data, config=config, args=args, include_device_code=False, timeout=5)
+    response = _form_post(
+        url,
+        data,
+        config=config,
+        args=args,
+        include_device_code=False,
+        timeout=5,
+        retry_network=True,
+    )
     logging.info(f"{response} {response.text}")
     return _require_data(response, "获取拍照打卡水印信息失败")
 
@@ -1107,7 +1237,15 @@ def commonPostPolicy(args, config):
         "publicRead": "true"
     }
 
-    response = _form_post(url, data, config=config, args=args, include_device_code=True, timeout=5)
+    response = _form_post(
+        url,
+        data,
+        config=config,
+        args=args,
+        include_device_code=True,
+        timeout=5,
+        retry_network=True,
+    )
     logging.info(f"{response} {response.text}")
     return _require_data(response, "commonPostPolicy请求异常")
 
@@ -1137,7 +1275,22 @@ def aliyun_OSS(files, timestamp, policyData,config):
     }
 
     logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, data:{data}, files:{files}")
-    response = requests.post(url, data=data, files=files, headers=headers)
+    def upload():
+        file_obj = files.get("file", [None, None, None])[1]
+        if file_obj:
+            file_obj.seek(0)
+        return requests.post(
+            url,
+            data=data,
+            files=files,
+            headers=headers,
+            timeout=(5, 30),
+        )
+
+    response = _request_with_network_retry(
+        upload,
+        label="阿里云 OSS 图片上传",
+    )
     logging.debug(f"📡 收到响应:{response} {response.text}")
 
     if response.status_code != 200:

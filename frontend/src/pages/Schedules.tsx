@@ -202,7 +202,7 @@ export default function Schedules() {
         type="info"
         showIcon
         message="调度由 Linux 后端执行"
-        description="服务器系统时间可以是 UTC；这里的时区单独决定触发时间。服务会在 SESSION 有效时主动保活；若凭证已经失效，定时任务会停止并等待账号验证码或新 Code 恢复，不会在无人值守时开放抓包端口。"
+        description="服务器系统时间可以是 UTC；这里的时区单独决定触发时间。临时网络故障会先在当前请求内短期退避，再按当天的分时段计划继续重试；凭证失效、配置错误和业务拒绝不会盲目重试。"
       />
 
       <div className="schedule-layout">
@@ -255,8 +255,20 @@ export default function Schedules() {
                 title: "下次执行",
                 dataIndex: "nextAt",
                 responsive: ["md"],
-                render: (value) =>
-                  value ? formatDateTime(value) : <span className="muted">保存后计算</span>,
+                render: (value, record) =>
+                  record.retryAt ? (
+                    <div className="table-primary">
+                      <strong>{formatDateTime(record.retryAt)}</strong>
+                      <span>
+                        网络重试 {record.retryAttempt || 1} /{" "}
+                        {state?.retryPolicy?.longMinutes.length || 5}
+                      </span>
+                    </div>
+                  ) : value ? (
+                    formatDateTime(value)
+                  ) : (
+                    <span className="muted">保存后计算</span>
+                  ),
               },
               {
                 title: "",
@@ -344,6 +356,14 @@ export default function Schedules() {
               随机图片本轮已使用 {state?.imageRotation?.used || 0} /{" "}
               {state?.imageRotation?.total || 0}，剩余{" "}
               {state?.imageRotation?.remaining || 0} 张；全部使用后自动开始新一轮。
+            </div>
+            <div className="security-note">
+              <ShieldCheck size={16} />
+              网络故障短期退避：
+              {state?.retryPolicy?.shortSeconds.join(" / ") || "2 / 5 / 15"} 秒；
+              跨时段重试：原计划后
+              {state?.retryPolicy?.longMinutes.join(" / ") || "5 / 15 / 30 / 60 / 120"}
+              分钟。仅当天生效。
             </div>
           </Card>
 

@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -20,7 +21,7 @@ from app.utils import files as file_utils
 from app.utils.gotify import build_gotify_message_url, notify_gotify
 from webapp import runtime as runtime_module
 from webapp import security as web_security
-from webapp.runtime import ImageRotation, SessionKeeper, TaskManager
+from webapp.runtime import ImageRotation, Scheduler, SessionKeeper, TaskManager
 
 
 def check_session_cache_has_no_local_expiry():
@@ -235,6 +236,118 @@ def check_task_does_not_retry_expired_session():
     assert "重新获取 Code" in manager.snapshot()["message"]
     assert calls == 1
     rotate.assert_not_called()
+
+
+def check_safe_network_short_retry():
+    response = SimpleNamespace(
+        status_code=200,
+        text='{"code":"200","data":{}}',
+        json=lambda: {"code": "200", "data": {}},
+    )
+    config = {
+        "userAgent": "test",
+        "device": {
+            "brand": "OnePlus",
+            "model": "PHP110",
+            "system": "Android 15",
+            "platform": "android",
+        },
+    }
+    with (
+        patch.object(
+            xybsyw,
+            "_build_security_context",
+            return_value={"params": {}, "url_token": "token"},
+        ),
+        patch.object(xybsyw, "get_device_code", return_value="device"),
+        patch.object(
+            xybsyw.requests,
+            "post",
+            side_effect=[requests.exceptions.SSLError("temporary eof"), response],
+        ) as post,
+        patch.object(xybsyw.time, "sleep") as sleep,
+    ):
+        result = xybsyw._form_post(
+            "https://xcx.xybsyw.com/uploadfile/commonPostPolicy.action",
+            {"safe": "value"},
+            config=config,
+            args={"sessionId": "session", "encryptValue": "encrypt"},
+            retry_network=True,
+            retry_delays=(0,),
+        )
+    assert result is response
+    assert post.call_count == 2
+    sleep.assert_called_once_with(0)
+
+
+def check_scheduler_stages_retryable_failures():
+    with tempfile.TemporaryDirectory() as directory:
+        retry_file = Path(directory) / "scheduled-retries.json"
+        manager = TaskManager()
+        with (
+            patch.object(runtime_module, "SCHEDULE_RETRY_FILE", retry_file),
+            patch.object(
+                runtime_module,
+                "read_config",
+                return_value={"settings": {"timezone": "Asia/Shanghai"}},
+            ),
+        ):
+            scheduler = Scheduler(manager)
+            origin = datetime.now().astimezone().isoformat(timespec="seconds")
+            record = {
+                "source": "auto",
+                "status": "failed",
+                "message": "temporary network failure",
+                "startedAt": origin,
+            }
+            context = {
+                "scheduleKey": "0:photo_in:09:00::1",
+                "retryAttempt": 0,
+                "retryOriginAt": origin,
+                "imagePath": "/tmp/scheduled.jpg",
+            }
+            scheduler._on_task_finished(
+                record,
+                False,
+                xybsyw.RetryableNetworkError("temporary"),
+                context,
+            )
+            retry = scheduler.retry_runs[context["scheduleKey"]]
+            assert retry["attempt"] == 1
+            assert retry["imagePath"] == "/tmp/scheduled.jpg"
+            assert record["retryAttempt"] == 1
+            assert "跨时段重试" in record["message"]
+            assert retry_file.exists()
+
+            retry["nextAt"] = (
+                datetime.now().astimezone() - runtime_module.timedelta(seconds=1)
+            ).isoformat(timespec="seconds")
+            with patch.object(manager, "start_sign") as start_sign:
+                assert scheduler._start_due_retry(
+                    datetime.now().astimezone(),
+                    [
+                        {
+                            "time": "09:00",
+                            "mode": "photo_in",
+                            "image_path": "",
+                            "random_image": True,
+                        }
+                    ],
+                )
+            _, dispatch = start_sign.call_args
+            assert dispatch["random_image"] is False
+            assert dispatch["retry_attempt"] == 1
+            assert start_sign.call_args.args[1] == "/tmp/scheduled.jpg"
+
+            non_retryable = dict(record, message="business rejection")
+            scheduler._on_task_finished(
+                non_retryable,
+                False,
+                RuntimeError("操作失败"),
+                {**context, "retryAttempt": 1},
+            )
+            assert context["scheduleKey"] not in scheduler.retry_runs
+            assert "停止自动重试" in non_retryable["message"]
 
 
 def check_random_image_rotation():
@@ -502,6 +615,8 @@ def main():
     check_consumed_code_message()
     check_proactive_session_rotation()
     check_task_does_not_retry_expired_session()
+    check_safe_network_short_retry()
+    check_scheduler_stages_retryable_failures()
     check_random_image_rotation()
     check_stable_security_context()
     check_security_token_fallback_matches_594()

@@ -21,8 +21,10 @@ from app.config.common import (
     SESSION_CACHE_FILE,
 )
 from app.apis.xybsyw import (
+    DEFAULT_NETWORK_RETRY_DELAYS,
     SESSION_REAUTH_REQUIRED,
     auto_login,
+    is_retryable_network_error,
     is_session_expired_error,
 )
 from app.mitm.service import MitmService
@@ -40,6 +42,10 @@ TASK_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name("web_task_history.json")
 SCHEDULE_IMAGE_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name(
     "scheduled_image_history.json"
 )
+SCHEDULE_RETRY_FILE = Path(SESSION_CACHE_FILE).with_name(
+    "scheduled_retry_state.json"
+)
+LONG_RETRY_MINUTES = (5, 15, 30, 60, 120)
 
 
 def iso_now() -> str:
@@ -216,6 +222,7 @@ class TaskManager:
         self.thread: threading.Thread | None = None
         self.image_rotation = image_rotation or ImageRotation()
         self.history = _load_history()
+        self.completion_listeners = []
         self.state = {
             "id": "",
             "status": "idle",
@@ -239,7 +246,19 @@ class TaskManager:
                 )
             )
 
-    def _start(self, *, mode: str, action: str, source: str, target) -> dict:
+    def add_completion_listener(self, listener) -> None:
+        with self.lock:
+            self.completion_listeners.append(listener)
+
+    def _start(
+        self,
+        *,
+        mode: str,
+        action: str,
+        source: str,
+        target,
+        context: dict | None = None,
+    ) -> dict:
         with self.lock:
             if self.state["status"] in {"queued", "running", "stopping"}:
                 raise RuntimeError("已有任务正在执行")
@@ -257,7 +276,7 @@ class TaskManager:
             task_id = self.state["id"]
             self.thread = threading.Thread(
                 target=self._run,
-                args=(task_id, target),
+                args=(task_id, target, context or {}),
                 name=f"web-task-{task_id}",
                 daemon=True,
             )
@@ -270,6 +289,9 @@ class TaskManager:
         image_path: str = "",
         source: str = "manual",
         random_image: bool = False,
+        schedule_key: str = "",
+        retry_attempt: int = 0,
+        retry_origin_at: str = "",
     ) -> dict:
         with self.session_lock:
             if not get_valid_session_cache():
@@ -290,6 +312,12 @@ class TaskManager:
                     action=option["action"],
                     source=source,
                     target=lambda flow: flow.run(option),
+                    context={
+                        "scheduleKey": schedule_key,
+                        "retryAttempt": max(0, int(retry_attempt)),
+                        "retryOriginAt": str(retry_origin_at or ""),
+                        "imagePath": image_path,
+                    },
                 )
 
     def start_session_refresh(self, code: str, source: str = "manual") -> dict:
@@ -300,7 +328,7 @@ class TaskManager:
             target=lambda flow: flow.refresh_session(code),
         )
 
-    def _run(self, task_id: str, target) -> None:
+    def _run(self, task_id: str, target, context: dict) -> None:
         with self.lock:
             if self.state["id"] != task_id:
                 return
@@ -309,6 +337,7 @@ class TaskManager:
 
         success = False
         result = None
+        error = None
         try:
             result = target(SignFlow(stop_event=self.stop_event))
             status = "success"
@@ -319,6 +348,7 @@ class TaskManager:
             message = "任务已停止"
             logging.warning("🚫 任务已停止")
         except Exception as exc:
+            error = exc
             status = "failed"
             message = (
                 SESSION_REAUTH_REQUIRED
@@ -341,6 +371,20 @@ class TaskManager:
                 else:
                     self.state["result"] = _redact_task_value(result)
             record = _sanitize_task_record(self.state)
+            listeners = list(self.completion_listeners)
+
+        for listener in listeners:
+            try:
+                listener(record, success, error, copy.deepcopy(context))
+            except Exception:
+                logging.exception("任务完成回调失败")
+
+        with self.lock:
+            if self.state["id"] == task_id:
+                self.state["message"] = record.get("message", self.state["message"])
+                for key in ("retryAt", "retryAttempt"):
+                    if key in record:
+                        self.state[key] = record[key]
             self.history.append(record)
             try:
                 _save_history(self.history)
@@ -430,11 +474,149 @@ class Scheduler:
         self.stop_event = threading.Event()
         self.lock = threading.RLock()
         self.next_runs: dict[str, datetime] = {}
+        self.retry_runs = self._load_retry_runs()
+        self.task_manager.add_completion_listener(self._on_task_finished)
         self.thread = threading.Thread(
             target=self._loop,
             name="web-scheduler",
             daemon=True,
         )
+
+    @staticmethod
+    def _load_retry_runs() -> dict[str, dict]:
+        try:
+            payload = json.loads(SCHEDULE_RETRY_FILE.read_text(encoding="utf-8"))
+            items = payload.get("items") if isinstance(payload, dict) else None
+            if not isinstance(items, dict):
+                return {}
+            restored = {}
+            for key, item in items.items():
+                if not isinstance(item, dict) or not item.get("nextAt"):
+                    continue
+                # A service stop during dispatch makes the remote submission
+                # outcome unknowable. Do not risk duplicating that attempt.
+                if item.get("inProgress"):
+                    logging.warning(
+                        "检测到未完成的跨时段重试 %s，因提交结果不确定已取消",
+                        key,
+                    )
+                    continue
+                restored[str(key)] = item
+            return restored
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return {}
+
+    def _save_retry_runs(self) -> None:
+        try:
+            SCHEDULE_RETRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+            temporary = SCHEDULE_RETRY_FILE.with_suffix(".tmp")
+            temporary.write_text(
+                json.dumps(
+                    {"version": 1, "items": self.retry_runs},
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            os.chmod(temporary, 0o600)
+            os.replace(temporary, SCHEDULE_RETRY_FILE)
+        except OSError as exc:
+            logging.warning("保存定时任务重试状态失败: %s", exc)
+
+    @staticmethod
+    def _parse_time(value: str, timezone: ZoneInfo) -> datetime | None:
+        try:
+            parsed = datetime.fromisoformat(str(value))
+        except (TypeError, ValueError):
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone)
+        return parsed.astimezone(timezone)
+
+    def _on_task_finished(
+        self,
+        record: dict,
+        success: bool,
+        error: Exception | None,
+        context: dict,
+    ) -> None:
+        key = str(context.get("scheduleKey") or "")
+        if not key or record.get("source") != "auto":
+            return
+
+        retry_attempt = max(0, int(context.get("retryAttempt") or 0))
+        if success:
+            with self.lock:
+                changed = self.retry_runs.pop(key, None) is not None
+                if changed:
+                    self._save_retry_runs()
+            if retry_attempt:
+                record["message"] = f"第 {retry_attempt} 次跨时段重试成功"
+                logging.info("✅ %s", record["message"])
+            return
+
+        if error is None or not is_retryable_network_error(error):
+            with self.lock:
+                changed = self.retry_runs.pop(key, None) is not None
+                if changed:
+                    self._save_retry_runs()
+            if retry_attempt:
+                record["message"] = (
+                    f"{record.get('message', '任务失败')}；"
+                    "错误不属于可安全重试的临时网络故障，已停止自动重试"
+                )
+            return
+
+        config = read_config(CONFIG_FILE)
+        timezone = _timezone(config)
+        origin = self._parse_time(
+            context.get("retryOriginAt") or record.get("startedAt"),
+            timezone,
+        )
+        if origin is None:
+            return
+        now = datetime.now(timezone)
+        next_attempt = None
+        next_at = None
+        # retryAttempt=0 is the original execution; after retry N fails,
+        # continue from offset N so each slot is measured from the origin.
+        for index in range(retry_attempt, len(LONG_RETRY_MINUTES)):
+            candidate = origin + timedelta(minutes=LONG_RETRY_MINUTES[index])
+            if candidate > now and candidate.date() == origin.date():
+                next_attempt = index + 1
+                next_at = candidate
+                break
+
+        with self.lock:
+            if next_at is None:
+                self.retry_runs.pop(key, None)
+                self._save_retry_runs()
+            else:
+                self.retry_runs[key] = {
+                    "originAt": origin.isoformat(timespec="seconds"),
+                    "nextAt": next_at.isoformat(timespec="seconds"),
+                    "attempt": next_attempt,
+                    "imagePath": str(context.get("imagePath") or ""),
+                    "inProgress": False,
+                }
+                self._save_retry_runs()
+
+        if next_at is None:
+            record["message"] = (
+                f"{record.get('message', '任务失败')}；"
+                "当天跨时段重试窗口已用尽"
+            )
+            logging.error("定时任务当天跨时段重试窗口已用尽: %s", key)
+            return
+
+        record["retryAt"] = next_at.isoformat(timespec="seconds")
+        record["retryAttempt"] = next_attempt
+        record["message"] = (
+            f"{record.get('message', '任务失败')}；"
+            f"已安排 {next_at.strftime('%H:%M')} 第 "
+            f"{next_attempt}/{len(LONG_RETRY_MINUTES)} 次跨时段重试"
+        )
+        logging.warning("📅 %s", record["message"])
 
     def start(self) -> None:
         self.reload()
@@ -489,14 +671,32 @@ class Scheduler:
         with self.lock:
             previous = self.next_runs
             self.next_runs = {}
+            valid_keys = set()
             for index, task in enumerate(tasks):
                 key = self._task_key(index, task)
+                valid_keys.add(key)
                 future = previous.get(key)
                 self.next_runs[key] = (
                     future
                     if future is not None and future > now
                     else self._next_for(now, task, random_minutes)
                 )
+            original_retry_keys = set(self.retry_runs)
+            self.retry_runs = {
+                key: item
+                for key, item in self.retry_runs.items()
+                if key in valid_keys
+                and (
+                    origin := self._parse_time(
+                        item.get("originAt"),
+                        now.tzinfo,
+                    )
+                )
+                is not None
+                and origin.date() == now.date()
+            }
+            if set(self.retry_runs) != original_retry_keys:
+                self._save_retry_runs()
 
     def snapshot(self) -> dict:
         config = read_config(CONFIG_FILE)
@@ -505,13 +705,17 @@ class Scheduler:
         with self.lock:
             next_items = []
             for index, task in enumerate(tasks):
-                next_at = self.next_runs.get(self._task_key(index, task))
+                key = self._task_key(index, task)
+                next_at = self.next_runs.get(key)
+                retry = self.retry_runs.get(key) or {}
                 next_items.append(
                     {
                         **task,
                         "nextAt": next_at.isoformat(timespec="seconds")
                         if next_at
                         else None,
+                        "retryAt": retry.get("nextAt"),
+                        "retryAttempt": retry.get("attempt"),
                     }
                 )
         return {
@@ -521,7 +725,67 @@ class Scheduler:
             "tasks": next_items,
             "timezone": str(_timezone(config)),
             "imageRotation": self.task_manager.image_rotation.snapshot(),
+            "retryPolicy": {
+                "shortSeconds": list(DEFAULT_NETWORK_RETRY_DELAYS),
+                "longMinutes": list(LONG_RETRY_MINUTES),
+            },
         }
+
+    def _start_due_retry(
+        self,
+        now: datetime,
+        tasks: list[dict],
+    ) -> bool:
+        task_map = {
+            self._task_key(index, task): task
+            for index, task in enumerate(tasks)
+        }
+        selected_key = ""
+        selected = None
+        with self.lock:
+            for key, item in self.retry_runs.items():
+                if key not in task_map or item.get("inProgress"):
+                    continue
+                retry_at = self._parse_time(item.get("nextAt"), now.tzinfo)
+                if retry_at is None or now < retry_at:
+                    continue
+                if selected is None or retry_at < selected[0]:
+                    selected_key = key
+                    selected = (retry_at, copy.deepcopy(item))
+            if selected is None:
+                return False
+            self.retry_runs[selected_key]["inProgress"] = True
+            self.retry_runs[selected_key]["dispatchedAt"] = now.isoformat(
+                timespec="seconds"
+            )
+            self._save_retry_runs()
+
+        _, retry = selected
+        task = task_map[selected_key]
+        attempt = int(retry.get("attempt") or 1)
+        logging.info(
+            "⏱️ 触发跨时段重试 %s %s（第 %s/%s 次）",
+            task["time"],
+            task["mode"],
+            attempt,
+            len(LONG_RETRY_MINUTES),
+        )
+        try:
+            self.task_manager.start_sign(
+                task["mode"],
+                str(retry.get("imagePath") or task.get("image_path") or ""),
+                source="auto",
+                random_image=False,
+                schedule_key=selected_key,
+                retry_attempt=attempt,
+                retry_origin_at=str(retry.get("originAt") or ""),
+            )
+        except Exception as exc:
+            with self.lock:
+                self.retry_runs.pop(selected_key, None)
+                self._save_retry_runs()
+            logging.error("跨时段重试启动失败，已停止本轮重试: %s", exc)
+        return True
 
     def _loop(self) -> None:
         while not self.stop_event.wait(1):
@@ -543,6 +807,8 @@ class Scheduler:
 
         random_minutes = max(0, min(120, int(auto_clock.get("random_minutes") or 0)))
         now = datetime.now(_timezone(config))
+        if self._start_due_retry(now, tasks):
+            return
         for index, task in enumerate(tasks):
             key = self._task_key(index, task)
             with self.lock:
@@ -559,6 +825,8 @@ class Scheduler:
                     task.get("image_path", ""),
                     source="auto",
                     random_image=bool(task.get("random_image")),
+                    schedule_key=key,
+                    retry_origin_at=next_at.isoformat(timespec="seconds"),
                 )
             except Exception as exc:
                 logging.error("定时任务启动失败: %s", exc)

@@ -37,6 +37,8 @@ export interface ScheduleTask {
   image?: string;
   randomImage?: boolean;
   nextAt?: string | null;
+  retryAt?: string | null;
+  retryAttempt?: number | null;
 }
 
 export interface ScheduleState {
@@ -52,6 +54,10 @@ export interface ScheduleState {
     used: number;
     total: number;
     remaining: number;
+  };
+  retryPolicy: {
+    shortSeconds: number[];
+    longMinutes: number[];
   };
 }
 
