@@ -125,6 +125,7 @@ def check_device_platform_consistency():
 
 def check_consumed_code_message():
     response = SimpleNamespace(
+        status_code=200,
         json=lambda: {"code": "202", "msg": "获取openid失败！"},
         text='{"code":"202"}',
     )
@@ -444,13 +445,17 @@ def check_account_password_recovery():
             status_code=200,
             text=json.dumps(payload),
             json=lambda: payload,
+            cookies=[],
         )
 
     class FakeCookies:
         def __init__(self):
             self.values = {}
 
-        def set(self, key, value):
+        def clear(self):
+            self.values.clear()
+
+        def set(self, key, value, **_kwargs):
             self.values[key] = value
 
     class FakeClient:
@@ -654,15 +659,27 @@ def main():
         raise AssertionError("Web service did not become ready")
 
     assert session.get(f"{base_url}/api/status", timeout=3).status_code == 401
-    password = Path(".runtime/initial_admin_password.txt").read_text(
-        encoding="utf-8"
-    ).strip()
-    response = session.post(
-        f"{base_url}/api/auth/login",
-        json={"username": "admin", "password": password},
-        timeout=5,
-    )
-    assert response.status_code == 200, response.text
+    password_file = Path(".runtime/initial_admin_password.txt")
+    used_password_login = password_file.exists()
+    if used_password_login:
+        password = password_file.read_text(encoding="utf-8").strip()
+        response = session.post(
+            f"{base_url}/api/auth/login",
+            json={"username": "admin", "password": password},
+            timeout=5,
+        )
+        assert response.status_code == 200, response.text
+    else:
+        # A changed admin password intentionally removes the plaintext file.
+        # Build a signed local test session from the same protected runtime
+        # secret so deployment checks never need the user's password.
+        session_token, csrf_token = web_security.create_session()
+        session.cookies.set(web_security.SESSION_COOKIE, session_token)
+        session.cookies.set(web_security.CSRF_COOKIE, csrf_token)
+        assert (
+            session.get(f"{base_url}/api/auth/me", timeout=5).status_code
+            == 200
+        )
     admin_cookie = next(
         cookie
         for cookie in session.cookies
@@ -738,6 +755,8 @@ def main():
         timeout=5,
     )
     assert response.status_code == 200, response.text
+    if not used_password_login:
+        session.cookies.clear()
     assert session.get(f"{base_url}/api/status", timeout=3).status_code == 401
     print("web self-check passed")
 
