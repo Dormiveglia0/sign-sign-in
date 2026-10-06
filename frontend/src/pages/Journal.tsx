@@ -69,16 +69,17 @@ function normalizeYears(raw: unknown): YearItem[] {
   });
 }
 
-function normalizeWeeks(raw: unknown): WeekItem[] {
+function normalizePeriods(raw: unknown, kind: "week" | "month"): WeekItem[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
     const body = item as Record<string, unknown>;
-    const startDate = String(body.startDate || "");
-    const endDate = String(body.endDate || "");
+    const startDate = String(body.startDate || "").replaceAll(".", "-");
+    const endDate = String(body.endDate || "").replaceAll(".", "-");
+    const submitted = Number(body.blogCount || 0) > 0;
     return startDate && endDate ? [{
       startDate, endDate,
-      label: `第 ${body.week || ""} 周 · ${startDate} ~ ${endDate} · ${String(body.status) === "1" ? "已提交" : "未提交"}`,
+      label: `${kind === "week" ? `第 ${body.week || ""} 周` : "月报周期"} · ${startDate} ~ ${endDate} · ${submitted ? "已提交" : "未提交"}`,
     }] : [];
   });
 }
@@ -112,6 +113,7 @@ export default function Journal() {
   const [traineeId, setTraineeId] = useState("");
   const [years, setYears] = useState<YearItem[]>([]);
   const [weeks, setWeeks] = useState<WeekItem[]>([]);
+  const [monthlyPeriods, setMonthlyPeriods] = useState<WeekItem[]>([]);
   const [blogs, setBlogs] = useState<Array<Record<string, unknown>>>([]);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -151,6 +153,7 @@ export default function Journal() {
     setLoading(false);
     setBlogs([]);
     setWeeks([]);
+    setMonthlyPeriods([]);
     setYears([]);
     setYear("");
     setMonth("");
@@ -160,7 +163,7 @@ export default function Journal() {
     const sequence = ++loadSequence.current;
     setLoading(true);
     try {
-      const result = await api<{ traineeId: string; years: unknown; blogs: unknown }>(
+      const result = await api<{ traineeId: string; years: unknown; months: unknown; blogs: unknown }>(
         `/api/journal/bootstrap?blogType=${blogType}`,
       );
       if (sequence !== loadSequence.current) return;
@@ -168,6 +171,7 @@ export default function Journal() {
       setTraineeId(result.traineeId);
       form.setFieldValue("traineeId", result.traineeId);
       setYears(normalizedYears);
+      setMonthlyPeriods(normalizePeriods(result.months, "month"));
       setBlogs(normalizeBlogs(result.blogs));
       setLoaded(true);
       setWeeks([]);
@@ -189,7 +193,7 @@ export default function Journal() {
       const result = await api<unknown>(
         `/api/journal/weeks?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`,
       );
-      if (sequence === loadSequence.current) setWeeks(normalizeWeeks(result));
+      if (sequence === loadSequence.current) setWeeks(normalizePeriods(result, "week"));
     } catch (error) {
       if (sequence === loadSequence.current) message.error(error instanceof Error ? error.message : "周次加载失败");
     } finally {
@@ -225,6 +229,7 @@ export default function Journal() {
       },
     });
     setDraftId(item.id);
+    form.setFieldValue("content", item.blogBody);
     if (!schedule) form.setFieldValue("scheduledAt", "");
     await loadDrafts();
     return item;
@@ -330,6 +335,7 @@ export default function Journal() {
 
   const months = years.find((item) => item.year === year)?.months || [];
   const selectedWeek = weeks.findIndex((week) => week.startDate === dateRange?.[0]?.format("YYYY-MM-DD") && week.endDate === dateRange?.[1]?.format("YYYY-MM-DD"));
+  const selectedMonthlyPeriod = monthlyPeriods.findIndex((period) => period.startDate === dateRange?.[0]?.format("YYYY-MM-DD") && period.endDate === dateRange?.[1]?.format("YYYY-MM-DD"));
   const visibleDrafts = drafts.filter((draft) => (draft.status === "submitted") === (draftTab === "submitted"));
 
   return (
@@ -390,7 +396,7 @@ export default function Journal() {
               <span>生成后可自由校对，点击保存才会进入草稿箱。</span>
               <Button type="primary" ghost icon={<Sparkles size={16} />} loading={generating} onClick={generate}>生成{label}内容</Button>
             </div>
-            <Form.Item label={`${label}正文`} name="content" rules={[
+            <Form.Item label={`${label}正文`} name="content" extra="正文按段落编辑，提交时保留换行。" rules={[
               { required: true, whitespace: true, message: "请填写正文" },
               { validator: (_, value: string) => (value?.trim().length || 0) >= 50 ? Promise.resolve() : Promise.reject(new Error("提交时正文至少 50 个字符")) },
             ]}>
@@ -404,8 +410,9 @@ export default function Journal() {
                 { required: true, message: "请选择报告日期" },
                 { validator: (_, value?: [Dayjs, Dayjs]) => {
                   if (!value) return Promise.resolve();
-                  const valid = blogType === "1" ? value[1].diff(value[0], "day") <= 6 : value[0].format("YYYY-MM") === value[1].format("YYYY-MM");
-                  return valid ? Promise.resolve() : Promise.reject(new Error(blogType === "1" ? "周报不能超过 7 天" : "月报须在同一个月份"));
+                  const days = value[1].diff(value[0], "day");
+                  const valid = days >= 0 && days <= (blogType === "1" ? 6 : 30);
+                  return valid ? Promise.resolve() : Promise.reject(new Error(blogType === "1" ? "周报不能超过 7 天" : "月报不能超过 31 天，请使用校友邦月报周期"));
                 } },
               ]}>
                 <DatePicker.RangePicker style={{ width: "100%" }} />
@@ -431,9 +438,11 @@ export default function Journal() {
 
         <aside className="journal-sidebar">
           <Card>
-            <SectionHeading title={blogType === "1" ? "选择周次" : "选择月份"} description="选择报告所覆盖的日期，可提前填写后续时段。" />
-            {blogType === "2" ? <DatePicker aria-label="月报月份" picker="month" style={{ width: "100%" }} disabled={busy} value={dateRange?.[0] || null}
-              placeholder="选择月报月份" onChange={(value) => form.setFieldValue("dateRange", value ? [value.startOf("month"), value.endOf("month")] : undefined)} /> :
+            <SectionHeading title={blogType === "1" ? "选择周次" : "选择月报周期"} description={blogType === "1" ? "选择报告所覆盖的日期，可提前填写后续时段。" : "使用校友邦的实际周期，开始与结束日期可以跨月。"} />
+            {blogType === "2" ? <Select<number> aria-label="月报周期" style={{ width: "100%" }} disabled={busy || loading}
+              value={selectedMonthlyPeriod >= 0 ? selectedMonthlyPeriod : undefined} placeholder={loaded ? "选择月报周期" : "请先加载校友邦数据"}
+              options={monthlyPeriods.map((period, index) => ({ value: index, label: period.label }))}
+              onChange={(index) => form.setFieldValue("dateRange", [dayjs(monthlyPeriods[index].startDate), dayjs(monthlyPeriods[index].endDate)])} /> :
               <Space direction="vertical" style={{ width: "100%" }}>
                 <Select aria-label="周报年份" value={year || undefined} placeholder="年份" disabled={busy || loading}
                   options={years.map((item) => ({ value: item.year, label: item.label }))}
@@ -458,8 +467,8 @@ export default function Journal() {
             {loading ? <Skeleton active paragraph={{ rows: 3 }} /> : blogs.length ? <div className="history-list server">{blogs.slice(0, 8).map((blog, index) =>
               <button type="button" disabled={busy} key={String(blog.blogId || index)} onClick={() => {
                 setDraftId(null);
-                form.setFieldsValue({ title: String(blog.blogTitle || ""), content: String(blog.blogBody || ""), scheduledAt: "",
-                  dateRange: blog.startDate && blog.endDate ? [dayjs(String(blog.startDate)), dayjs(String(blog.endDate))] : undefined });
+                form.setFieldsValue({ title: String(blog.blogTitle || ""), content: String(blog.blogBodyText || ""), scheduledAt: "",
+                  dateRange: blog.startDate && blog.endDate ? [dayjs(String(blog.startDate).replaceAll(".", "-")), dayjs(String(blog.endDate).replaceAll(".", "-"))] : undefined });
               }}><span>{String(blog.blogTitle || "无标题")}</span><Tag>{String(blog.commitDate || blog.endDate || "已提交")}</Tag></button>)}</div> :
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="点击上方加载校友邦数据" />}
           </Card>

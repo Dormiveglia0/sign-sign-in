@@ -36,8 +36,8 @@ from app.utils.files import (
     load_session_cache,
     read_config,
 )
-from app.utils.gotify import get_gotify_config, notify_gotify
 from webapp.journal import JournalStore
+from webapp.notifications import notify_result
 
 TASK_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name("web_task_history.json")
 SCHEDULE_IMAGE_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name(
@@ -395,27 +395,11 @@ class TaskManager:
 
     @staticmethod
     def _notify_result(record: dict, success: bool) -> None:
-        try:
-            settings = read_config(CONFIG_FILE).get("settings", {})
-            if not settings.get("notifications_enabled"):
-                return
-            url, token = get_gotify_config(settings)
-            if not url or not token:
-                return
-            result = "成功" if success else "失败"
-            notify_gotify(
-                title=f"{record.get('action') or '任务'}{result}",
-                content=(
-                    f"来源：{'定时任务' if record.get('source') == 'auto' else '手动'}\n"
-                    f"时间：{record.get('finishedAt')}\n"
-                    f"结果：{record.get('message')}"
-                ),
-                server_url=url,
-                token=token,
-            )
-            logging.info("Gotify 推送成功")
-        except Exception as exc:
-            logging.warning("Gotify 推送失败: %s", exc)
+        # All report submission paths notify in submit_report, including manual.
+        if record.get("mode") == "journal":
+            return
+        notify_result(record.get("action") or "任务", success, record.get("message"),
+                      source=record.get("source"), finished_at=record.get("finishedAt"))
 
     def cancel(self) -> dict:
         with self.lock:

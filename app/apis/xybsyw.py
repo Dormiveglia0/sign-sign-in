@@ -22,6 +22,7 @@ from app.config.common import (
     XYB_VERSION,
 )
 from app.utils.common import get_timestamp
+from app.utils.report_text import report_body_html
 from app.utils.files import (
     check_img,
     get_img_file,
@@ -1423,6 +1424,16 @@ def load_blog_date(args, config, year, month):
     return _require_data(response, "加载周次失败")
 
 
+def load_blog_months(args, config):
+    """Load actual monthly periods, which may cross calendar months."""
+    response = _form_post(
+        "https://xcx.xybsyw.com/student/blog/LoadBlogDate!month.action",
+        {"traineeId": str(args.get("traineeId", "")), "id": ""},
+        config, args, timeout=10,
+    )
+    return _require_data(response, "加载月报周期失败")
+
+
 class BlogSubmissionUncertain(RuntimeError):
     """请求可能已送达，不能直接自动重试。"""
 
@@ -1434,7 +1445,7 @@ def submit_blog(args, config, blog_title, blog_body, start_date, end_date,
     data = {
         "blogType": str(blog_type),
         "blogTitle": blog_title,
-        "blogBody": blog_body,
+        "blogBody": report_body_html(blog_body),
         "blogOpenType": str(blog_open_type),
         "traineeId": str(trainee_id),
         "isDraft": "0",

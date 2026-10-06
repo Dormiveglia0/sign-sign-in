@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.apis.xybsyw import (
     BlogSubmissionUncertain, get_default_plan, get_plan,
@@ -21,6 +21,8 @@ from app.apis.xybsyw import (
 from app.config.common import CONFIG_FILE, JOURNAL_DRAFTS_FILE
 from app.sign_flow import find_trainee_id
 from app.utils.files import append_journal_entry, read_config
+from app.utils.report_text import report_body_text
+from webapp.notifications import notify_result
 
 
 class JournalInput(BaseModel):
@@ -34,6 +36,11 @@ class JournalInput(BaseModel):
     blogOpenType: Literal["0", "1", "2"] = "2"
     traineeId: str = Field(default="", max_length=64)
 
+    @field_validator("blogBody", mode="before")
+    @classmethod
+    def editable_body(cls, value):
+        return report_body_text(value) if isinstance(value, str) else value
+
     @model_validator(mode="after")
     def valid_dates(self):
         if self.startDate and self.endDate:
@@ -41,10 +48,8 @@ class JournalInput(BaseModel):
                 raise ValueError("结束日期不能早于开始日期")
             if self.blogType == "1" and (self.endDate - self.startDate).days > 6:
                 raise ValueError("周报日期范围不能超过 7 天")
-            if self.blogType == "2" and (
-                self.startDate.year, self.startDate.month
-            ) != (self.endDate.year, self.endDate.month):
-                raise ValueError("月报日期必须在同一个月份")
+            if self.blogType == "2" and (self.endDate - self.startDate).days > 30:
+                raise ValueError("月报日期范围不能超过 31 天，请使用校友邦月报周期")
         return self
 
     def require_complete(self):
@@ -72,23 +77,32 @@ def journal_context():
     return config, args, trainee_id
 
 
-def submit_report(payload: JournalInput, owner: str = ""):
-    payload.require_complete()
-    config, args, trainee_id = journal_context()
-    if owner and owner != args.get("openId"):
-        raise RuntimeError("登录账号已变化，请重新确认草稿所属账号")
-    if payload.traineeId and payload.traineeId != trainee_id:
-        raise RuntimeError("实习计划已变化，请重新加载后确认草稿日期")
-    result = submit_blog(
-        args, config["input"], payload.blogTitle, payload.blogBody,
-        payload.startDate.isoformat(), payload.endDate.isoformat(),
-        payload.blogOpenType, trainee_id, blog_type=payload.blogType,
-    )
+def submit_report(payload: JournalInput, owner: str = "", *, source="manual"):
+    action = f"提交{'周报' if payload.blogType == '1' else '月报'}"
+    details = (f"标题：{payload.blogTitle}\n"
+               f"报告时段：{payload.startDate} ~ {payload.endDate}\n")
+    try:
+        payload.require_complete()
+        config, args, trainee_id = journal_context()
+        if owner and owner != args.get("openId"):
+            raise RuntimeError("登录账号已变化，请重新确认草稿所属账号")
+        if payload.traineeId and payload.traineeId != trainee_id:
+            raise RuntimeError("实习计划已变化，请重新加载后确认草稿日期")
+        result = submit_blog(
+            args, config["input"], payload.blogTitle, payload.blogBody,
+            payload.startDate.isoformat(), payload.endDate.isoformat(),
+            payload.blogOpenType, trainee_id, blog_type=payload.blogType,
+        )
+    except Exception as exc:
+        notify_result(action, False, details + str(exc), source=source,
+                      result_label="需核对结果" if isinstance(exc, BlogSubmissionUncertain) else None)
+        raise
     # 平台确认成功后的本地历史失败不能触发重复提交。
     try:
         append_journal_entry("submitted", payload.blogBody)
     except Exception:
         logging.exception("报告已提交，保存本地历史失败")
+    notify_result(action, True, details + "校友邦已确认提交成功", source=source)
     return result
 
 
@@ -119,8 +133,10 @@ class JournalStore:
 
     @staticmethod
     def _item(row):
+        data = json.loads(row["data"])
+        data["blogBody"] = report_body_text(data.get("blogBody", ""))
         return {
-            **json.loads(row["data"]), "id": row["id"], "status": row["status"],
+            **data, "id": row["id"], "status": row["status"],
             "scheduledAt": datetime.fromtimestamp(row["submit_at"], timezone.utc)
                 .isoformat() if row["submit_at"] is not None else None,
             "createdAt": row["created_at"], "updatedAt": row["updated_at"],
@@ -209,7 +225,7 @@ class JournalStore:
             db.execute("UPDATE drafts SET status='submitting', error='' WHERE id=?",
                        (draft_id,))
         try:
-            result = submit_report(payload, row["owner"])
+            result = submit_report(payload, row["owner"], source="auto" if due_only else "manual")
         except Exception as exc:
             status = "uncertain" if isinstance(exc, BlogSubmissionUncertain) else "failed"
             if due_only and is_session_expired_error(exc):

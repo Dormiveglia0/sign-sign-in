@@ -37,6 +37,7 @@ from app.apis.xybsyw import (
     create_account_login_challenge,
     is_session_expired_error,
     load_blog_date,
+    load_blog_months,
     load_blog_year,
     xyb_completion,
 )
@@ -59,6 +60,7 @@ from app.utils.files import (
     validate_config,
 )
 from app.utils.model_client import call_chat_model
+from app.utils.report_text import readable_blog_list, report_body_text
 from app.utils.gotify import (
     build_gotify_message_url,
     get_gotify_config,
@@ -884,7 +886,8 @@ async def journal_bootstrap(
         return {
             "traineeId": trainee_id,
             "years": load_blog_year(args, config["input"]) if blogType == "1" else [],
-            "blogs": blog_list(args, config["input"], page, blogType),
+            "months": load_blog_months(args, config["input"]) if blogType == "2" else [],
+            "blogs": readable_blog_list(blog_list(args, config["input"], page, blogType)),
             "history": load_journal_history(),
         }
 
@@ -910,7 +913,7 @@ async def journal_blogs(
 ):
     def load():
         config, args, _ = _journal_context()
-        return blog_list(args, config["input"], page, blogType)
+        return readable_blog_list(blog_list(args, config["input"], page, blogType))
 
     return await _blocking(load)
 
@@ -940,6 +943,7 @@ async def journal_generate(payload: JournalGenerateInput):
                 config["input"],
                 f"请根据以下真实素材撰写实习{'周报' if payload.blogType == '1' else '月报'}：\n{payload.prompt}",
             )
+        content = report_body_text(content)
         append_journal_entry("generated", content)
         return content
 
