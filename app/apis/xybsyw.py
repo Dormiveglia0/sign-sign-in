@@ -6,6 +6,7 @@ import secrets
 import tempfile
 import threading
 import time
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -1438,6 +1439,12 @@ class BlogSubmissionUncertain(RuntimeError):
     """请求可能已送达，不能直接自动重试。"""
 
 
+def _blog_period_date(value):
+    # The official editor sends LoadBlogDate's dotted dates unchanged.
+    # Local drafts use ISO dates, while Blog!save rejects the ISO separator.
+    return date.fromisoformat(str(value).replace(".", "-")).strftime("%Y.%m.%d")
+
+
 def submit_blog(args, config, blog_title, blog_body, start_date, end_date,
                 blog_open_type, trainee_id, blog_type="1"):
     if str(blog_type) not in ("1", "2"):
@@ -1449,8 +1456,8 @@ def submit_blog(args, config, blog_title, blog_body, start_date, end_date,
         "blogOpenType": str(blog_open_type),
         "traineeId": str(trainee_id),
         "isDraft": "0",
-        "startDate": start_date,
-        "endDate": end_date,
+        "startDate": _blog_period_date(start_date),
+        "endDate": _blog_period_date(end_date),
         "backgroundTemplateId": "0",
         "fileJson": '[{"fileName":""}]',
         "blogId": "undefined",

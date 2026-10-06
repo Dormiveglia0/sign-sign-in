@@ -70,9 +70,17 @@ def check_protocol():
         assert request["data"]["st"] == "signed"
         assert request["data"]["blogOpenType"] == "0"
         assert request["data"]["blogBody"] == report_body_html(REPORT["blogBody"])
+        assert request["data"]["startDate"] == "2099.11.01"
+        assert request["data"]["endDate"] == "2099.11.30"
         assert request["headers"]["devicecode"] == "device-code"
         assert request["cookies"] == {"JSESSIONID": "session"}
         assert request["params"] == {"t": "token"}
+        assert xybsyw.submit_blog(args, config, "跨月月报", REPORT["blogBody"], "2099.11.26", "2099.12.25", "2", "plan", blog_type="2") == "blog-id"
+        assert post.call_args.kwargs["data"]["startDate"] == "2099.11.26"
+        assert post.call_args.kwargs["data"]["endDate"] == "2099.12.25"
+        post.reset_mock()
+        rejected(lambda: xybsyw.submit_blog(args, config, "title", REPORT["blogBody"], "2099-02-30", "2099-03-01", "2", "plan"), ValueError)
+        post.assert_not_called()
         post.return_value = SimpleNamespace(status_code=200, json=lambda: {"data": "unconfirmed"})
         rejected(lambda: xybsyw.submit_blog(args, config, "title", REPORT["blogBody"], "2099-11-02", "2099-11-08", "2", "plan"), xybsyw.BlogSubmissionUncertain)
         post.return_value = response(None, 205)
