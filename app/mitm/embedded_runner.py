@@ -2,7 +2,7 @@ import argparse
 import os
 
 
-CAPTURE_HOST_PATTERN = r"(^|.+\.)(xybsyw\.com|jielong\.com):\d+$"
+CAPTURE_HOST_PATTERN = r"(^|.+\.)xybsyw\.com:\d+$"
 
 
 def build_mitmdump_args(args):

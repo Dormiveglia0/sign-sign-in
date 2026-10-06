@@ -84,7 +84,7 @@ export default function ImagesPage() {
       <PageHeader
         eyebrow="ASSETS / IMAGES"
         title="图片资产"
-        description="上传并统一管理拍照签到、接龙表单使用的服务器图片。"
+        description="上传并统一管理拍照签到使用的服务器图片。"
         actions={
           <Button icon={<RefreshCw size={16} />} onClick={() => void load()}>
             刷新
@@ -158,7 +158,7 @@ export default function ImagesPage() {
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description="还没有服务器图片"
             >
-              <span className="muted">从上方上传后即可用于拍照签到与接龙表单。</span>
+              <span className="muted">从上方上传后即可用于拍照签到。</span>
             </Empty>
           </Card>
         )}

@@ -87,7 +87,6 @@ MITM_CERT_STATE_FILE = os.path.join(USER_DATA_DIR, "config", "mitm_cert_state.js
 CONFIG_FILE = os.path.join(RES_DIR, "config", "config.json")
 UPDATE_ASSET_CACHE_FILE = os.path.join(RES_DIR, "cache", "update_asset_cache.json")
 UPDATE_SETTINGS_FILE = os.path.join(RES_DIR, "cache", "update_settings.json")
-JIELONG_FORM_DRAFTS_FILE = os.path.join(RES_DIR, "cache", "jielong_form_drafts.json")
 
 # code文件目录
 CERT_FILE = os.path.join(USER_DATA_DIR, "cert", "mitmproxy-ca-cert.p12")
@@ -98,6 +97,7 @@ IMAGE_DIR = os.path.join(RES_DIR, "img")
 # 周记目录
 JOURNAL_DIR = os.path.join(RES_DIR, "journals")
 JOURNAL_HISTORY_FILE = os.path.join(JOURNAL_DIR, "history.json")
+JOURNAL_DRAFTS_FILE = os.path.join(JOURNAL_DIR, "drafts.sqlite3")
 
 # 日志目录
 LOG_DIR = os.path.join(RES_DIR, "logs")

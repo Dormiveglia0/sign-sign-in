@@ -27,7 +27,6 @@ PACKET_LOG_FILE = os.path.normpath(
 
 
 XYB_SOURCE = "xyb_code"
-JIELONG_SOURCE = "jielong_token"
 SEEN_HOSTS = set()
 SEEN_CONNECTS = set()
 SEEN_CLIENTS = set()
@@ -90,10 +89,8 @@ def is_interesting_flow(flow: http.HTTPFlow):
     url = (flow.request.pretty_url or "").lower()
     return (
         "getopenid.action" in url
-        or "/api/user/token" in url
         or host.endswith("xybsyw.com")
         or host.endswith("servicewechat.com")
-        or host.endswith("jielong.com")
     )
 
 
@@ -160,7 +157,6 @@ def write_payload(payload: dict):
 
 class GetCode:
     XYB_TARGET = "getOpenId.action"
-    JIELONG_TARGET = "/api/User/Token"
 
     def client_connected(self, client):
         allowed = os.environ.get("SIGN_MITM_ALLOWED_CLIENT", "").strip()
@@ -228,44 +224,6 @@ class GetCode:
 
         flow.kill()
 
-    def _capture_jielong_token_code(self, flow: http.HTTPFlow):
-        try:
-            body = json.loads(flow.request.get_text(strict=False) or "{}")
-        except json.JSONDecodeError:
-            append_packet_log(f"[MITM] 解析 User/Token 请求体 JSON 失败: {compact_text(flow.request.get_text(strict=False), 120)}")
-            return
-
-        code = str(body.get("code") or "").strip()
-        if not code:
-            append_packet_log(f"[MITM] 捕获 User/Token 时未找到 code")
-            return
-
-        payload = {
-            "source": JIELONG_SOURCE,
-            "code": code,
-            "qCode": str(body.get("qCode") or ""),
-            "authorization": str(flow.request.headers.get("authorization") or ""),
-            "request_payload": str(flow.request.headers.get("x-api-request-payload") or ""),
-            "request_referer": str(flow.request.headers.get("x-api-request-referer") or ""),
-            "referer": str(flow.request.headers.get("referer") or ""),
-            "user_agent": str(flow.request.headers.get("user-agent") or ""),
-            "platform": str(flow.request.headers.get("platform") or ""),
-        }
-        append_packet_log(
-            "[MITM] 捕获 User/Token | "
-            "code=<redacted> | authorization=<redacted>"
-        )
-
-        try:
-            write_payload(payload)
-            append_packet_log(f"[MITM] 请求 payload 已写入: {CODE_FILE}")
-            print(f"[addon] 已保存 User/Token payload 文件: {CODE_FILE}")
-        except Exception as exc:
-            append_packet_log(f"[MITM] 请求 payload 写入失败: {exc}")
-            print(f"[addon] 请求 payload 写入失败: {exc}")
-
-        flow.kill()
-
     def request(self, flow: http.HTTPFlow):
         host = (flow.request.host or "").lower()
         if host and host not in SEEN_HOSTS:
@@ -279,10 +237,6 @@ class GetCode:
 
         if self.XYB_TARGET in flow.request.pretty_url:
             self._capture_xyb_code(flow)
-            return
-
-        if flow.request.method.upper() == "POST" and self.JIELONG_TARGET in flow.request.pretty_url:
-            self._capture_jielong_token_code(flow)
             return
 
     def response(self, flow: http.HTTPFlow):

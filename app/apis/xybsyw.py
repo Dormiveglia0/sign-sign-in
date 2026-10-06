@@ -1404,249 +1404,84 @@ def simple_sign_in_or_out(args, geo, traineeId, config, opt):
 
 
 def load_blog_year(args, config):
-    """加载周记年份和月份"""
-    logging.info('正在加载周记年份和月份...')
-    url = "https://xcx.xybsyw.com/student/blog/LoadBlogDate!weekYear.action"
-
-    data = {
-        "traineeId": str(args.get('traineeId', ''))
-    }
-
-    header_token = get_header_token(data)
-    headers = {
-        "content-type": "application/x-www-form-urlencoded",
-        "encryptvalue": args['encryptValue'],
-        "m": header_token['m'],
-        "n": header_token['n'],
-        "referer": XYB_REFERER,
-        "s": header_token['s'],
-        "t": header_token['t'],
-        "user-agent": config['userAgent'],
-        "v": XYB_VERSION,
-        "wechat": "1",
-        "xweb_xhr": "1"
-    }
-    cookies = {
-        "JSESSIONID": args['sessionId']
-    }
-
-    try:
-        logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, data:{data}, cookies:{cookies}")
-        response = requests.post(url, headers=headers, cookies=cookies, data=data, timeout=10)
-        logging.debug(f"📡 收到响应:{response} {response.text}")
-        res = response.json()
-
-        _assert_session(res)
-
-        logging.info(f"加载周记年份和月份：{res.get('data', 'Unknown error')}")
-        if res.get('code') == '200' and 'data' in res:
-            return res['data']
-        else:
-            raise RuntimeError(f"加载年份月份失败: {res.get('msg', 'Unknown error')}")
-    except Exception as e:
-        raise RuntimeError(f"加载年份月份请求异常: {e}")
+    """加载周报可选年份和月份。"""
+    response = _form_post(
+        "https://xcx.xybsyw.com/student/blog/LoadBlogDate!weekYear.action",
+        {"traineeId": str(args.get("traineeId", ""))},
+        config, args, timeout=10,
+    )
+    return _require_data(response, "加载年份月份失败")
 
 
 def load_blog_date(args, config, year, month):
-    """加载指定年月下的周信息"""
-    logging.info(f'正在加载{year}年{month}月的周信息...')
-    url = "https://xcx.xybsyw.com/student/blog/LoadBlogDate!week.action"
+    response = _form_post(
+        "https://xcx.xybsyw.com/student/blog/LoadBlogDate!week.action",
+        {"year": str(year), "month": str(month),
+         "traineeId": str(args.get("traineeId", "")), "id": ""},
+        config, args, timeout=10,
+    )
+    return _require_data(response, "加载周次失败")
 
+
+class BlogSubmissionUncertain(RuntimeError):
+    """请求可能已送达，不能直接自动重试。"""
+
+
+def submit_blog(args, config, blog_title, blog_body, start_date, end_date,
+                blog_open_type, trainee_id, blog_type="1"):
+    if str(blog_type) not in ("1", "2"):
+        raise ValueError("报告类型必须是周报或月报")
     data = {
-        "year": str(year),
-        "month": str(month),
-        "traineeId": str(args.get('traineeId', '')),
-        "id": ""
-    }
-
-    header_token = get_header_token(data)
-    headers = {
-        "content-type": "application/x-www-form-urlencoded",
-        "encryptvalue": args['encryptValue'],
-        "m": header_token['m'],
-        "n": header_token['n'],
-        "referer": XYB_REFERER,
-        "s": header_token['s'],
-        "t": header_token['t'],
-        "user-agent": config['userAgent'],
-        "v": XYB_VERSION,
-        "wechat": "1",
-        "xweb_xhr": "1"
-    }
-    cookies = {
-        "JSESSIONID": args['sessionId']
-    }
-
-    try:
-        logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, data:{data}, cookies:{cookies}")
-        response = requests.post(url, headers=headers, cookies=cookies, data=data, timeout=10)
-        logging.debug(f"📡 收到响应:{response} {response.text}")
-        res = response.json()
-
-        _assert_session(res)
-
-        logging.info(f"加载周信息：{res.get('msg', 'Unknown error')}")
-        if res.get('code') == '200' and 'data' in res:
-            return res['data']
-        else:
-            raise RuntimeError(f"加载周信息失败: {res.get('msg', 'Unknown error')}")
-    except Exception as e:
-        raise RuntimeError(f"加载周信息请求异常: {e}")
-
-
-def submit_blog(args, config, blog_title, blog_body, start_date, end_date, blog_open_type, trainee_id):
-    """提交周记"""
-    logging.info('正在提交周记...')
-    url = "https://xcx.xybsyw.com/student/blog/Blog!save.action"
-
-    data = {
-        "blogType": "1",
+        "blogType": str(blog_type),
         "blogTitle": blog_title,
         "blogBody": blog_body,
-        "blogOpenType": str(blog_open_type),  # 查看权限：1-公开，2-仅自己
+        "blogOpenType": str(blog_open_type),
         "traineeId": str(trainee_id),
         "isDraft": "0",
         "startDate": start_date,
         "endDate": end_date,
         "backgroundTemplateId": "0",
-        "fileJson": "[{\"fileName\":\"\"}]",
-        "blogId": "undefined"
+        "fileJson": '[{"fileName":""}]',
+        "blogId": "undefined",
     }
-
-    header_token = get_header_token(data)
-    headers = {
-        "content-type": "application/x-www-form-urlencoded",
-        "devicecode": get_device_code(openId=args['openId'], device=config['device']),
-        "encryptvalue": args['encryptValue'],
-        "m": header_token['m'],
-        "n": header_token['n'],
-        "referer": XYB_REFERER,
-        "s": header_token['s'],
-        "t": header_token['t'],
-        "user-agent": config['userAgent'],
-        "v": XYB_VERSION,
-        "wechat": "1",
-        "xweb_xhr": "1"
-    }
-    cookies = {
-        "JSESSIONID": args['sessionId']
-    }
-
     try:
-        logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, data:{data}, cookies:{cookies}")
-        response = requests.post(url, headers=headers, cookies=cookies, data=data, timeout=10)
-        logging.debug(f"📡 收到响应:{response} {response.text}")
-        res = response.json()
-
-        _assert_session(res)
-
-        logging.info(f"提交周记结果: {res}")
-        if res.get('code') == '200':
-            logging.info(f"提交周记成功: {res.get('msg', 'Unknown error')}")
-            return res.get('data')
-        else:
-            raise RuntimeError(f"提交周记失败: {res.get('msg', 'Unknown error')}")
-    except Exception as e:
-        raise RuntimeError(f"提交周记请求异常: {e}")
+        response = _form_post(
+            "https://xcx.xybsyw.com/student/blog/Blog!save.action",
+            data, config, args, include_device_code=True, timeout=10,
+        )
+    except requests.RequestException as exc:
+        raise BlogSubmissionUncertain("未收到提交确认，请在校友邦核对后再操作") from exc
+    try:
+        result = response.json()
+    except ValueError as exc:
+        raise BlogSubmissionUncertain("提交响应无法解析，请在校友邦核对后再操作") from exc
+    _assert_session(result)
+    if response.status_code != 200 or not isinstance(result, dict) or "code" not in result:
+        raise BlogSubmissionUncertain("提交响应异常，请在校友邦核对后再操作")
+    if not _is_success_code(result.get("code")):
+        raise RuntimeError(f"提交报告失败: {_response_message(result)}")
+    return result.get("data")
 
 
 def xyb_completion(args, config, prompt, on_delta=None):
-    """
-    调用 AI 完成接口
-    :param args: 登录参数
-    :param config: 配置
-    :param prompt: 提示词
-    :param on_delta: 流式输出回调函数，接收每个文本片段
-    :return: 完整的生成内容
-    """
-    data = {
-        "processType": "0",
-        "content": prompt,
-        "questionType": "0",
-        "type": "0",
-        "aiSessionMsgType": "4"
-    }
-    header_token = get_header_token(data)
-    headers = {
-        "content-type": "application/x-www-form-urlencoded",
-        "devicecode": get_device_code(openId=args['openId'], device=config['device']),
-        "encryptvalue": args['encryptValue'],
-        "m": header_token['m'],
-        "n": header_token['n'],
-        "referer": XYB_REFERER,
-        "s": header_token['s'],
-        "t": header_token['t'],
-        "user-agent": config['userAgent'],
-        "v": XYB_VERSION,
-        "wechat": "1",
-        "xweb_xhr": "1"
-    }
-    cookies = {
-        "JSESSIONID": args['sessionId']
-    }
-    url = "https://xcx.xybsyw.com/careerplanning/saveSession.action"
-
-    try:
-        import json
-        response = requests.post(url, data=data, headers=headers, cookies=cookies, timeout=60)
-        res = response.json()
-
-        if res.get('code') == '200' and 'data' in res:
-            content = res['data'].get('content', '')
-            if on_delta and content:
-                # 模拟流式输出效果
-                for char in content:
-                    on_delta(char)
-            return content
-        else:
-            raise RuntimeError(f"AI生成失败: {res.get('msg', 'Unknown error')}")
-    except json.JSONDecodeError as e:
-        logging.error(f"AI响应解析失败: {e}")
-        raise RuntimeError(f"AI响应解析失败: {e}")
-    except Exception as e:
-        logging.error(f"AI生成请求异常: {e}")
-        raise RuntimeError(f"AI生成请求异常: {e}")
+    response = _form_post(
+        "https://xcx.xybsyw.com/careerplanning/saveSession.action",
+        {"processType": "0", "content": prompt, "questionType": "0",
+         "type": "0", "aiSessionMsgType": "4"},
+        config, args, include_device_code=True, timeout=60,
+    )
+    data = _require_data(response, "AI生成失败")
+    content = (data or {}).get("content", "")
+    if on_delta and content:
+        on_delta(content)
+    return content
 
 
 def blog_list(args, config, page, blogType="1"):
-    logging.info(f'正在加载第{page}页周记列表...')
-    data = {
-        "blogType": blogType,
-        "planId": "",
-        "reviewStatus": "null",
-        "page": str(page)
-    }
-    header_token = get_header_token(data)
-    headers = {
-        "content-type": "application/x-www-form-urlencoded",
-        "devicecode": get_device_code(openId=args['openId'], device=config['device']),
-        "encryptvalue": args['encryptValue'],
-        "m": header_token['m'],
-        "n": header_token['n'],
-        "referer": XYB_REFERER,
-        "s": header_token['s'],
-        "t": header_token['t'],
-        "user-agent": config['userAgent'],
-        "v": XYB_VERSION,
-        "wechat": "1",
-        "xweb_xhr": "1"
-    }
-    cookies = {
-        "JSESSIONID": args['sessionId']
-    }
-    url = "https://xcx.xybsyw.com/student/blog/BlogList.action"
-
-    try:
-        logging.debug(f"🛩️ 准备发起请求。url:{url}, headers:{headers}, data:{data}, cookies:{cookies}")
-        response = requests.post(url, headers=headers, cookies=cookies, data=data, timeout=10)
-        logging.debug(f"📡 收到响应:{response} {response.text}")
-        res = response.json()
-
-        _assert_session(res)
-
-        if res.get('code') == '200' and 'data' in res:
-            return res['data']
-        else:
-            raise RuntimeError(f"获取周记列表失败: {res.get('msg', 'Unknown error')}")
-    except Exception as e:
-        raise RuntimeError(f"获取周记列表请求异常: {e}")
+    response = _form_post(
+        "https://xcx.xybsyw.com/student/blog/BlogList.action",
+        {"blogType": str(blogType), "planId": "", "reviewStatus": "null",
+         "page": str(page)},
+        config, args, include_device_code=True, timeout=10,
+    )
+    return _require_data(response, "获取报告列表失败")

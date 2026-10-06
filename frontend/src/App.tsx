@@ -31,7 +31,6 @@ import {
   Menu,
   Network,
   Settings,
-  Waypoints,
 } from "lucide-react";
 import {
   HashRouter,
@@ -47,7 +46,6 @@ import Dashboard from "./pages/Dashboard";
 import type { SystemStatus } from "./types";
 
 const ImagesPage = lazy(() => import("./pages/Images"));
-const Jielong = lazy(() => import("./pages/Jielong"));
 const Journal = lazy(() => import("./pages/Journal"));
 const Logs = lazy(() => import("./pages/Logs"));
 const Schedules = lazy(() => import("./pages/Schedules"));
@@ -71,8 +69,7 @@ const navItems = [
   { path: "/", label: "运行总览", icon: LayoutDashboard },
   { path: "/schedules", label: "定时任务", icon: CalendarClock },
   { path: "/images", label: "图片资产", icon: Images },
-  { path: "/journal", label: "实习周记", icon: BookOpenText },
-  { path: "/jielong", label: "接龙表单", icon: Waypoints },
+  { path: "/journal", label: "周报与月报", icon: BookOpenText },
   { path: "/logs", label: "运行日志", icon: FileClock },
   { path: "/settings", label: "系统配置", icon: Settings },
 ];
@@ -340,7 +337,6 @@ function Workspace({ onLogout }: { onLogout: () => void }) {
                 <Route path="/schedules" element={<Schedules />} />
                 <Route path="/images" element={<ImagesPage />} />
                 <Route path="/journal" element={<Journal />} />
-                <Route path="/jielong" element={<Jielong />} />
                 <Route path="/logs" element={<Logs />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

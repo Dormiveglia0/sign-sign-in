@@ -21,7 +21,6 @@ from app.gui.dialogs.dialogs.auto_clock_config_dialog import AutoClockConfigDial
 from app.gui.dialogs.dialogs.config_dialog import ConfigDialog
 from app.gui.dialogs.feedback_dialog import FeedbackDialog
 from app.gui.dialogs.image_manager_dialog import ImageManagerDialog
-from app.gui.dialogs.jielong_dialog import JieLongDialog
 from app.gui.dialogs.photo_sign_dialog import PhotoSignDialog
 from app.gui.dialogs.sponsor_dialog import SponsorSubmitDialog
 from app.gui.dialogs.update_dialog import UpdateDialog
@@ -66,7 +65,6 @@ class ModernWindow(QMainWindow):
         self.auto_clock_timer.timeout.connect(self._on_auto_clock_tick)
         self.btn_get_code_original_style = None  # 保存按钮原始样式
         self.weekly_journal_dialog = None  # 周记对话框实例
-        self.jielong_page = None
         self._pending_auto_clock_opt = None  # 定时打卡等待获取code后重试的任务
         self._force_exit = False
         self._is_exiting = False
@@ -163,20 +161,9 @@ class ModernWindow(QMainWindow):
         self.btn_platform_xyb.clicked.connect(self.show_home_page)
         nav_shell_layout.addWidget(self.btn_platform_xyb, 0, Qt.AlignTop | Qt.AlignHCenter)
 
-        self.btn_nav_jielong = QPushButton("接龙")
-        self.btn_nav_jielong.setObjectName("RailNavShortcutBtn")
-        self.btn_nav_jielong.setCursor(Qt.PointingHandCursor)
-        self.btn_nav_jielong.setFixedSize(36, 36)
-        self.btn_nav_jielong.setToolTip("切换到接龙页")
-        self.btn_nav_jielong.setCheckable(True)
-        self.btn_nav_jielong.setText("接\n龙")
-        self.btn_nav_jielong.clicked.connect(self.open_jielong_dialog)
-        nav_shell_layout.addWidget(self.btn_nav_jielong, 0, Qt.AlignTop | Qt.AlignHCenter)
-
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
         self.nav_group.addButton(self.btn_platform_xyb)
-        self.nav_group.addButton(self.btn_nav_jielong)
 
         rail_layout.addWidget(nav_shell, 0, Qt.AlignTop | Qt.AlignHCenter)
         rail_layout.addStretch()
@@ -400,10 +387,7 @@ class ModernWindow(QMainWindow):
 
         l_vbox.addLayout(btn_row2)
 
-        self.jielong_page = JieLongDialog(self)
-
         self.left_stack.addWidget(home_page)
-        self.left_stack.addWidget(self.jielong_page)
         self.show_home_page()
 
         # ------------------------- Right Panel -------------------------
@@ -1123,19 +1107,9 @@ class ModernWindow(QMainWindow):
         QApplication.clipboard().setText(QQ_GROUP)
         ToastManager.instance().show(f"QQ群号 {QQ_GROUP} 已复制", "success")
 
-    def _switch_left_page(self, page_name: str):
-        if page_name == "jielong" and self.jielong_page is not None:
-            self.left_stack.setCurrentWidget(self.jielong_page)
-            self.btn_nav_jielong.setChecked(True)
-            return
+    def show_home_page(self):
         self.left_stack.setCurrentWidget(self.home_page)
         self.btn_platform_xyb.setChecked(True)
-
-    def show_home_page(self):
-        self._switch_left_page("home")
-
-    def open_jielong_dialog(self):
-        self._switch_left_page("jielong")
 
     def open_image_manager(self):
         ImageManagerDialog(self).exec()

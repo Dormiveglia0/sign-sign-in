@@ -37,6 +37,7 @@ from app.utils.files import (
     read_config,
 )
 from app.utils.gotify import get_gotify_config, notify_gotify
+from webapp.journal import JournalStore
 
 TASK_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name("web_task_history.json")
 SCHEDULE_IMAGE_HISTORY_FILE = Path(SESSION_CACHE_FILE).with_name(
@@ -420,6 +421,8 @@ class TaskManager:
         with self.lock:
             if self.state["status"] not in {"queued", "running"}:
                 raise RuntimeError("当前没有可停止的任务")
+            if self.state["mode"] == "journal":
+                raise RuntimeError("报告正在提交，请等待平台确认后查看结果")
             self.state["status"] = "stopping"
             self.state["message"] = "正在等待当前请求结束"
             self.stop_event.set()
@@ -469,8 +472,9 @@ def _valid_schedule_tasks(config: dict) -> list[dict]:
 
 
 class Scheduler:
-    def __init__(self, task_manager: TaskManager):
+    def __init__(self, task_manager: TaskManager, journals: JournalStore | None = None):
         self.task_manager = task_manager
+        self.journals = journals or JournalStore()
         self.stop_event = threading.Event()
         self.lock = threading.RLock()
         self.next_runs: dict[str, datetime] = {}
@@ -795,6 +799,17 @@ class Scheduler:
                 logging.exception("定时调度检查失败")
 
     def _tick(self) -> None:
+        if self.task_manager.snapshot()["status"] in {"queued", "running", "stopping"}:
+            return
+        due = self.journals.next_due()
+        if due and get_valid_session_cache():
+            self.task_manager._start(
+                mode="journal",
+                action="提交周报" if due["blogType"] == "1" else "提交月报",
+                source="auto",
+                target=lambda _flow: self.journals.submit(due["id"], due_only=True),
+            )
+            return
         config = read_config(CONFIG_FILE)
         auto_clock = (config.get("settings") or {}).get("auto_clock") or {}
         if not auto_clock.get("enabled"):
@@ -802,9 +817,6 @@ class Scheduler:
         tasks = _valid_schedule_tasks(config)
         if not tasks:
             return
-        if self.task_manager.snapshot()["status"] in {"queued", "running", "stopping"}:
-            return
-
         random_minutes = max(0, min(120, int(auto_clock.get("random_minutes") or 0)))
         now = datetime.now(_timezone(config))
         if self._start_due_retry(now, tasks):
@@ -902,7 +914,7 @@ class CaptureManager:
     def _diagnosis(status: str, events: list[str]) -> str:
         tls_failures = [line for line in events if "[TLS-FAILED]" in line]
         if any(
-            "xybsyw.com" in line or "jielong.com" in line
+            "xybsyw.com" in line
             for line in tls_failures
         ):
             return "目标小程序已连接，但客户端拒绝抓包 CA；该设备无法远程解密"
@@ -1294,8 +1306,9 @@ class Runtime:
         self.logs = MemoryLogHandler()
         self.image_rotation = ImageRotation()
         self.tasks = TaskManager(self.image_rotation)
+        self.journals = JournalStore()
+        self.scheduler = Scheduler(self.tasks, self.journals)
         self.session_keeper = SessionKeeper(self.tasks)
-        self.scheduler = Scheduler(self.tasks)
         self.capture = CaptureManager(self.tasks)
 
     def start(self) -> None:
@@ -1303,6 +1316,7 @@ class Runtime:
         root_logger.setLevel(logging.INFO)
         if self.logs not in root_logger.handlers:
             root_logger.addHandler(self.logs)
+        self.journals.recover()
         self.session_keeper.start()
         self.scheduler.start()
         logging.info("SignSignIn Linux 服务已启动")

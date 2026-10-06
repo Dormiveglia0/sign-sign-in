@@ -694,7 +694,7 @@ def main():
         "/api/images",
         "/api/logs",
         "/api/tasks/history",
-        "/api/jielong/settings",
+        "/api/journal/drafts",
     ):
         response = session.get(f"{base_url}{path}", timeout=5)
         assert response.status_code == 200, f"{path}: {response.text}"

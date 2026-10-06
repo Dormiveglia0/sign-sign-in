@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import copy
 import io
 import json
@@ -10,12 +9,11 @@ import re
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import (
     APIRouter,
-    Body,
     Depends,
     FastAPI,
     File,
@@ -28,45 +26,28 @@ from fastapi import (
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from starlette.concurrency import run_in_threadpool
 
-from app.apis.jielong import (
-    build_local_media_files,
-    build_submit_payload,
-    create_qr_login,
-    download_qrcode_image,
-    exchange_qr_login_token,
-    get_thread_id_by_url,
-    load_form_bundle,
-    poll_qr_login,
-    submit_record,
-)
 from app.apis.xybsyw import (
     SESSION_REAUTH_REQUIRED,
     account_password_login,
     blog_list,
     clear_account_login_challenges,
     create_account_login_challenge,
-    get_default_plan,
-    get_plan,
     is_session_expired_error,
     load_blog_date,
     load_blog_year,
-    login,
-    submit_blog,
     xyb_completion,
 )
 from app.config.common import (
     CONFIG_FILE,
     IMAGE_DIR,
-    JIELONG_FORM_DRAFTS_FILE,
     MITM_CONF_DIR,
     PROJECT_VERSION,
     SYSTEM_PROMPT,
     ensure_resource_layout,
 )
-from app.sign_flow import find_trainee_id
 from app.utils.files import (
     append_journal_entry,
     build_user_agent,
@@ -90,7 +71,10 @@ from webapp.companion_auth import (
     revoke_companion,
     verify_companion_token,
 )
-from webapp.runtime import Runtime
+from webapp.journal import (
+    JournalDraftInput, JournalInput, journal_context as _journal_context, submit_report,
+)
+from webapp.runtime import Runtime, _timezone
 from webapp.security import (
     CSRF_COOKIE,
     INITIAL_PASSWORD_FILE,
@@ -195,14 +179,12 @@ def _secret_state(config: dict) -> dict:
     input_config = config.get("input") or {}
     model = config.get("model") or {}
     settings = config.get("settings") or {}
-    jielong = settings.get("jielong") or {}
     _, gotify_token = get_gotify_config(settings)
     return {
         "amapKey": bool((input_config.get("mapApiKeys") or {}).get("amap")),
         "tencentKey": bool((input_config.get("mapApiKeys") or {}).get("tencent")),
         "modelApiKey": bool(model.get("apiKey")),
         "gotifyToken": bool(gotify_token),
-        "jielongToken": bool(jielong.get("authorization")),
         "initialPassword": INITIAL_PASSWORD_FILE.exists(),
     }
 
@@ -892,37 +874,17 @@ async def test_notification(payload: NotificationTestInput):
     return {"ok": True}
 
 
-def _journal_context() -> tuple[dict, dict, str]:
-    config = read_config(CONFIG_FILE)
-    args = login(config["input"], use_cache=True)
-    plan = get_plan(
-        config["input"]["userAgent"],
-        args,
-        config=config["input"],
-    )
-    trainee_id = find_trainee_id(plan)
-    if not trainee_id:
-        trainee_id = find_trainee_id(
-            get_default_plan(
-                config["input"]["userAgent"],
-                args,
-                config=config["input"],
-            )
-        )
-    if not trainee_id:
-        raise RuntimeError("未找到 traineeId")
-    args["traineeId"] = trainee_id
-    return config, args, trainee_id
-
-
 @protected.get("/journal/bootstrap")
-async def journal_bootstrap(page: int = Query(default=1, ge=1, le=1000)):
+async def journal_bootstrap(
+    page: int = Query(default=1, ge=1, le=1000),
+    blogType: Literal["1", "2"] = "1",
+):
     def load():
         config, args, trainee_id = _journal_context()
         return {
             "traineeId": trainee_id,
-            "years": load_blog_year(args, config["input"]),
-            "blogs": blog_list(args, config["input"], page),
+            "years": load_blog_year(args, config["input"]) if blogType == "1" else [],
+            "blogs": blog_list(args, config["input"], page, blogType),
             "history": load_journal_history(),
         }
 
@@ -931,8 +893,8 @@ async def journal_bootstrap(page: int = Query(default=1, ge=1, le=1000)):
 
 @protected.get("/journal/weeks")
 async def journal_weeks(
-    year: str = Query(min_length=4, max_length=4),
-    month: str = Query(min_length=1, max_length=2),
+    year: str = Query(pattern=r"^\d{4}$"),
+    month: str = Query(pattern=r"^(0?[1-9]|1[0-2])$"),
 ):
     def load():
         config, args, _ = _journal_context()
@@ -942,16 +904,20 @@ async def journal_weeks(
 
 
 @protected.get("/journal/blogs")
-async def journal_blogs(page: int = Query(default=1, ge=1, le=1000)):
+async def journal_blogs(
+    page: int = Query(default=1, ge=1, le=1000),
+    blogType: Literal["1", "2"] = "1",
+):
     def load():
         config, args, _ = _journal_context()
-        return blog_list(args, config["input"], page)
+        return blog_list(args, config["input"], page, blogType)
 
     return await _blocking(load)
 
 
 class JournalGenerateInput(BaseModel):
     prompt: str = Field(min_length=1, max_length=5000)
+    blogType: Literal["1", "2"] = "1"
 
 
 @protected.post("/journal/generate")
@@ -963,13 +929,16 @@ async def journal_generate(payload: JournalGenerateInput):
             str(model.get(key) or "").strip()
             for key in ("baseUrl", "apiKey", "model")
         ):
-            content = call_chat_model(model, payload.prompt, SYSTEM_PROMPT)
+            system_prompt = SYSTEM_PROMPT
+            if payload.blogType == "2":
+                system_prompt = system_prompt.replace("周记", "月报").replace("本周", "本月").replace("下周", "下月").replace("一周", "一个月").replace("第几周", "第几个月")
+            content = call_chat_model(model, payload.prompt, system_prompt)
         else:
             _, args, _ = _journal_context()
             content = xyb_completion(
                 args,
                 config["input"],
-                payload.prompt,
+                f"请根据以下真实素材撰写实习{'周报' if payload.blogType == '1' else '月报'}：\n{payload.prompt}",
             )
         append_journal_entry("generated", content)
         return content
@@ -977,261 +946,66 @@ async def journal_generate(payload: JournalGenerateInput):
     return {"content": await _blocking(generate)}
 
 
-class JournalSubmitInput(BaseModel):
-    blogTitle: str = Field(min_length=1, max_length=200)
-    blogBody: str = Field(min_length=50, max_length=10000)
-    startDate: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    endDate: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    blogOpenType: Literal["1", "2"] = "2"
-    traineeId: str = Field(default="", max_length=64)
+class JournalSubmitInput(JournalInput):
+    @model_validator(mode="after")
+    def complete_report(self):
+        return self.require_complete()
 
 
 @protected.post("/journal/submit")
 async def journal_submit(payload: JournalSubmitInput):
-    def submit():
-        config, args, trainee_id = _journal_context()
-        result = submit_blog(
-            args=args,
-            config=config["input"],
-            blog_title=payload.blogTitle.strip(),
-            blog_body=payload.blogBody.strip(),
-            start_date=payload.startDate,
-            end_date=payload.endDate,
-            blog_open_type=payload.blogOpenType,
-            trainee_id=payload.traineeId or trainee_id,
-        )
-        append_journal_entry("submitted", payload.blogBody.strip())
-        return result
+    return {"result": await _blocking(submit_report, payload)}
 
-    return {"result": await _blocking(submit)}
+
+@protected.get("/journal/drafts")
+def journal_drafts():
+    return {
+        "items": runtime.journals.list(),
+        "history": load_journal_history(),
+        "timezone": str(_timezone(read_config(CONFIG_FILE))),
+    }
+
+
+async def _save_journal_draft(payload: JournalDraftInput, draft_id=None):
+    def save():
+        owner = ""
+        config = read_config(CONFIG_FILE)
+        if payload.scheduledAt:
+            config, args, trainee_id = _journal_context()
+            if payload.traineeId and payload.traineeId != trainee_id:
+                raise ValueError("实习计划已变化，请重新加载后确认草稿")
+            payload.traineeId = trainee_id
+            owner = args["openId"]
+        return runtime.journals.save(
+            payload, draft_id, zone=_timezone(config), owner=owner,
+        )
+    return await _blocking(save)
+
+
+@protected.post("/journal/drafts")
+async def journal_create_draft(payload: JournalDraftInput):
+    return await _save_journal_draft(payload)
+
+
+@protected.put("/journal/drafts/{draft_id}")
+async def journal_update_draft(draft_id: str, payload: JournalDraftInput):
+    return await _save_journal_draft(payload, draft_id)
+
+
+@protected.delete("/journal/drafts/{draft_id}")
+async def journal_delete_draft(draft_id: str):
+    return await _blocking(runtime.journals.delete, draft_id)
+
+
+@protected.post("/journal/drafts/{draft_id}/submit")
+async def journal_submit_draft(draft_id: str):
+    return await _blocking(runtime.journals.submit, draft_id)
 
 
 @protected.delete("/journal/history")
 def journal_clear_history(section: Literal["generated", "submitted", "all"] = "all"):
     clear_journal_history(None if section == "all" else section)
     return {"ok": True}
-
-
-def _jielong_settings() -> dict:
-    return (read_config(CONFIG_FILE).get("settings") or {}).get("jielong") or {}
-
-
-def _save_jielong(values: dict) -> dict:
-    config = read_config(CONFIG_FILE)
-    settings = config.setdefault("settings", {})
-    current = settings.setdefault("jielong", {})
-    current.update(values)
-    _atomic_save_config(config)
-    return current
-
-
-class JielongSettingsInput(BaseModel):
-    authorization: str = Field(default="", max_length=5000)
-    threadId: str = Field(default="", max_length=200)
-    shareUrl: str = Field(default="", max_length=2000)
-    clearToken: bool = False
-
-
-@protected.get("/jielong/settings")
-def get_jielong_settings():
-    settings = _jielong_settings()
-    return {
-        "threadId": str(settings.get("thread_id") or ""),
-        "shareUrl": str(settings.get("share_url") or ""),
-        "tokenConfigured": bool(settings.get("authorization")),
-    }
-
-
-@protected.put("/jielong/settings")
-def update_jielong_settings(payload: JielongSettingsInput):
-    values = {
-        "thread_id": payload.threadId.strip(),
-        "share_url": payload.shareUrl.strip(),
-    }
-    if payload.authorization.strip():
-        values["authorization"] = payload.authorization.strip()
-    elif payload.clearToken:
-        values["authorization"] = ""
-    _save_jielong(values)
-    return get_jielong_settings()
-
-
-@protected.post("/jielong/qr")
-async def jielong_qr():
-    def create():
-        result = create_qr_login()
-        image = download_qrcode_image(result["qrcode_url"])
-        image_type = "png" if image.startswith(b"\x89PNG\r\n\x1a\n") else "jpeg"
-        return {
-            "uuid": result["uuid"],
-            "image": f"data:image/{image_type};base64,{base64.b64encode(image).decode()}",
-        }
-
-    return await _blocking(create)
-
-
-class JielongPollInput(BaseModel):
-    uuid: str = Field(min_length=1, max_length=500)
-
-
-@protected.post("/jielong/qr/poll")
-async def jielong_qr_poll(payload: JielongPollInput):
-    def poll():
-        state = poll_qr_login(payload.uuid)
-        result = {
-            "status": state.get("status"),
-            "message": state.get("message"),
-            "tokenConfigured": False,
-        }
-        if state.get("status") == "confirmed" and state.get("code"):
-            token_response = exchange_qr_login_token(state["code"])
-            body = token_response.get("Data") or {}
-            token = str(
-                body.get("Token")
-                or body.get("token")
-                or body.get("Authorization")
-                or body.get("authorization")
-                or ""
-            ).strip()
-            if not token:
-                raise RuntimeError("接龙登录成功但未返回 Token")
-            _save_jielong(
-                {
-                    "authorization": token,
-                    "openId": str(body.get("OpenId") or ""),
-                    "sId": str(body.get("SId") or ""),
-                    "expire": body.get("Expire"),
-                }
-            )
-            result["message"] = "接龙登录成功"
-            result["tokenConfigured"] = True
-        return result
-
-    return await _blocking(poll)
-
-
-class ShareUrlInput(BaseModel):
-    shareUrl: str = Field(min_length=8, max_length=2000)
-
-
-@protected.post("/jielong/parse")
-async def jielong_parse(payload: ShareUrlInput):
-    thread_id = await _blocking(get_thread_id_by_url, payload.shareUrl)
-    _save_jielong(
-        {"share_url": payload.shareUrl.strip(), "thread_id": thread_id}
-    )
-    return {"threadId": thread_id}
-
-
-class JielongLoadInput(BaseModel):
-    authorization: str = Field(default="", max_length=5000)
-    threadId: str = Field(default="", max_length=200)
-
-
-@protected.post("/jielong/form")
-async def jielong_form(payload: JielongLoadInput):
-    settings = _jielong_settings()
-    token = payload.authorization.strip() or str(settings.get("authorization") or "")
-    thread_id = payload.threadId.strip() or str(settings.get("thread_id") or "")
-    if not token:
-        raise HTTPException(status_code=422, detail="请先扫码登录或填写 Token")
-    if not thread_id:
-        raise HTTPException(status_code=422, detail="请先解析分享链接")
-    bundle = await _blocking(load_form_bundle, token, thread_id)
-    _save_jielong({"authorization": token, "thread_id": thread_id})
-    return bundle
-
-
-def _read_jielong_drafts() -> dict:
-    try:
-        return read_config(JIELONG_FORM_DRAFTS_FILE)
-    except Exception:
-        return {}
-
-
-def _save_jielong_draft(thread_id: str, answers: dict) -> None:
-    drafts = _read_jielong_drafts()
-    drafts[str(thread_id)] = {"answers": answers}
-    path = Path(JIELONG_FORM_DRAFTS_FILE)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(
-        json.dumps(drafts, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    os.replace(temporary, path)
-
-
-@protected.get("/jielong/draft/{thread_id}")
-def jielong_get_draft(thread_id: str):
-    return (_read_jielong_drafts().get(thread_id) or {}).get("answers") or {}
-
-
-class JielongDraftInput(BaseModel):
-    answers: dict[str, dict[str, Any]]
-
-
-@protected.put("/jielong/draft/{thread_id}")
-def jielong_save_draft(thread_id: str, payload: JielongDraftInput):
-    if len(json.dumps(payload.answers, ensure_ascii=False)) > 200_000:
-        raise HTTPException(status_code=413, detail="草稿内容过大")
-    _save_jielong_draft(thread_id, payload.answers)
-    return {"ok": True}
-
-
-class JielongSubmitInput(BaseModel):
-    threadId: str = Field(min_length=1, max_length=200)
-    signature: str = Field(default="", max_length=200)
-    number: str = Field(default="", max_length=200)
-    answers: dict[str, dict[str, Any]]
-
-
-@protected.post("/jielong/submit")
-async def jielong_submit(payload: JielongSubmitInput):
-    if len(json.dumps(payload.answers, ensure_ascii=False)) > 200_000:
-        raise HTTPException(status_code=413, detail="表单内容过大")
-    settings = _jielong_settings()
-    token = str(settings.get("authorization") or "")
-    if not token:
-        raise HTTPException(status_code=422, detail="接龙 Token 未配置")
-
-    def submit():
-        bundle = load_form_bundle(token, payload.threadId)
-        answers = copy.deepcopy(payload.answers)
-        for answer in answers.values():
-            raw_files = answer.get("files") or []
-            if not raw_files:
-                continue
-            prepared_files = []
-            for item in raw_files:
-                if (
-                    isinstance(item, dict)
-                    and item.get("RelativePath")
-                    and not item.get("LocalPath")
-                ):
-                    prepared_files.append(item)
-                    continue
-                name = (
-                    item
-                    if isinstance(item, str)
-                    else item.get("name") or item.get("Name") or item.get("FileName")
-                )
-                if not name:
-                    raise RuntimeError("接龙图片信息无效")
-                path = _safe_image_path(str(name))
-                prepared_files.extend(build_local_media_files([str(path)]))
-            answer["files"] = prepared_files
-        submit_payload = build_submit_payload(
-            bundle,
-            answers,
-            signature=payload.signature,
-            number=payload.number,
-        )
-        result = submit_record(token, submit_payload)
-        _save_jielong_draft(payload.threadId, payload.answers)
-        return result
-
-    return await _blocking(submit)
 
 
 app.include_router(protected)

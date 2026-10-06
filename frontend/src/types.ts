@@ -130,44 +130,6 @@ export interface AppConfig {
     tencentKey: boolean;
     modelApiKey: boolean;
     gotifyToken: boolean;
-    jielongToken: boolean;
     initialPassword: boolean;
   };
 }
-
-export interface JielongField {
-  Id: number | string;
-  FieldType?: number;
-  Name?: string;
-  IsRequired?: boolean;
-  IsTextarea?: boolean;
-  InitialValue?: string;
-  InitialFiles?: Array<Record<string, unknown>>;
-  ControlOptions?: unknown;
-  VisibilityCondition?: Array<{
-    OptionValue?: string | number;
-    RelationIdList?: string[];
-  }>;
-  RelationId?: string;
-  Tip?: string;
-  [key: string]: unknown;
-}
-
-export interface JielongBundle {
-  thread: Record<string, unknown>;
-  check_in: Record<string, unknown>;
-  edit_detail: Record<string, unknown>;
-  fields: JielongField[];
-}
-
-export type JielongAnswer = {
-  value?: string;
-  area?: string;
-  place?: string;
-  longitude?: string;
-  latitude?: string;
-  option_text?: string;
-  option_value?: string;
-  other_value?: string;
-  files?: Array<string | Record<string, unknown>>;
-};
